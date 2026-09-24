@@ -1,0 +1,86 @@
+[
+  {
+    "id": "tictactoe",
+    "name": "Tres en Raya",
+    "description": "Clásico juego de Tres en Raya con modo 1 vs AI o 2 jugadores local.",
+    "category": "board",
+    "players": 2,
+    "mode": ["solo", "multiplayer"],
+    "mobile": true,
+    "requiresServer": false,
+    "license": "MIT",
+    "url": "./tictactoe/"
+  },
+  {
+    "id": "connect4",
+    "name": "4 en Raya",
+    "description": "Conecta 4 fichas de tu color en línea horizontal, vertical o diagonal.",
+    "category": "board",
+    "players": 2,
+    "mode": ["solo", "multiplayer"],
+    "mobile": true,
+    "requiresServer": false,
+    "license": "MIT",
+    "url": "./connect4/"
+  },
+  {
+    "id": "pong",
+    "name": "Pong Clásico",
+    "description": "El clásico juego retro de paletas y pelota en 2D.",
+    "category": "arcade",
+    "players": 2,
+    "mode": ["solo", "multiplayer"],
+    "mobile": true,
+    "requiresServer": false,
+    "license": "MIT",
+    "url": "./pong/"
+  },
+  {
+    "id": "trivia",
+    "name": "Trivia Quiz",
+    "description": "Pon a prueba tus conocimientos en tecnología, cultura general, ciencia y cine.",
+    "category": "trivia",
+    "players": 1,
+    "mode": ["solo"],
+    "mobile": true,
+    "requiresServer": false,
+    "license": "MIT",
+    "url": "./trivia/"
+  },
+  {
+    "id": "memory",
+    "name": "Juego de Memoria",
+    "description": "Encuentra las parejas de cartas iguales en el menor número de movimientos.",
+    "category": "puzzle",
+    "players": 1,
+    "mode": ["solo"],
+    "mobile": true,
+    "requiresServer": false,
+    "license": "MIT",
+    "url": "./memory/"
+  },
+  {
+    "id": "snake",
+    "name": "Serpiente Classic",
+    "description": "Guía a la serpiente para comer alimentos sin chocar contra las paredes ni contigo mismo.",
+    "category": "arcade",
+    "players": 1,
+    "mode": ["solo"],
+    "mobile": true,
+    "requiresServer": false,
+    "license": "MIT",
+    "url": "./snake/"
+  },
+  {
+    "id": "2048",
+    "name": "2048 Puzzle",
+    "description": "Combina fichas del mismo valor hasta alcanzar la casilla 2048.",
+    "category": "puzzle",
+    "players": 1,
+    "mode": ["solo"],
+    "mobile": true,
+    "requiresServer": false,
+    "license": "MIT",
+    "url": "./2048/"
+  }
+]

@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Trivia Quiz - Link Minigames</title>
+  <link rel="stylesheet" href="../assets/css/link-theme.css">
+  <style>
+    .game-container {
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    .quiz-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      padding: 2rem;
+      box-shadow: var(--shadow-md);
+    }
+
+    .quiz-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.5rem;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .question-text {
+      font-size: 1.25rem;
+      font-weight: 700;
+      line-height: 1.4;
+      margin-bottom: 1.5rem;
+      color: var(--text-primary);
+    }
+
+    .options-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .option-btn {
+      padding: 1rem 1.25rem;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      color: var(--text-primary);
+      font-size: 1rem;
+      font-weight: 500;
+      text-align: left;
+      cursor: pointer;
+      transition: var(--transition);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .option-btn:hover {
+      background: var(--bg-card-hover);
+      border-color: var(--border-highlight);
+    }
+
+    .option-btn.correct {
+      background: rgba(16, 185, 129, 0.2);
+      border-color: var(--success);
+      color: #34d399;
+    }
+
+    .option-btn.wrong {
+      background: rgba(239, 68, 68, 0.2);
+      border-color: var(--danger);
+      color: #f87171;
+    }
+
+    .result-screen {
+      text-align: center;
+      padding: 2rem 1rem;
+    }
+
+    .score-big {
+      font-size: 3.5rem;
+      font-weight: 900;
+      background: var(--accent-gradient);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin: 1rem 0;
+    }
+  </style>
+</head>
+<body>
+
+  <header class="link-header">
+    <a href="../" class="btn-back">
+      <span>← Volver al Catálogo</span>
+    </a>
+    <div class="link-logo">
+      <div class="link-logo-icon">🧠</div>
+      <span>Trivia Quiz</span>
+    </div>
+  </header>
+
+  <main class="container">
+    <div class="game-container">
+      <div class="quiz-card" id="quizCard">
+
+        <div class="quiz-header">
+          <span class="badge badge-purple" id="categoryBadge">Tecnología</span>
+          <span class="badge badge-blue" id="progressBadge">Pregunta 1/5</span>
+        </div>
+
+        <div id="quizBody">
+          <h2 class="question-text" id="questionText">Cargando pregunta...</h2>
+          <div class="options-grid" id="optionsContainer"></div>
+        </div>
+
+      </div>
+    </div>
+  </main>
+
+  <footer class="link-footer">
+    <p>Licencia MIT — Link Minigames</p>
+  </footer>
+
+  <script>
+    const questions = [
+      {
+        category: "Tecnología",
+        question: "¿Qué significa HTML?",
+        options: [
+          "HyperText Markup Language",
+          "HighText Machine Language",
+          "Hyperlink Text Management Language",
+          "Home Tool Markup Language"
+        ],
+        answer: 0
+      },
+      {
+        category: "Tecnología",
+        question: "¿Cuál de estos lenguajes se ejecuta directamente en el navegador del cliente?",
+        options: ["Python", "JavaScript", "Java", "C++"],
+        answer: 1
+      },
+      {
+        category: "Cultura General",
+        question: "¿Cuál es el planeta más grande del Sistema Solar?",
+        options: ["Tierra", "Marte", "Júpiter", "Saturno"],
+        answer: 2
+      },
+      {
+        category: "Ciencia",
+        question: "¿Cuál es el símbolo químico del Oro?",
+        options: ["Ag", "Au", "Fe", "Cu"],
+        answer: 1
+      },
+      {
+        category: "Videojuegos",
+        question: "¿En qué año se lanzó el icónico juego Pac-Man?",
+        options: ["1978", "1980", "1985", "1990"],
+        answer: 1
+      }
+    ];
+
+    let currentIdx = 0;
+    let score = 0;
+    let answered = false;
+
+    function renderQuestion() {
+      answered = false;
+      const q = questions[currentIdx];
+
+      document.getElementById('categoryBadge').textContent = q.category;
+      document.getElementById('progressBadge').textContent = `Pregunta ${currentIdx + 1}/${questions.length}`;
+      document.getElementById('questionText').textContent = q.question;
+
+      const container = document.getElementById('optionsContainer');
+      container.innerHTML = q.options.map((opt, i) => `
+        <button class="option-btn" onclick="selectOption(${i})">
+          <span>${opt}</span>
+          <span class="opt-icon"></span>
+        </button>
+      `).join('');
+    }
+
+    function selectOption(idx) {
+      if (answered) return;
+      answered = true;
+
+      const q = questions[currentIdx];
+      const buttons = document.querySelectorAll('.option-btn');
+
+      if (idx === q.answer) {
+        buttons[idx].classList.add('correct');
+        buttons[idx].querySelector('.opt-icon').textContent = '✅';
+        score++;
+      } else {
+        buttons[idx].classList.add('wrong');
+        buttons[idx].querySelector('.opt-icon').textContent = '❌';
+        buttons[q.answer].classList.add('correct');
+        buttons[q.answer].querySelector('.opt-icon').textContent = '✅';
+      }
+
+      setTimeout(() => {
+        currentIdx++;
+        if (currentIdx < questions.length) {
+          renderQuestion();
+        } else {
+          showResults();
+        }
+      }, 1500);
+    }
+
+    function showResults() {
+      const percentage = Math.round((score / questions.length) * 100);
+      document.getElementById('quizBody').innerHTML = `
+        <div class="result-screen">
+          <h2>¡Quiz Completado! 🎉</h2>
+          <div class="score-big">${score} / ${questions.length}</div>
+          <p style="color: var(--text-secondary); margin-bottom: 2rem;">
+            Acuracidad: ${percentage}%
+          </p>
+          <button class="btn btn-primary" onclick="restartQuiz()" style="width: 100%;">Intentar de nuevo</button>
+        </div>
+      `;
+    }
+
+    function restartQuiz() {
+      currentIdx = 0;
+      score = 0;
+      document.getElementById('quizBody').innerHTML = `
+        <h2 class="question-text" id="questionText"></h2>
+        <div class="options-grid" id="optionsContainer"></div>
+      `;
+      renderQuestion();
+    }
+
+    renderQuestion();
+  </script>
+</body>
+</html>

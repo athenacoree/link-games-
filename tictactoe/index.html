@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tres en Raya - Link Minigames</title>
+  <link rel="stylesheet" href="../assets/css/link-theme.css">
+  <style>
+    .game-container {
+      max-width: 480px;
+      margin: 0 auto;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .mode-selector {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1.5rem;
+      background: var(--bg-card);
+      padding: 0.35rem;
+      border-radius: var(--radius-full);
+      border: 1px solid var(--border-color);
+    }
+
+    .mode-btn {
+      padding: 0.5rem 1rem;
+      border-radius: var(--radius-full);
+      border: none;
+      background: transparent;
+      color: var(--text-secondary);
+      font-weight: 600;
+      font-size: 0.875rem;
+      cursor: pointer;
+      transition: var(--transition);
+    }
+
+    .mode-btn.active {
+      background: var(--accent-gradient);
+      color: white;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .status-panel {
+      font-size: 1.25rem;
+      font-weight: 700;
+      margin-bottom: 1.5rem;
+      min-height: 2rem;
+      color: var(--text-primary);
+    }
+
+    .board {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      width: 100%;
+      aspect-ratio: 1;
+      background: var(--bg-card);
+      padding: 12px;
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border-color);
+      box-shadow: var(--shadow-md);
+      margin-bottom: 1.5rem;
+    }
+
+    .cell {
+      background: var(--bg-secondary);
+      border-radius: var(--radius-md);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 3rem;
+      font-weight: 900;
+      cursor: pointer;
+      user-select: none;
+      transition: var(--transition);
+      border: 1px solid var(--border-color);
+    }
+
+    .cell:hover {
+      background: var(--bg-card-hover);
+      border-color: var(--border-highlight);
+    }
+
+    .cell.x {
+      color: #6366f1;
+    }
+
+    .cell.o {
+      color: #ec4899;
+    }
+
+    .scores {
+      display: flex;
+      justify-content: space-around;
+      width: 100%;
+      background: var(--bg-card);
+      padding: 1rem;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border-color);
+      margin-bottom: 1.5rem;
+    }
+
+    .score-box {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .score-label {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .score-val {
+      font-size: 1.5rem;
+      font-weight: 800;
+      margin-top: 0.25rem;
+    }
+  </style>
+</head>
+<body>
+
+  <header class="link-header">
+    <a href="../" class="btn-back">
+      <span>← Volver al Catálogo</span>
+    </a>
+    <div class="link-logo">
+      <div class="link-logo-icon">❌</div>
+      <span>Tres en Raya</span>
+    </div>
+  </header>
+
+  <main class="container">
+    <div class="game-container">
+
+      <div class="mode-selector">
+        <button class="mode-btn active" id="btnVsAi">vs IA</button>
+        <button class="mode-btn" id="btnVsP2">2 Jugadores</button>
+      </div>
+
+      <div class="status-panel" id="statusPanel">Turno de X</div>
+
+      <div class="board" id="board">
+        <div class="cell" data-index="0"></div>
+        <div class="cell" data-index="1"></div>
+        <div class="cell" data-index="2"></div>
+        <div class="cell" data-index="3"></div>
+        <div class="cell" data-index="4"></div>
+        <div class="cell" data-index="5"></div>
+        <div class="cell" data-index="6"></div>
+        <div class="cell" data-index="7"></div>
+        <div class="cell" data-index="8"></div>
+      </div>
+
+      <div class="scores">
+        <div class="score-box">
+          <span class="score-label">X (Jugador 1)</span>
+          <span class="score-val" id="scoreX" style="color: #6366f1;">0</span>
+        </div>
+        <div class="score-box">
+          <span class="score-label">Empates</span>
+          <span class="score-val" id="scoreTies" style="color: var(--text-secondary);">0</span>
+        </div>
+        <div class="score-box">
+          <span class="score-label" id="labelO">O (IA)</span>
+          <span class="score-val" id="scoreO" style="color: #ec4899;">0</span>
+        </div>
+      </div>
+
+      <button class="btn btn-secondary" id="btnReset" style="width: 100%;">Reiniciar Partida</button>
+
+    </div>
+  </main>
+
+  <footer class="link-footer">
+    <p>Licencia MIT — Link Minigames</p>
+  </footer>
+
+  <script>
+    let boardState = Array(9).fill(null);
+    let currentPlayer = 'X';
+    let gameActive = true;
+    let vsAi = true;
+
+    let scoreX = 0;
+    let scoreO = 0;
+    let scoreTies = 0;
+
+    const winConditions = [
+      [0,1,2], [3,4,5], [6,7,8], // Horizontales
+      [0,3,6], [1,4,7], [2,5,8], // Verticales
+      [0,4,8], [2,4,6]          // Diagonales
+    ];
+
+    const cells = document.querySelectorAll('.cell');
+    const statusPanel = document.getElementById('statusPanel');
+
+    function handleClick(e) {
+      const idx = e.target.dataset.index;
+      if (boardState[idx] || !gameActive) return;
+
+      makeMove(idx, currentPlayer);
+
+      if (gameActive && vsAi && currentPlayer === 'O') {
+        setTimeout(aiMove, 300);
+      }
+    }
+
+    function makeMove(index, player) {
+      boardState[index] = player;
+      const cell = cells[index];
+      cell.textContent = player;
+      cell.classList.add(player.toLowerCase());
+
+      if (checkWin(player)) {
+        statusPanel.textContent = `¡Jugador ${player} ha ganado! 🎉`;
+        gameActive = false;
+        if (player === 'X') scoreX++;
+        else scoreO++;
+        updateScores();
+        return;
+      }
+
+      if (boardState.every(cell => cell !== null)) {
+        statusPanel.textContent = '¡Empate! 🤝';
+        gameActive = false;
+        scoreTies++;
+        updateScores();
+        return;
+      }
+
+      currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+      statusPanel.textContent = `Turno de ${currentPlayer}`;
+    }
+
+    function checkWin(player) {
+      return winConditions.some(condition => {
+        return condition.every(index => boardState[index] === player);
+      });
+    }
+
+    function aiMove() {
+      if (!gameActive) return;
+
+      // 1. Try to win
+      for (let i = 0; i < 9; i++) {
+        if (!boardState[i]) {
+          boardState[i] = 'O';
+          if (checkWin('O')) {
+            boardState[i] = null;
+            makeMove(i, 'O');
+            return;
+          }
+          boardState[i] = null;
+        }
+      }
+
+      // 2. Try to block opponent
+      for (let i = 0; i < 9; i++) {
+        if (!boardState[i]) {
+          boardState[i] = 'X';
+          if (checkWin('X')) {
+            boardState[i] = null;
+            makeMove(i, 'O');
+            return;
+          }
+          boardState[i] = null;
+        }
+      }
+
+      // 3. Center if available
+      if (!boardState[4]) {
+        makeMove(4, 'O');
+        return;
+      }
+
+      // 4. Random available move
+      const available = boardState.map((val, idx) => val === null ? idx : null).filter(val => val !== null);
+      if (available.length > 0) {
+        const randomIdx = available[Math.floor(Math.random() * available.length)];
+        makeMove(randomIdx, 'O');
+      }
+    }
+
+    function updateScores() {
+      document.getElementById('scoreX').textContent = scoreX;
+      document.getElementById('scoreO').textContent = scoreO;
+      document.getElementById('scoreTies').textContent = scoreTies;
+    }
+
+    function resetBoard() {
+      boardState = Array(9).fill(null);
+      currentPlayer = 'X';
+      gameActive = true;
+      statusPanel.textContent = 'Turno de X';
+      cells.forEach(cell => {
+        cell.textContent = '';
+        cell.classList.remove('x', 'o');
+      });
+    }
+
+    cells.forEach(cell => cell.addEventListener('click', handleClick));
+
+    document.getElementById('btnReset').addEventListener('click', resetBoard);
+
+    document.getElementById('btnVsAi').addEventListener('click', (e) => {
+      vsAi = true;
+      document.getElementById('btnVsAi').classList.add('active');
+      document.getElementById('btnVsP2').classList.remove('active');
+      document.getElementById('labelO').textContent = 'O (IA)';
+      resetBoard();
+    });
+
+    document.getElementById('btnVsP2').addEventListener('click', (e) => {
+      vsAi = false;
+      document.getElementById('btnVsP2').classList.add('active');
+      document.getElementById('btnVsAi').classList.remove('active');
+      document.getElementById('labelO').textContent = 'O (Jugador 2)';
+      resetBoard();
+    });
+  </script>
+</body>
+</html>

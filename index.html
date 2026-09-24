@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Link Minigames - Catálogo Oficial</title>
+  <link rel="stylesheet" href="./assets/css/link-theme.css">
+  <style>
+    .hero {
+      text-align: center;
+      padding: 3rem 1rem 2rem;
+      background: radial-gradient(circle at top, rgba(99, 102, 241, 0.15) 0%, transparent 70%);
+      border-bottom: 1px solid var(--border-color);
+      margin-bottom: 2rem;
+    }
+
+    .hero-title {
+      font-size: 2.5rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      margin-bottom: 0.75rem;
+    }
+
+    .hero-subtitle {
+      color: var(--text-secondary);
+      font-size: 1.125rem;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2rem;
+    }
+
+    .search-box {
+      position: relative;
+      flex: 1;
+      min-width: 260px;
+    }
+
+    .search-input {
+      width: 100%;
+      padding: 0.75rem 1rem 0.75rem 2.5rem;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-full);
+      color: var(--text-primary);
+      font-size: 0.95rem;
+      outline: none;
+      transition: var(--transition);
+    }
+
+    .search-input:focus {
+      border-color: var(--accent-primary);
+      box-shadow: 0 0 15px rgba(99, 102, 241, 0.2);
+    }
+
+    .search-icon {
+      position: absolute;
+      left: 1rem;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-muted);
+      pointer-events: none;
+    }
+
+    .categories {
+      display: flex;
+      gap: 0.5rem;
+      overflow-x: auto;
+      padding-bottom: 0.5rem;
+    }
+
+    .category-btn {
+      padding: 0.5rem 1rem;
+      border-radius: var(--radius-full);
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      color: var(--text-secondary);
+      font-size: 0.875rem;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: var(--transition);
+    }
+
+    .category-btn:hover, .category-btn.active {
+      background: var(--accent-primary);
+      color: white;
+      border-color: var(--accent-primary);
+    }
+
+    .games-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 1.5rem;
+    }
+
+    .game-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      transition: var(--transition);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .game-card:hover {
+      transform: translateY(-4px);
+      border-color: var(--border-highlight);
+      box-shadow: var(--shadow-glow);
+      background: var(--bg-card-hover);
+    }
+
+    .game-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1rem;
+    }
+
+    .game-card-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: var(--radius-md);
+      background: var(--accent-gradient);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      color: white;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .game-title {
+      font-size: 1.25rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+      color: var(--text-primary);
+    }
+
+    .game-desc {
+      color: var(--text-secondary);
+      font-size: 0.875rem;
+      line-height: 1.4;
+      margin-bottom: 1.25rem;
+      flex: 1;
+    }
+
+    .game-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .game-card-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-top: 1rem;
+      border-top: 1px solid var(--border-color);
+    }
+
+    .players-info {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+    }
+
+    .no-results {
+      text-align: center;
+      padding: 4rem 1rem;
+      color: var(--text-muted);
+      grid-column: 1 / -1;
+    }
+  </style>
+</head>
+<body>
+
+  <header class="link-header">
+    <a href="./" class="link-logo">
+      <div class="link-logo-icon">🎮</div>
+      <span>Link Minigames</span>
+    </a>
+    <div style="display: flex; gap: 0.5rem; align-items: center;">
+      <span class="badge badge-purple">Plataforma Estática</span>
+    </div>
+  </header>
+
+  <div class="hero">
+    <h1 class="hero-title">Biblioteca Oficial de Minijuegos</h1>
+    <p class="hero-subtitle">Juegos HTML5 ultrarrápidos, optimizados para móviles y sin necesidad de instalación.</p>
+  </div>
+
+  <main class="container">
+    <div class="controls">
+      <div class="search-box">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="searchInput" class="search-input" placeholder="Buscar minijuego...">
+      </div>
+      <div class="categories" id="categoryList">
+        <button class="category-btn active" data-category="all">Todos</button>
+        <button class="category-btn" data-category="board">Tablero</button>
+        <button class="category-btn" data-category="arcade">Arcade</button>
+        <button class="category-btn" data-category="puzzle">Puzzle</button>
+        <button class="category-btn" data-category="trivia">Trivia</button>
+      </div>
+    </div>
+
+    <div class="games-grid" id="gamesGrid">
+      <!-- Generado dinámicamente -->
+    </div>
+  </main>
+
+  <footer class="link-footer">
+    <p>© Link Platform — Biblioteca de Minijuegos Open Source</p>
+  </footer>
+
+  <script>
+    let allGames = [];
+    let activeCategory = 'all';
+
+    const icons = {
+      tictactoe: '❌',
+      connect4: '🟡',
+      pong: '🏓',
+      trivia: '🧠',
+      memory: '🃏',
+      snake: '🐍',
+      '2048': '🔢'
+    };
+
+    async function loadGames() {
+      try {
+        const response = await fetch('./games.json');
+        if (!response.ok) throw new Error('Error al cargar catálogo');
+        allGames = await response.json();
+        renderGames();
+      } catch (err) {
+        console.error(err);
+        document.getElementById('gamesGrid').innerHTML = `
+          <div class="no-results">
+            <h3>⚠️ Error al cargar el catálogo de juegos</h3>
+            <p>Asegúrate de ejecutar el archivo mediante un servidor HTTP o en GitHub Pages.</p>
+          </div>
+        `;
+      }
+    }
+
+    function renderGames() {
+      const searchVal = document.getElementById('searchInput').value.toLowerCase().trim();
+      const grid = document.getElementById('gamesGrid');
+
+      const filtered = allGames.filter(game => {
+        const matchCategory = activeCategory === 'all' || game.category === activeCategory;
+        const matchSearch = game.name.toLowerCase().includes(searchVal) ||
+                            game.description.toLowerCase().includes(searchVal);
+        return matchCategory && matchSearch;
+      });
+
+      if (filtered.length === 0) {
+        grid.innerHTML = `
+          <div class="no-results">
+            <h3>No se encontraron juegos</h3>
+            <p>Intenta buscar con otros términos o categorías.</p>
+          </div>
+        `;
+        return;
+      }
+
+      grid.innerHTML = filtered.map(game => `
+        <div class="game-card">
+          <div>
+            <div class="game-card-header">
+              <div class="game-card-icon">${icons[game.id] || '🕹️'}</div>
+              ${game.requiresServer
+                ? '<span class="badge badge-amber">Servidor Requerido</span>'
+                : '<span class="badge badge-green">Cliente Estático</span>'}
+            </div>
+            <h2 class="game-title">${game.name}</h2>
+            <p class="game-desc">${game.description}</p>
+            <div class="game-meta">
+              <span class="badge badge-purple">${game.category}</span>
+              ${game.mobile ? '<span class="badge badge-blue">📱 Móvil</span>' : ''}
+              <span class="badge badge-green">${game.license}</span>
+            </div>
+          </div>
+          <div class="game-card-footer">
+            <div class="players-info">
+              👥 ${game.players} ${game.players === 1 ? 'jugador' : 'jugadores'}
+            </div>
+            <a href="${game.url}" class="btn btn-primary" style="padding: 0.4rem 1rem; font-size: 0.85rem;">Jugar</a>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    document.getElementById('searchInput').addEventListener('input', renderGames);
+
+    document.getElementById('categoryList').addEventListener('click', (e) => {
+      if (e.target.classList.contains('category-btn')) {
+        document.querySelectorAll('.category-btn').forEach(btn => btn.classList.remove('active'));
+        e.target.classList.add('active');
+        activeCategory = e.target.dataset.category;
+        renderGames();
+      }
+    });
+
+    loadGames();
+  </script>
+</body>
+</html>

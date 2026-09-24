@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pong Clásico - Link Minigames</title>
+  <link rel="stylesheet" href="../assets/css/link-theme.css">
+  <style>
+    .game-container {
+      max-width: 600px;
+      margin: 0 auto;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .canvas-wrapper {
+      position: relative;
+      width: 100%;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      padding: 10px;
+      box-shadow: var(--shadow-md);
+      margin-bottom: 1.5rem;
+    }
+
+    canvas {
+      width: 100%;
+      height: auto;
+      background: #090d16;
+      border-radius: var(--radius-md);
+      display: block;
+      touch-action: none;
+    }
+
+    .controls-hint {
+      display: flex;
+      justify-content: space-between;
+      width: 100%;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-bottom: 1rem;
+    }
+
+    .touch-controls {
+      display: flex;
+      gap: 1rem;
+      width: 100%;
+      margin-bottom: 1rem;
+    }
+
+    .touch-btn {
+      flex: 1;
+      padding: 1rem;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      color: var(--text-primary);
+      font-size: 1.25rem;
+      font-weight: bold;
+      user-select: none;
+      cursor: pointer;
+    }
+
+    .touch-btn:active {
+      background: var(--accent-primary);
+    }
+  </style>
+</head>
+<body>
+
+  <header class="link-header">
+    <a href="../" class="btn-back">
+      <span>← Volver al Catálogo</span>
+    </a>
+    <div class="link-logo">
+      <div class="link-logo-icon">🏓</div>
+      <span>Pong Clásico</span>
+    </div>
+  </header>
+
+  <main class="container">
+    <div class="game-container">
+
+      <div class="canvas-wrapper">
+        <canvas id="pongCanvas" width="600" height="400"></canvas>
+      </div>
+
+      <div class="controls-hint">
+        <span>🎮 Teclas W/S o Flechas Arriba/Abajo</span>
+        <span>📱 Arrastra en la pantalla o botones</span>
+      </div>
+
+      <div class="touch-controls">
+        <button class="touch-btn" id="btnUp">▲ Subir</button>
+        <button class="touch-btn" id="btnDown">▼ Bajar</button>
+      </div>
+
+      <button class="btn btn-primary" id="btnStart" style="width: 100%;">Iniciar / Reiniciar Juego</button>
+
+    </div>
+  </main>
+
+  <footer class="link-footer">
+    <p>Licencia MIT — Link Minigames</p>
+  </footer>
+
+  <script>
+    const canvas = document.getElementById('pongCanvas');
+    const ctx = canvas.getContext('2d');
+
+    const PADDLE_WIDTH = 12;
+    const PADDLE_HEIGHT = 80;
+    const BALL_SIZE = 10;
+
+    let playerY = (canvas.height - PADDLE_HEIGHT) / 2;
+    let aiY = (canvas.height - PADDLE_HEIGHT) / 2;
+
+    let ballX = canvas.width / 2;
+    let ballY = canvas.height / 2;
+    let ballSpeedX = 5;
+    let ballSpeedY = 3;
+
+    let playerScore = 0;
+    let aiScore = 0;
+    let gameRunning = false;
+
+    let upPressed = false;
+    let downPressed = false;
+
+    function resetBall() {
+      ballX = canvas.width / 2;
+      ballY = canvas.height / 2;
+      ballSpeedX = -ballSpeedX;
+      ballSpeedY = (Math.random() - 0.5) * 6;
+    }
+
+    function draw() {
+      // Clear screen
+      ctx.fillStyle = '#090d16';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Draw net
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+      ctx.setLineDash([6, 6]);
+      ctx.beginPath();
+      ctx.moveTo(canvas.width / 2, 0);
+      ctx.lineTo(canvas.width / 2, canvas.height);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // Draw paddles
+      ctx.fillStyle = '#6366f1'; // Player
+      ctx.fillRect(15, playerY, PADDLE_WIDTH, PADDLE_HEIGHT);
+
+      ctx.fillStyle = '#ec4899'; // AI
+      ctx.fillRect(canvas.width - 15 - PADDLE_WIDTH, aiY, PADDLE_WIDTH, PADDLE_HEIGHT);
+
+      // Draw ball
+      ctx.fillStyle = '#f8fafc';
+      ctx.beginPath();
+      ctx.arc(ballX, ballY, BALL_SIZE, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Draw Scores
+      ctx.font = 'bold 36px system-ui';
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+      ctx.fillText(playerScore, canvas.width / 4, 50);
+      ctx.fillText(aiScore, (3 * canvas.width) / 4, 50);
+    }
+
+    function update() {
+      if (!gameRunning) return;
+
+      // Player Movement
+      if (upPressed && playerY > 0) playerY -= 6;
+      if (downPressed && playerY < canvas.height - PADDLE_HEIGHT) playerY += 6;
+
+      // AI Movement
+      const aiCenter = aiY + PADDLE_HEIGHT / 2;
+      if (aiCenter < ballY - 20) {
+        aiY += 4.5;
+      } else if (aiCenter > ballY + 20) {
+        aiY -= 4.5;
+      }
+
+      // Ball Movement
+      ballX += ballSpeedX;
+      ballY += ballSpeedY;
+
+      // Bounce top / bottom
+      if (ballY - BALL_SIZE <= 0 || ballY + BALL_SIZE >= canvas.height) {
+        ballSpeedY = -ballSpeedY;
+      }
+
+      // Collision Player
+      if (
+        ballX - BALL_SIZE <= 15 + PADDLE_WIDTH &&
+        ballY >= playerY &&
+        ballY <= playerY + PADDLE_HEIGHT
+      ) {
+        ballSpeedX = -ballSpeedX * 1.05;
+        const deltaY = ballY - (playerY + PADDLE_HEIGHT / 2);
+        ballSpeedY = deltaY * 0.2;
+      }
+
+      // Collision AI
+      if (
+        ballX + BALL_SIZE >= canvas.width - 15 - PADDLE_WIDTH &&
+        ballY >= aiY &&
+        ballY <= aiY + PADDLE_HEIGHT
+      ) {
+        ballSpeedX = -ballSpeedX * 1.05;
+        const deltaY = ballY - (aiY + PADDLE_HEIGHT / 2);
+        ballSpeedY = deltaY * 0.2;
+      }
+
+      // Score check
+      if (ballX < 0) {
+        aiScore++;
+        resetBall();
+      } else if (ballX > canvas.width) {
+        playerScore++;
+        resetBall();
+      }
+    }
+
+    function gameLoop() {
+      update();
+      draw();
+      requestAnimationFrame(gameLoop);
+    }
+
+    // Key listeners
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') upPressed = true;
+      if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') downPressed = true;
+    });
+
+    window.addEventListener('keyup', (e) => {
+      if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') upPressed = false;
+      if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') downPressed = false;
+    });
+
+    // Touch controls
+    const btnUp = document.getElementById('btnUp');
+    const btnDown = document.getElementById('btnDown');
+
+    btnUp.addEventListener('touchstart', (e) => { e.preventDefault(); upPressed = true; });
+    btnUp.addEventListener('touchend', (e) => { e.preventDefault(); upPressed = false; });
+    btnDown.addEventListener('touchstart', (e) => { e.preventDefault(); downPressed = true; });
+    btnDown.addEventListener('touchend', (e) => { e.preventDefault(); downPressed = false; });
+
+    btnUp.addEventListener('mousedown', () => upPressed = true);
+    btnUp.addEventListener('mouseup', () => upPressed = false);
+    btnDown.addEventListener('mousedown', () => downPressed = true);
+    btnDown.addEventListener('mouseup', () => downPressed = false);
+
+    // Canvas touch move drag
+    canvas.addEventListener('touchmove', (e) => {
+      e.preventDefault();
+      const rect = canvas.getBoundingClientRect();
+      const touchY = e.touches[0].clientY - rect.top;
+      const scaleY = canvas.height / rect.height;
+      playerY = touchY * scaleY - PADDLE_HEIGHT / 2;
+    });
+
+    document.getElementById('btnStart').addEventListener('click', () => {
+      playerScore = 0;
+      aiScore = 0;
+      gameRunning = true;
+      resetBall();
+    });
+
+    draw();
+    gameLoop();
+  </script>
+</body>
+</html>
