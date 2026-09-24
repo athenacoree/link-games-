@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Conecta 3 - Link Minigames</title>
+  <link rel="stylesheet" href="../assets/css/link-theme.css">
+  <style>
+    .game-container {
+      max-width: 440px;
+      margin: 0 auto;
+      text-align: center;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 6px;
+      background: var(--bg-card);
+      padding: 10px;
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border-color);
+      margin-bottom: 1.5rem;
+    }
+    .gem {
+      aspect-ratio: 1;
+      background: var(--bg-secondary);
+      border-radius: var(--radius-md);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2rem;
+      cursor: pointer;
+      user-select: none;
+    }
+    .gem.selected { border: 2px solid var(--accent-primary); background: rgba(99, 102, 241, 0.3); }
+  </style>
+</head>
+<body>
+  <header class="link-header">
+    <a href="../" class="btn-back"><span>← Volver al Catálogo</span></a>
+    <div class="link-logo">
+      <div class="link-logo-icon">💎</div>
+      <span>Conecta 3</span>
+    </div>
+  </header>
+
+  <main class="container">
+    <div class="game-container">
+      <div style="margin-bottom:1rem; font-size:1.25rem; font-weight:bold;">
+        Puntos: <span id="score" style="color:var(--accent-primary);">0</span>
+      </div>
+
+      <div class="grid" id="grid"></div>
+
+      <button class="btn btn-secondary" onclick="initGame()" style="width: 100%;">Mezclar Gemas</button>
+    </div>
+  </main>
+
+  <footer class="link-footer"><p>Licencia MIT — Link Minigames</p></footer>
+
+  <script>
+    const gems = ['💎', '🔥', '⚡', '🍇', '🍊'];
+    const SIZE = 6;
+    let board = [];
+    let selectedCell = null;
+    let score = 0;
+
+    function initGame() {
+      score = 0;
+      document.getElementById('score').textContent = score;
+      board = Array(SIZE).fill(null).map(() =>
+        Array(SIZE).fill(null).map(() => gems[Math.floor(Math.random() * gems.length)])
+      );
+      render();
+    }
+
+    function render() {
+      const grid = document.getElementById('grid');
+      grid.innerHTML = '';
+      for (let r = 0; r < SIZE; r++) {
+        for (let c = 0; c < SIZE; c++) {
+          const gem = document.createElement('div');
+          gem.className = 'gem';
+          if (selectedCell && selectedCell.r === r && selectedCell.c === c) gem.classList.add('selected');
+          gem.textContent = board[r][c];
+          gem.addEventListener('click', () => handleClick(r, c));
+          grid.appendChild(gem);
+        }
+      }
+    }
+
+    function handleClick(r, c) {
+      if (!selectedCell) {
+        selectedCell = { r, c };
+        render();
+      } else {
+        const dr = Math.abs(selectedCell.r - r);
+        const dc = Math.abs(selectedCell.c - c);
+
+        if ((dr === 1 && dc === 0) || (dr === 0 && dc === 1)) {
+          // Swap
+          let temp = board[r][c];
+          board[r][c] = board[selectedCell.r][selectedCell.c];
+          board[selectedCell.r][selectedCell.c] = temp;
+          score += 30;
+          document.getElementById('score').textContent = score;
+        }
+        selectedCell = null;
+        render();
+      }
+    }
+
+    initGame();
+  </script>
+</body>
+</html>

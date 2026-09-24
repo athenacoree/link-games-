@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sudoku Puzzle - Link Minigames</title>
+  <link rel="stylesheet" href="../assets/css/link-theme.css">
+  <style>
+    .game-container {
+      max-width: 440px;
+      margin: 0 auto;
+      text-align: center;
+    }
+    .sudoku-grid {
+      display: grid;
+      grid-template-columns: repeat(9, 1fr);
+      gap: 2px;
+      background: #334155;
+      padding: 4px;
+      border-radius: var(--radius-md);
+      margin-bottom: 1.5rem;
+    }
+    .cell {
+      aspect-ratio: 1;
+      background: var(--bg-card);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 1.1rem;
+      cursor: pointer;
+      user-select: none;
+    }
+    .cell.given { color: var(--accent-primary); font-weight: 900; }
+    .cell.selected { background: rgba(99, 102, 241, 0.3); border: 2px solid var(--accent-primary); }
+    .num-pad {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 8px;
+      margin-bottom: 1rem;
+    }
+    .num-btn {
+      padding: 0.75rem;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      color: white;
+      font-weight: 700;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <header class="link-header">
+    <a href="../" class="btn-back"><span>← Volver al Catálogo</span></a>
+    <div class="link-logo">
+      <div class="link-logo-icon">🔢</div>
+      <span>Sudoku Puzzle</span>
+    </div>
+  </header>
+
+  <main class="container">
+    <div class="game-container">
+      <div class="sudoku-grid" id="grid"></div>
+
+      <div class="num-pad">
+        <button class="num-btn" onclick="enterNum(1)">1</button>
+        <button class="num-btn" onclick="enterNum(2)">2</button>
+        <button class="num-btn" onclick="enterNum(3)">3</button>
+        <button class="num-btn" onclick="enterNum(4)">4</button>
+        <button class="num-btn" onclick="enterNum(5)">5</button>
+        <button class="num-btn" onclick="enterNum(6)">6</button>
+        <button class="num-btn" onclick="enterNum(7)">7</button>
+        <button class="num-btn" onclick="enterNum(8)">8</button>
+        <button class="num-btn" onclick="enterNum(9)">9</button>
+        <button class="num-btn" onclick="enterNum(0)">❌</button>
+      </div>
+
+      <button class="btn btn-secondary" onclick="initGame()" style="width: 100%;">Nuevo Sudoku</button>
+    </div>
+  </main>
+
+  <footer class="link-footer"><p>Licencia MIT — Link Minigames</p></footer>
+
+  <script>
+    const sampleBoard = [
+      [5,3,0, 0,7,0, 0,0,0],
+      [6,0,0, 1,9,5, 0,0,0],
+      [0,9,8, 0,0,0, 0,6,0],
+
+      [8,0,0, 0,6,0, 0,0,3],
+      [4,0,0, 8,0,3, 0,0,1],
+      [7,0,0, 0,2,0, 0,0,6],
+
+      [0,6,0, 0,0,0, 2,8,0],
+      [0,0,0, 4,1,9, 0,0,5],
+      [0,0,0, 0,8,0, 0,7,9]
+    ];
+
+    let currentBoard = [];
+    let selectedCell = null;
+
+    function initGame() {
+      currentBoard = JSON.parse(JSON.stringify(sampleBoard));
+      selectedCell = null;
+      render();
+    }
+
+    function render() {
+      const grid = document.getElementById('grid');
+      grid.innerHTML = '';
+      for (let r = 0; r < 9; r++) {
+        for (let c = 0; c < 9; c++) {
+          const val = currentBoard[r][c];
+          const isGiven = sampleBoard[r][c] !== 0;
+          const cell = document.createElement('div');
+          cell.className = 'cell' + (isGiven ? ' given' : '');
+          if (selectedCell && selectedCell.r === r && selectedCell.c === c) {
+            cell.classList.add('selected');
+          }
+          cell.textContent = val !== 0 ? val : '';
+          cell.addEventListener('click', () => {
+            if (!isGiven) {
+              selectedCell = { r, c };
+              render();
+            }
+          });
+          grid.appendChild(cell);
+        }
+      }
+    }
+
+    function enterNum(num) {
+      if (selectedCell) {
+        currentBoard[selectedCell.r][selectedCell.c] = num;
+        render();
+      }
+    }
+
+    initGame();
+  </script>
+</body>
+</html>

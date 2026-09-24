@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Atrapa al Topo - Link Minigames</title>
+  <link rel="stylesheet" href="../assets/css/link-theme.css">
+  <style>
+    .game-container {
+      max-width: 440px;
+      margin: 0 auto;
+      text-align: center;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-bottom: 1.5rem;
+    }
+    .hole {
+      aspect-ratio: 1;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 3rem;
+      cursor: pointer;
+      user-select: none;
+    }
+    .score-board {
+      display: flex;
+      justify-content: space-around;
+      background: var(--bg-card);
+      padding: 0.875rem;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border-color);
+      margin-bottom: 1.5rem;
+    }
+  </style>
+</head>
+<body>
+  <header class="link-header">
+    <a href="../" class="btn-back"><span>← Volver al Catálogo</span></a>
+    <div class="link-logo">
+      <div class="link-logo-icon">🔨</div>
+      <span>Atrapa al Topo</span>
+    </div>
+  </header>
+
+  <main class="container">
+    <div class="game-container">
+      <div class="score-board">
+        <div>Puntos: <strong id="score" style="color:var(--accent-primary);">0</strong></div>
+        <div>Tiempo: <strong id="time">30s</strong></div>
+      </div>
+
+      <div class="grid" id="grid">
+        <div class="hole" onclick="whack(0)">🕳️</div>
+        <div class="hole" onclick="whack(1)">🕳️</div>
+        <div class="hole" onclick="whack(2)">🕳️</div>
+        <div class="hole" onclick="whack(3)">🕳️</div>
+        <div class="hole" onclick="whack(4)">🕳️</div>
+        <div class="hole" onclick="whack(5)">🕳️</div>
+        <div class="hole" onclick="whack(6)">🕳️</div>
+        <div class="hole" onclick="whack(7)">🕳️</div>
+        <div class="hole" onclick="whack(8)">🕳️</div>
+      </div>
+
+      <button class="btn btn-primary" onclick="startGame()" style="width: 100%;">Iniciar Juego</button>
+    </div>
+  </main>
+
+  <footer class="link-footer"><p>Licencia MIT — Link Minigames</p></footer>
+
+  <script>
+    let activeHole = -1;
+    let score = 0;
+    let timeLeft = 30;
+    let gameTimer = null;
+    let moleTimer = null;
+
+    function startGame() {
+      clearInterval(gameTimer);
+      clearInterval(moleTimer);
+      score = 0;
+      timeLeft = 30;
+      document.getElementById('score').textContent = score;
+      document.getElementById('time').textContent = '30s';
+
+      gameTimer = setInterval(() => {
+        timeLeft--;
+        document.getElementById('time').textContent = `${timeLeft}s`;
+        if (timeLeft <= 0) {
+          clearInterval(gameTimer);
+          clearInterval(moleTimer);
+          alert(`🎉 ¡Fin del juego! Conseguiste ${score} puntos.`);
+        }
+      }, 1000);
+
+      moleTimer = setInterval(showMole, 750);
+    }
+
+    function showMole() {
+      const holes = document.querySelectorAll('.hole');
+      holes.forEach(h => h.textContent = '🕳️');
+      activeHole = Math.floor(Math.random() * 9);
+      holes[activeHole].textContent = '🐹';
+    }
+
+    function whack(idx) {
+      if (idx === activeHole) {
+        score += 10;
+        document.getElementById('score').textContent = score;
+        document.querySelectorAll('.hole')[idx].textContent = '💥';
+        activeHole = -1;
+      }
+    }
+  </script>
+</body>
+</html>

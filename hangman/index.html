@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>El Ahorcado - Link Minigames</title>
+  <link rel="stylesheet" href="../assets/css/link-theme.css">
+  <style>
+    .game-container {
+      max-width: 440px;
+      margin: 0 auto;
+      text-align: center;
+    }
+    .gallows {
+      font-size: 3.5rem;
+      background: var(--bg-card);
+      padding: 1.5rem;
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border-color);
+      margin-bottom: 1.5rem;
+    }
+    .word-display {
+      font-size: 2rem;
+      font-weight: 800;
+      letter-spacing: 0.25em;
+      margin-bottom: 1.5rem;
+      color: var(--accent-primary);
+    }
+    .kb {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      justify-content: center;
+      margin-bottom: 1.5rem;
+    }
+    .key-btn {
+      padding: 0.6rem 0.8rem;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .key-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+  </style>
+</head>
+<body>
+  <header class="link-header">
+    <a href="../" class="btn-back"><span>← Volver al Catálogo</span></a>
+    <div class="link-logo">
+      <div class="link-logo-icon">🪢</div>
+      <span>El Ahorcado</span>
+    </div>
+  </header>
+
+  <main class="container">
+    <div class="game-container">
+      <div class="gallows" id="gallowsBox">🪢 (0/6)</div>
+
+      <div class="word-display" id="wordBox">_ _ _ _ _</div>
+
+      <div class="kb" id="kbBox"></div>
+
+      <button class="btn btn-primary" onclick="initGame()" style="width: 100%;">Nueva Palabra</button>
+    </div>
+  </main>
+
+  <footer class="link-footer"><p>Licencia MIT — Link Minigames</p></footer>
+
+  <script>
+    const WORDS = ["PLATAFORMA", "MINIJUEGOS", "TECNOLOGIA", "INTERFAZ", "JUEGO", "SISTEMA", "BIBLIOTECA", "CODIGO", "LINK"];
+    const alphabet = "ABCDEFGHIJKLMNÑOPQRSTUVWXYZ".split("");
+
+    let word = "";
+    let guessed = [];
+    let mistakes = 0;
+
+    function initGame() {
+      word = WORDS[Math.floor(Math.random() * WORDS.length)];
+      guessed = [];
+      mistakes = 0;
+      updateDisplay();
+
+      const kb = document.getElementById('kbBox');
+      kb.innerHTML = alphabet.map(letter => `
+        <button class="key-btn" id="key-${letter}" onclick="guess('${letter}')">${letter}</button>
+      `).join('');
+    }
+
+    function updateDisplay() {
+      document.getElementById('gallowsBox').textContent = `🪢 Errores: ${mistakes}/6`;
+      const displayWord = word.split("").map(l => guessed.includes(l) ? l : "_").join(" ");
+      document.getElementById('wordBox').textContent = displayWord;
+    }
+
+    function guess(letter) {
+      document.getElementById(`key-${letter}`).disabled = true;
+      if (word.includes(letter)) {
+        guessed.push(letter);
+      } else {
+        mistakes++;
+      }
+      updateDisplay();
+
+      if (word.split("").every(l => guessed.includes(l))) {
+        setTimeout(() => alert("🎉 ¡Felicidades! Adivinaste la palabra."), 100);
+      } else if (mistakes >= 6) {
+        setTimeout(() => alert(`💥 ¡Ahorcado! La palabra era: ${word}`), 100);
+      }
+    }
+
+    initGame();
+  </script>
+</body>
+</html>

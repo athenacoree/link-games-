@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reto Matemático - Link Minigames</title>
+  <link rel="stylesheet" href="../assets/css/link-theme.css">
+  <style>
+    .game-container {
+      max-width: 440px;
+      margin: 0 auto;
+      text-align: center;
+    }
+    .math-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      padding: 2rem;
+      margin-bottom: 1.5rem;
+    }
+    .equation {
+      font-size: 3rem;
+      font-weight: 900;
+      color: var(--accent-primary);
+      margin-bottom: 1.5rem;
+    }
+    .options {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+    }
+    .opt-btn {
+      padding: 1rem;
+      font-size: 1.5rem;
+      font-weight: 800;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      color: white;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <header class="link-header">
+    <a href="../" class="btn-back"><span>← Volver al Catálogo</span></a>
+    <div class="link-logo">
+      <div class="link-logo-icon">➕</div>
+      <span>Reto Matemático</span>
+    </div>
+  </header>
+
+  <main class="container">
+    <div class="game-container">
+      <div style="margin-bottom:1rem; font-size:1.25rem; font-weight:bold;">
+        Puntos: <span id="score" style="color:var(--accent-primary);">0</span> | Tiempo: <span id="time">20s</span>
+      </div>
+
+      <div class="math-card">
+        <div class="equation" id="eqBox">5 + 3 = ?</div>
+        <div class="options" id="optContainer"></div>
+      </div>
+
+      <button class="btn btn-primary" onclick="initGame()" style="width: 100%;">Iniciar Reto</button>
+    </div>
+  </main>
+
+  <footer class="link-footer"><p>Licencia MIT — Link Minigames</p></footer>
+
+  <script>
+    let score = 0;
+    let timeLeft = 20;
+    let timer = null;
+    let currentAns = 0;
+
+    function initGame() {
+      clearInterval(timer);
+      score = 0;
+      timeLeft = 20;
+      document.getElementById('score').textContent = score;
+      document.getElementById('time').textContent = '20s';
+
+      nextEquation();
+
+      timer = setInterval(() => {
+        timeLeft--;
+        document.getElementById('time').textContent = `${timeLeft}s`;
+        if (timeLeft <= 0) {
+          clearInterval(timer);
+          alert(`🎉 ¡Tiempo agotado! Respondiste ${score} operaciones correctamente.`);
+        }
+      }, 1000);
+    }
+
+    function nextEquation() {
+      const a = Math.floor(Math.random() * 20) + 1;
+      const b = Math.floor(Math.random() * 20) + 1;
+      const op = Math.random() < 0.5 ? '+' : 'x';
+
+      currentAns = op === '+' ? a + b : a * b;
+      document.getElementById('eqBox').textContent = `${a} ${op} ${b} = ?`;
+
+      let opts = [currentAns];
+      while (opts.length < 4) {
+        let fake = currentAns + (Math.floor(Math.random() * 10) - 5);
+        if (fake !== currentAns && !opts.includes(fake)) opts.push(fake);
+      }
+      opts.sort(() => Math.random() - 0.5);
+
+      document.getElementById('optContainer').innerHTML = opts.map(o => `
+        <button class="opt-btn" onclick="check(${o})">${o}</button>
+      `).join('');
+    }
+
+    function check(val) {
+      if (val === currentAns) {
+        score++;
+        document.getElementById('score').textContent = score;
+        nextEquation();
+      } else {
+        nextEquation();
+      }
+    }
+  </script>
+</body>
+</html>

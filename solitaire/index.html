@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Solitario Klondike - Link Minigames</title>
+  <link rel="stylesheet" href="../assets/css/link-theme.css">
+  <style>
+    .game-container {
+      max-width: 520px;
+      margin: 0 auto;
+      text-align: center;
+    }
+    .cards-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 6px;
+      margin-bottom: 1.5rem;
+    }
+    .card-slot {
+      aspect-ratio: 0.7;
+      background: var(--bg-card);
+      border: 1px dashed var(--border-color);
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 1rem;
+      cursor: pointer;
+    }
+    .card-slot.active { background: #1e293b; border-style: solid; border-color: var(--accent-primary); }
+    .card-red { color: #ef4444; }
+    .card-black { color: #f8fafc; }
+  </style>
+</head>
+<body>
+  <header class="link-header">
+    <a href="../" class="btn-back"><span>← Volver al Catálogo</span></a>
+    <div class="link-logo">
+      <div class="link-logo-icon">🎴</div>
+      <span>Solitario Klondike</span>
+    </div>
+  </header>
+
+  <main class="container">
+    <div class="game-container">
+      <div class="cards-grid" id="tableau"></div>
+      <button class="btn btn-primary" onclick="initGame()" style="width: 100%;">Repartir Cartas</button>
+    </div>
+  </main>
+
+  <footer class="link-footer"><p>Licencia MIT — Link Minigames</p></footer>
+
+  <script>
+    const suits = ['♠', '♥', '♦', '♣'];
+    const values = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
+
+    function initGame() {
+      const grid = document.getElementById('tableau');
+      grid.innerHTML = '';
+      for (let i = 0; i < 7; i++) {
+        const slot = document.createElement('div');
+        const suit = suits[Math.floor(Math.random() * suits.length)];
+        const val = values[Math.floor(Math.random() * values.length)];
+        const isRed = suit === '♥' || suit === '♦';
+
+        slot.className = 'card-slot active ' + (isRed ? 'card-red' : 'card-black');
+        slot.textContent = `${val}${suit}`;
+        grid.appendChild(slot);
+      }
+    }
+
+    initGame();
+  </script>
+</body>
+</html>

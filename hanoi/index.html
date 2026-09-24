@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Torres de Hanói - Link Minigames</title>
+  <link rel="stylesheet" href="../assets/css/link-theme.css">
+  <style>
+    .game-container {
+      max-width: 480px;
+      margin: 0 auto;
+      text-align: center;
+    }
+    .hanoi-towers {
+      display: flex;
+      justify-content: space-around;
+      align-items: flex-end;
+      height: 200px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      padding: 10px;
+      margin-bottom: 1.5rem;
+    }
+    .tower {
+      width: 28%;
+      height: 100%;
+      background: rgba(255, 255, 255, 0.05);
+      border-bottom: 4px solid var(--accent-primary);
+      display: flex;
+      flex-direction: column-reverse;
+      align-items: center;
+      cursor: pointer;
+      position: relative;
+    }
+    .tower.selected { background: rgba(99, 102, 241, 0.2); }
+    .disc {
+      height: 24px;
+      border-radius: 6px;
+      margin-bottom: 3px;
+      transition: all 0.2s ease;
+    }
+  </style>
+</head>
+<body>
+  <header class="link-header">
+    <a href="../" class="btn-back"><span>← Volver al Catálogo</span></a>
+    <div class="link-logo">
+      <div class="link-logo-icon">🗼</div>
+      <span>Torres de Hanói</span>
+    </div>
+  </header>
+
+  <main class="container">
+    <div class="game-container">
+      <div style="margin-bottom:1rem; font-weight:bold;">Movimientos: <span id="moves" style="color:var(--accent-primary);">0</span></div>
+
+      <div class="hanoi-towers">
+        <div class="tower" id="t0" onclick="selectTower(0)"></div>
+        <div class="tower" id="t1" onclick="selectTower(1)"></div>
+        <div class="tower" id="t2" onclick="selectTower(2)"></div>
+      </div>
+
+      <button class="btn btn-secondary" onclick="initGame()" style="width: 100%;">Reiniciar Torres</button>
+    </div>
+  </main>
+
+  <footer class="link-footer"><p>Licencia MIT — Link Minigames</p></footer>
+
+  <script>
+    let towers = [[], [], []];
+    let selectedTower = null;
+    let moves = 0;
+
+    const discColors = ['#ef4444', '#f59e0b', '#10b981', '#3b82f6'];
+
+    function initGame() {
+      towers = [[4, 3, 2, 1], [], []];
+      selectedTower = null;
+      moves = 0;
+      document.getElementById('moves').textContent = moves;
+      render();
+    }
+
+    function render() {
+      for (let i = 0; i < 3; i++) {
+        const tEl = document.getElementById(`t${i}`);
+        tEl.innerHTML = '';
+        if (selectedTower === i) tEl.classList.add('selected');
+        else tEl.classList.remove('selected');
+
+        towers[i].forEach(discSize => {
+          const disc = document.createElement('div');
+          disc.className = 'disc';
+          disc.style.width = `${discSize * 22}%`;
+          disc.style.backgroundColor = discColors[discSize - 1];
+          tEl.appendChild(disc);
+        });
+      }
+    }
+
+    function selectTower(idx) {
+      if (selectedTower === null) {
+        if (towers[idx].length > 0) {
+          selectedTower = idx;
+          render();
+        }
+      } else {
+        if (selectedTower === idx) {
+          selectedTower = null;
+          render();
+          return;
+        }
+
+        const from = towers[selectedTower];
+        const to = towers[idx];
+
+        if (to.length === 0 || from[from.length - 1] < to[to.length - 1]) {
+          to.push(from.pop());
+          moves++;
+          document.getElementById('moves').textContent = moves;
+
+          if (towers[2].length === 4) {
+            setTimeout(() => alert(`🎉 ¡Felicidades! Completaste las Torres de Hanói en ${moves} movimientos.`), 200);
+          }
+        }
+        selectedTower = null;
+        render();
+      }
+    }
+
+    initGame();
+  </script>
+</body>
+</html>

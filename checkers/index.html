@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Damas Clásicas - Link Minigames</title>
+  <link rel="stylesheet" href="../assets/css/link-theme.css">
+  <style>
+    .game-container {
+      max-width: 440px;
+      margin: 0 auto;
+      text-align: center;
+    }
+    .checkers-board {
+      display: grid;
+      grid-template-columns: repeat(8, 1fr);
+      gap: 2px;
+      background: #1e293b;
+      padding: 6px;
+      border-radius: var(--radius-lg);
+      margin-bottom: 1.5rem;
+    }
+    .cell {
+      aspect-ratio: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2rem;
+      cursor: pointer;
+    }
+    .cell.dark { background: #0f172a; }
+    .cell.light { background: #334155; }
+    .cell.selected { background: rgba(99, 102, 241, 0.4); }
+  </style>
+</head>
+<body>
+  <header class="link-header">
+    <a href="../" class="btn-back"><span>← Volver al Catálogo</span></a>
+    <div class="link-logo">
+      <div class="link-logo-icon">⚪</div>
+      <span>Damas Clásicas</span>
+    </div>
+  </header>
+
+  <main class="container">
+    <div class="game-container">
+      <div style="margin-bottom:1rem; font-weight:bold;" id="turnText">Turno: Rojas 🔴</div>
+      <div class="checkers-board" id="board"></div>
+      <button class="btn btn-secondary" onclick="initGame()" style="width: 100%;">Reiniciar Partida</button>
+    </div>
+  </main>
+
+  <footer class="link-footer"><p>Licencia MIT — Link Minigames</p></footer>
+
+  <script>
+    let boardState = [];
+    let turn = 'R'; // 'R' or 'B'
+    let selected = null;
+
+    function initGame() {
+      boardState = Array(8).fill(null).map(() => Array(8).fill(null));
+      for (let r = 0; r < 3; r++) {
+        for (let c = 0; c < 8; c++) {
+          if ((r + c) % 2 === 1) boardState[r][c] = 'B';
+        }
+      }
+      for (let r = 5; r < 8; r++) {
+        for (let c = 0; c < 8; c++) {
+          if ((r + c) % 2 === 1) boardState[r][c] = 'R';
+        }
+      }
+      turn = 'R';
+      selected = null;
+      render();
+    }
+
+    function render() {
+      const boardEl = document.getElementById('board');
+      boardEl.innerHTML = '';
+      for (let r = 0; r < 8; r++) {
+        for (let c = 0; c < 8; c++) {
+          const isDark = (r + c) % 2 === 1;
+          const cell = document.createElement('div');
+          cell.className = 'cell ' + (isDark ? 'dark' : 'light');
+          if (selected && selected.r === r && selected.c === c) cell.classList.add('selected');
+
+          const piece = boardState[r][c];
+          if (piece === 'R') cell.textContent = '🔴';
+          else if (piece === 'B') cell.textContent = '⚪';
+
+          cell.addEventListener('click', () => handleClick(r, c));
+          boardEl.appendChild(cell);
+        }
+      }
+      document.getElementById('turnText').textContent = turn === 'R' ? 'Turno: Rojas 🔴' : 'Turno: Blancas ⚪';
+    }
+
+    function handleClick(r, c) {
+      const piece = boardState[r][c];
+      if (piece === turn) {
+        selected = { r, c };
+        render();
+      } else if (selected && (r + c) % 2 === 1 && !piece) {
+        boardState[r][c] = turn;
+        boardState[selected.r][selected.c] = null;
+        turn = turn === 'R' ? 'B' : 'R';
+        selected = null;
+        render();
+      }
+    }
+
+    initGame();
+  </script>
+</body>
+</html>

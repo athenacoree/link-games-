@@ -167,6 +167,39 @@ a {
   border-color: var(--border-highlight);
 }
 
+.btn-fav {
+  background: transparent;
+  border: none;
+  font-size: 1.25rem;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.btn-fav:hover {
+  transform: scale(1.2);
+}
+
+/* Stats Counter Pill */
+.stats-bar-header {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  margin-top: 1rem;
+}
+
+.stat-pill {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-color);
+  padding: 0.4rem 1rem;
+  border-radius: var(--radius-full);
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.stat-pill strong {
+  color: var(--text-primary);
+}
+
 /* Badges */
 .badge {
   display: inline-flex;

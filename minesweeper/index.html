@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Buscaminas - Link Minigames</title>
+  <link rel="stylesheet" href="../assets/css/link-theme.css">
+  <style>
+    .game-container {
+      max-width: 440px;
+      margin: 0 auto;
+      text-align: center;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(8, 1fr);
+      gap: 4px;
+      background: var(--bg-card);
+      padding: 10px;
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border-color);
+      margin-bottom: 1.5rem;
+    }
+    .cell {
+      aspect-ratio: 1;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 1.25rem;
+      cursor: pointer;
+      user-select: none;
+    }
+    .cell.revealed { background: #1e293b; border-color: transparent; }
+    .cell.mine { background: #ef4444; color: white; }
+    .mode-bar {
+      display: flex;
+      gap: 0.5rem;
+      justify-content: center;
+      margin-bottom: 1rem;
+    }
+  </style>
+</head>
+<body>
+  <header class="link-header">
+    <a href="../" class="btn-back"><span>← Volver al Catálogo</span></a>
+    <div class="link-logo">
+      <div class="link-logo-icon">💣</div>
+      <span>Buscaminas</span>
+    </div>
+  </header>
+
+  <main class="container">
+    <div class="game-container">
+      <div class="mode-bar">
+        <button class="btn btn-secondary" id="btnMode">Modo: 🔍 Revelar</button>
+      </div>
+
+      <div class="grid" id="grid"></div>
+
+      <button class="btn btn-primary" onclick="initGame()" style="width: 100%;">Reiniciar Tablero</button>
+    </div>
+  </main>
+
+  <footer class="link-footer"><p>Licencia MIT — Link Minigames</p></footer>
+
+  <script>
+    const ROWS = 8, COLS = 8, MINES = 10;
+    let board = [], revealed = [], flagged = [];
+    let flagMode = false, gameOver = false;
+
+    function initGame() {
+      board = Array(ROWS).fill(null).map(() => Array(COLS).fill(0));
+      revealed = Array(ROWS).fill(null).map(() => Array(COLS).fill(false));
+      flagged = Array(ROWS).fill(null).map(() => Array(COLS).fill(false));
+      gameOver = false;
+
+      // Plant mines
+      let planted = 0;
+      while (planted < MINES) {
+        let r = Math.floor(Math.random() * ROWS);
+        let c = Math.floor(Math.random() * COLS);
+        if (board[r][c] !== 'M') {
+          board[r][c] = 'M';
+          planted++;
+        }
+      }
+
+      // Calculate numbers
+      for (let r = 0; r < ROWS; r++) {
+        for (let c = 0; c < COLS; c++) {
+          if (board[r][c] === 'M') continue;
+          let count = 0;
+          for (let dr = -1; dr <= 1; dr++) {
+            for (let dc = -1; dc <= 1; dc++) {
+              let nr = r + dr, nc = c + dc;
+              if (nr >= 0 && nr < ROWS && nc >= 0 && nc < COLS && board[nr][nc] === 'M') {
+                count++;
+              }
+            }
+          }
+          board[r][c] = count;
+        }
+      }
+
+      render();
+    }
+
+    function render() {
+      const grid = document.getElementById('grid');
+      grid.innerHTML = '';
+      for (let r = 0; r < ROWS; r++) {
+        for (let c = 0; c < COLS; c++) {
+          const cell = document.createElement('div');
+          cell.className = 'cell';
+          if (revealed[r][c]) {
+            cell.classList.add('revealed');
+            if (board[r][c] === 'M') {
+              cell.classList.add('mine');
+              cell.textContent = '💣';
+            } else if (board[r][c] > 0) {
+              cell.textContent = board[r][c];
+            }
+          } else if (flagged[r][c]) {
+            cell.textContent = '🚩';
+          }
+
+          cell.addEventListener('click', () => handleClick(r, c));
+          cell.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+            toggleFlag(r, c);
+          });
+          grid.appendChild(cell);
+        }
+      }
+    }
+
+    function handleClick(r, c) {
+      if (gameOver || revealed[r][c]) return;
+
+      if (flagMode) {
+        toggleFlag(r, c);
+        return;
+      }
+
+      if (flagged[r][c]) return;
+
+      if (board[r][c] === 'M') {
+        gameOver = true;
+        revealAll();
+        alert('💥 ¡Boom! Has tocado una mina.');
+        return;
+      }
+
+      revealCell(r, c);
+      render();
+      checkWin();
+    }
+
+    function revealCell(r, c) {
+      if (r < 0 || r >= ROWS || c < 0 || c >= COLS || revealed[r][c] || flagged[r][c]) return;
+      revealed[r][c] = true;
+      if (board[r][c] === 0) {
+        for (let dr = -1; dr <= 1; dr++) {
+          for (let dc = -1; dc <= 1; dc++) {
+            revealCell(r + dr, c + dc);
+          }
+        }
+      }
+    }
+
+    function toggleFlag(r, c) {
+      if (gameOver || revealed[r][c]) return;
+      flagged[r][c] = !flagged[r][c];
+      render();
+    }
+
+    function revealAll() {
+      for (let r = 0; r < ROWS; r++) {
+        for (let c = 0; c < COLS; c++) {
+          revealed[r][c] = true;
+        }
+      }
+      render();
+    }
+
+    function checkWin() {
+      let win = true;
+      for (let r = 0; r < ROWS; r++) {
+        for (let c = 0; c < COLS; c++) {
+          if (board[r][c] !== 'M' && !revealed[r][c]) win = false;
+        }
+      }
+      if (win) {
+        alert('🎉 ¡Felicidades! Limpiaste el campo de minas.');
+        gameOver = true;
+      }
+    }
+
+    document.getElementById('btnMode').addEventListener('click', () => {
+      flagMode = !flagMode;
+      document.getElementById('btnMode').textContent = flagMode ? 'Modo: 🚩 Bandera' : 'Modo: 🔍 Revelar';
+    });
+
+    initGame();
+  </script>
+</body>
+</html>

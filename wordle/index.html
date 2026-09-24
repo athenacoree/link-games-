@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Adivina la Palabra - Link Minigames</title>
+  <link rel="stylesheet" href="../assets/css/link-theme.css">
+  <style>
+    .game-container {
+      max-width: 440px;
+      margin: 0 auto;
+      text-align: center;
+    }
+    .wordle-grid {
+      display: grid;
+      grid-template-rows: repeat(6, 1fr);
+      gap: 6px;
+      margin-bottom: 1.5rem;
+    }
+    .wordle-row {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 6px;
+    }
+    .tile {
+      aspect-ratio: 1;
+      border: 2px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      background: var(--bg-card);
+    }
+    .tile.correct { background: #10b981; border-color: #10b981; color: white; }
+    .tile.present { background: #f59e0b; border-color: #f59e0b; color: white; }
+    .tile.absent { background: #334155; border-color: #334155; color: white; }
+    .keyboard {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 1rem;
+    }
+    .kb-row {
+      display: flex;
+      justify-content: center;
+      gap: 4px;
+    }
+    .key {
+      padding: 0.75rem 0.5rem;
+      border-radius: var(--radius-sm);
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      color: white;
+      font-weight: 700;
+      cursor: pointer;
+      min-width: 32px;
+      user-select: none;
+    }
+    .key.wide { flex: 1.5; font-size: 0.8rem; }
+  </style>
+</head>
+<body>
+  <header class="link-header">
+    <a href="../" class="btn-back"><span>← Volver al Catálogo</span></a>
+    <div class="link-logo">
+      <div class="link-logo-icon">🔤</div>
+      <span>Adivina la Palabra</span>
+    </div>
+  </header>
+
+  <main class="container">
+    <div class="game-container">
+      <div class="wordle-grid" id="grid"></div>
+
+      <div class="keyboard" id="keyboard">
+        <div class="kb-row">
+          <button class="key" onclick="handleKey('Q')">Q</button>
+          <button class="key" onclick="handleKey('W')">W</button>
+          <button class="key" onclick="handleKey('E')">E</button>
+          <button class="key" onclick="handleKey('R')">R</button>
+          <button class="key" onclick="handleKey('T')">T</button>
+          <button class="key" onclick="handleKey('Y')">Y</button>
+          <button class="key" onclick="handleKey('U')">U</button>
+          <button class="key" onclick="handleKey('I')">I</button>
+          <button class="key" onclick="handleKey('O')">O</button>
+          <button class="key" onclick="handleKey('P')">P</button>
+        </div>
+        <div class="kb-row">
+          <button class="key" onclick="handleKey('A')">A</button>
+          <button class="key" onclick="handleKey('S')">S</button>
+          <button class="key" onclick="handleKey('D')">D</button>
+          <button class="key" onclick="handleKey('F')">F</button>
+          <button class="key" onclick="handleKey('G')">G</button>
+          <button class="key" onclick="handleKey('H')">H</button>
+          <button class="key" onclick="handleKey('J')">J</button>
+          <button class="key" onclick="handleKey('K')">K</button>
+          <button class="key" onclick="handleKey('L')">L</button>
+          <button class="key" onclick="handleKey('Ñ')">Ñ</button>
+        </div>
+        <div class="kb-row">
+          <button class="key wide" onclick="handleKey('ENTER')">ENTER</button>
+          <button class="key" onclick="handleKey('Z')">Z</button>
+          <button class="key" onclick="handleKey('X')">X</button>
+          <button class="key" onclick="handleKey('C')">C</button>
+          <button class="key" onclick="handleKey('V')">V</button>
+          <button class="key" onclick="handleKey('B')">B</button>
+          <button class="key" onclick="handleKey('N')">N</button>
+          <button class="key" onclick="handleKey('M')">M</button>
+          <button class="key wide" onclick="handleKey('BACK')">⌫</button>
+        </div>
+      </div>
+
+      <button class="btn btn-secondary" onclick="initGame()" style="width:100%;">Nueva Palabra</button>
+    </div>
+  </main>
+
+  <footer class="link-footer"><p>Licencia MIT — Link Minigames</p></footer>
+
+  <script>
+    const WORDS = ["LINK", "GAMES", "PLAZA", "FUEGO", "PLAYA", "MUNDO", "PIXEL", "AUDIO", "SUPER", "TEXTO", "CLAVE", "LINEA", "GATO", "PERRO", "NOCHE", "CAMPO", "LIBRO"];
+    let targetWord = "";
+    let currentRow = 0;
+    let currentTile = 0;
+    let guesses = Array(6).fill("").map(() => Array(5).fill(""));
+
+    function initGame() {
+      targetWord = WORDS[Math.floor(Math.random() * WORDS.length)];
+      if (targetWord.length < 5) targetWord = targetWord.padEnd(5, "S");
+      currentRow = 0;
+      currentTile = 0;
+      guesses = Array(6).fill("").map(() => Array(5).fill(""));
+      renderGrid();
+    }
+
+    function renderGrid() {
+      const gridEl = document.getElementById('grid');
+      gridEl.innerHTML = '';
+      for (let r = 0; r < 6; r++) {
+        const rowEl = document.createElement('div');
+        rowEl.className = 'wordle-row';
+        for (let c = 0; c < 5; c++) {
+          const tile = document.createElement('div');
+          tile.className = 'tile';
+          tile.id = `tile-${r}-${c}`;
+          tile.textContent = guesses[r][c];
+          rowEl.appendChild(tile);
+        }
+        gridEl.appendChild(rowEl);
+      }
+    }
+
+    function handleKey(key) {
+      if (key === 'ENTER') {
+        if (currentTile === 5) {
+          checkWord();
+        }
+      } else if (key === 'BACK') {
+        if (currentTile > 0) {
+          currentTile--;
+          guesses[currentRow][currentTile] = "";
+          document.getElementById(`tile-${currentRow}-${currentTile}`).textContent = "";
+        }
+      } else if (currentTile < 5 && key.length === 1) {
+        guesses[currentRow][currentTile] = key;
+        document.getElementById(`tile-${currentRow}-${currentTile}`).textContent = key;
+        currentTile++;
+      }
+    }
+
+    function checkWord() {
+      const guess = guesses[currentRow].join("");
+      const targetArr = targetWord.split("");
+
+      for (let c = 0; c < 5; c++) {
+        const tile = document.getElementById(`tile-${currentRow}-${c}`);
+        const char = guess[c];
+        if (char === targetArr[c]) {
+          tile.classList.add('correct');
+        } else if (targetArr.includes(char)) {
+          tile.classList.add('present');
+        } else {
+          tile.classList.add('absent');
+        }
+      }
+
+      if (guess === targetWord) {
+        alert("🎉 ¡Felicidades! Adivinaste la palabra.");
+      } else if (currentRow === 5) {
+        alert(`💥 Fin del juego. La palabra era: ${targetWord}`);
+      } else {
+        currentRow++;
+        currentTile = 0;
+      }
+    }
+
+    document.addEventListener('keydown', (e) => {
+      const k = e.key.toUpperCase();
+      if (k === 'ENTER') handleKey('ENTER');
+      else if (k === 'BACKSPACE') handleKey('BACK');
+      else if (/^[A-ZÑ]$/.test(k)) handleKey(k);
+    });
+
+    initGame();
+  </script>
+</body>
+</html>

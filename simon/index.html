@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Secuencia de Colores - Link Minigames</title>
+  <link rel="stylesheet" href="../assets/css/link-theme.css">
+  <style>
+    .game-container {
+      max-width: 440px;
+      margin: 0 auto;
+      text-align: center;
+    }
+    .simon-board {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+      margin-bottom: 1.5rem;
+      aspect-ratio: 1;
+      padding: 16px;
+      background: var(--bg-card);
+      border-radius: 50%;
+      border: 2px solid var(--border-color);
+      box-shadow: var(--shadow-md);
+    }
+    .simon-btn {
+      border-radius: 20px;
+      border: none;
+      cursor: pointer;
+      opacity: 0.6;
+      transition: all 0.2s ease;
+    }
+    .simon-btn.active {
+      opacity: 1;
+      transform: scale(0.96);
+      box-shadow: 0 0 25px currentColor;
+    }
+    .btn-green { background: #10b981; color: #10b981; }
+    .btn-red { background: #ef4444; color: #ef4444; }
+    .btn-yellow { background: #f59e0b; color: #f59e0b; }
+    .btn-blue { background: #3b82f6; color: #3b82f6; }
+    .score-board {
+      font-size: 1.5rem;
+      font-weight: 800;
+      margin-bottom: 1.5rem;
+    }
+  </style>
+</head>
+<body>
+  <header class="link-header">
+    <a href="../" class="btn-back"><span>← Volver al Catálogo</span></a>
+    <div class="link-logo">
+      <div class="link-logo-icon">🔴</div>
+      <span>Secuencia de Colores</span>
+    </div>
+  </header>
+
+  <main class="container">
+    <div class="game-container">
+      <div class="score-board">Nivel: <span id="level" style="color:var(--accent-primary);">0</span></div>
+
+      <div class="simon-board">
+        <button class="simon-btn btn-green" data-color="0"></button>
+        <button class="simon-btn btn-red" data-color="1"></button>
+        <button class="simon-btn btn-yellow" data-color="2"></button>
+        <button class="simon-btn btn-blue" data-color="3"></button>
+      </div>
+
+      <button class="btn btn-primary" id="btnStart" style="width: 100%;">Iniciar Secuencia</button>
+    </div>
+  </main>
+
+  <footer class="link-footer"><p>Licencia MIT — Link Minigames</p></footer>
+
+  <script>
+    let sequence = [];
+    let playerStep = 0;
+    let level = 0;
+    let isPlaying = false;
+
+    const buttons = document.querySelectorAll('.simon-btn');
+
+    function startGame() {
+      sequence = [];
+      level = 0;
+      nextLevel();
+    }
+
+    function nextLevel() {
+      level++;
+      playerStep = 0;
+      document.getElementById('level').textContent = level;
+      sequence.push(Math.floor(Math.random() * 4));
+      playSequence();
+    }
+
+    function playSequence() {
+      isPlaying = false;
+      let i = 0;
+      const interval = setInterval(() => {
+        activateButton(sequence[i]);
+        i++;
+        if (i >= sequence.length) {
+          clearInterval(interval);
+          isPlaying = true;
+        }
+      }, 700);
+    }
+
+    function activateButton(idx) {
+      buttons[idx].classList.add('active');
+      setTimeout(() => buttons[idx].classList.remove('active'), 400);
+    }
+
+    buttons.forEach((btn, idx) => {
+      btn.addEventListener('click', () => {
+        if (!isPlaying) return;
+        activateButton(idx);
+
+        if (idx === sequence[playerStep]) {
+          playerStep++;
+          if (playerStep === sequence.length) {
+            setTimeout(nextLevel, 800);
+          }
+        } else {
+          alert(`💥 ¡Secuencia incorrecta! Llegaste al nivel ${level}.`);
+          isPlaying = false;
+        }
+      });
+    });
+
+    document.getElementById('btnStart').addEventListener('click', startGame);
+  </script>
+</body>
+</html>

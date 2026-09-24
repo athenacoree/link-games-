@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Flappy Link - Link Minigames</title>
+  <link rel="stylesheet" href="../assets/css/link-theme.css">
+  <style>
+    .game-container {
+      max-width: 440px;
+      margin: 0 auto;
+      text-align: center;
+    }
+    .canvas-wrapper {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      padding: 10px;
+      box-shadow: var(--shadow-md);
+      margin-bottom: 1.5rem;
+    }
+    canvas {
+      width: 100%;
+      height: auto;
+      background: #0b1329;
+      border-radius: var(--radius-md);
+      display: block;
+      touch-action: none;
+    }
+    .score-board {
+      display: flex;
+      justify-content: space-around;
+      background: var(--bg-card);
+      padding: 0.875rem;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border-color);
+      margin-bottom: 1.5rem;
+    }
+    .score-val {
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: var(--accent-primary);
+    }
+  </style>
+</head>
+<body>
+  <header class="link-header">
+    <a href="../" class="btn-back"><span>← Volver al Catálogo</span></a>
+    <div class="link-logo">
+      <div class="link-logo-icon">🐤</div>
+      <span>Flappy Link</span>
+    </div>
+  </header>
+
+  <main class="container">
+    <div class="game-container">
+      <div class="score-board">
+        <div>
+          <div style="font-size:0.75rem; color:var(--text-muted); text-transform:uppercase;">Puntos</div>
+          <div class="score-val" id="score">0</div>
+        </div>
+        <div>
+          <div style="font-size:0.75rem; color:var(--text-muted); text-transform:uppercase;">RRecord</div>
+          <div class="score-val" id="highScore" style="color: #ec4899;">0</div>
+        </div>
+      </div>
+
+      <div class="canvas-wrapper">
+        <canvas id="flappyCanvas" width="360" height="500"></canvas>
+      </div>
+
+      <button class="btn btn-primary" id="btnTap" style="width: 100%; height: 50px; font-size: 1.1rem;">🚀 Aletear / Saltar (Espacio / Tap)</button>
+    </div>
+  </main>
+
+  <footer class="link-footer"><p>Licencia MIT — Link Minigames</p></footer>
+
+  <script>
+    const canvas = document.getElementById('flappyCanvas');
+    const ctx = canvas.getContext('2d');
+
+    let bird = { x: 50, y: 200, radius: 12, velocity: 0, gravity: 0.45, jump: -7.5 };
+    let pipes = [];
+    let frame = 0;
+    let score = 0;
+    let highScore = localStorage.getItem('flappy_highscore') || 0;
+    let gameRunning = false;
+
+    document.getElementById('highScore').textContent = highScore;
+
+    function resetGame() {
+      bird.y = 200;
+      bird.velocity = 0;
+      pipes = [];
+      frame = 0;
+      score = 0;
+      document.getElementById('score').textContent = score;
+      gameRunning = true;
+    }
+
+    function flap() {
+      if (!gameRunning) resetGame();
+      else bird.velocity = bird.jump;
+    }
+
+    function loop() {
+      ctx.fillStyle = '#0b1329';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      if (gameRunning) {
+        bird.velocity += bird.gravity;
+        bird.y += bird.velocity;
+
+        if (frame % 90 === 0) {
+          let gap = 120;
+          let top = Math.floor(Math.random() * (canvas.height - gap - 100)) + 40;
+          pipes.push({ x: canvas.width, top: top, bottom: canvas.height - top - gap, passed: false });
+        }
+
+        for (let i = pipes.length - 1; i >= 0; i--) {
+          let p = pipes[i];
+          p.x -= 2.5;
+
+          // Draw pipe top & bottom
+          ctx.fillStyle = '#10b981';
+          ctx.fillRect(p.x, 0, 48, p.top);
+          ctx.fillRect(p.x, canvas.height - p.bottom, 48, p.bottom);
+
+          // Collision check
+          if (
+            bird.x + bird.radius > p.x && bird.x - bird.radius < p.x + 48 &&
+            (bird.y - bird.radius < p.top || bird.y + bird.radius > canvas.height - p.bottom)
+          ) {
+            gameOver();
+          }
+
+          if (p.x + 48 < bird.x && !p.passed) {
+            p.passed = true;
+            score++;
+            document.getElementById('score').textContent = score;
+            if (score > highScore) {
+              highScore = score;
+              localStorage.setItem('flappy_highscore', highScore);
+              document.getElementById('highScore').textContent = highScore;
+            }
+          }
+
+          if (p.x < -50) pipes.splice(i, 1);
+        }
+
+        // Boundary collision
+        if (bird.y + bird.radius >= canvas.height || bird.y - bird.radius <= 0) {
+          gameOver();
+        }
+
+        frame++;
+      } else {
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+        ctx.font = 'bold 20px system-ui';
+        ctx.textAlign = 'center';
+        ctx.fillText('Toca para empezar 🎮', canvas.width / 2, canvas.height / 2);
+      }
+
+      // Draw Bird
+      ctx.fillStyle = '#f59e0b';
+      ctx.beginPath();
+      ctx.arc(bird.x, bird.y, bird.radius, 0, Math.PI * 2);
+      ctx.fill();
+
+      requestAnimationFrame(loop);
+    }
+
+    function gameOver() {
+      gameRunning = false;
+    }
+
+    window.addEventListener('keydown', (e) => { if (e.code === 'Space') flap(); });
+    canvas.addEventListener('touchstart', (e) => { e.preventDefault(); flap(); });
+    canvas.addEventListener('mousedown', flap);
+    document.getElementById('btnTap').addEventListener('click', flap);
+
+    loop();
+  </script>
+</body>
+</html>

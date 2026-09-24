@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Invasores del Espacio - Link Minigames</title>
+  <link rel="stylesheet" href="../assets/css/link-theme.css">
+  <style>
+    .game-container {
+      max-width: 480px;
+      margin: 0 auto;
+      text-align: center;
+    }
+    .canvas-wrapper {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      padding: 10px;
+      box-shadow: var(--shadow-md);
+      margin-bottom: 1.5rem;
+    }
+    canvas {
+      width: 100%;
+      height: auto;
+      background: #050814;
+      border-radius: var(--radius-md);
+      display: block;
+      touch-action: none;
+    }
+    .controls-grid {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+    .ctrl-btn {
+      flex: 1;
+      padding: 1rem;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      color: white;
+      font-size: 1.25rem;
+      font-weight: bold;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <header class="link-header">
+    <a href="../" class="btn-back"><span>← Volver al Catálogo</span></a>
+    <div class="link-logo">
+      <div class="link-logo-icon">👾</div>
+      <span>Invasores del Espacio</span>
+    </div>
+  </header>
+
+  <main class="container">
+    <div class="game-container">
+      <div style="margin-bottom: 1rem; font-size: 1.25rem; font-weight: bold;">
+        Puntos: <span id="score" style="color:var(--accent-primary);">0</span>
+      </div>
+
+      <div class="canvas-wrapper">
+        <canvas id="invadersCanvas" width="400" height="480"></canvas>
+      </div>
+
+      <div class="controls-grid">
+        <button class="ctrl-btn" id="btnLeft">◄ Izquierda</button>
+        <button class="ctrl-btn" id="btnFire" style="background:var(--accent-gradient);">🔥 Disparar</button>
+        <button class="ctrl-btn" id="btnRight">► Derecha</button>
+      </div>
+
+      <button class="btn btn-secondary" id="btnStart" style="width: 100%;">Iniciar Partida</button>
+    </div>
+  </main>
+
+  <footer class="link-footer"><p>Licencia MIT — Link Minigames</p></footer>
+
+  <script>
+    const canvas = document.getElementById('invadersCanvas');
+    const ctx = canvas.getContext('2d');
+
+    let player = { x: 180, y: 440, w: 40, h: 20, speed: 5 };
+    let bullets = [];
+    let aliens = [];
+    let alienDirection = 1;
+    let score = 0;
+    let gameRunning = false;
+
+    function initAliens() {
+      aliens = [];
+      for (let r = 0; r < 3; r++) {
+        for (let c = 0; c < 6; c++) {
+          aliens.push({ x: 30 + c * 50, y: 30 + r * 35, w: 30, h: 20, alive: true });
+        }
+      }
+    }
+
+    function draw() {
+      ctx.fillStyle = '#050814';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      if (!gameRunning) return;
+
+      // Player
+      ctx.fillStyle = '#6366f1';
+      ctx.fillRect(player.x, player.y, player.w, player.h);
+
+      // Bullets
+      ctx.fillStyle = '#ec4899';
+      for (let i = bullets.length - 1; i >= 0; i--) {
+        let b = bullets[i];
+        b.y -= 7;
+        ctx.fillRect(b.x, b.y, 4, 10);
+        if (b.y < 0) bullets.splice(i, 1);
+      }
+
+      // Aliens
+      let moveDown = false;
+      ctx.fillStyle = '#10b981';
+      for (let a of aliens) {
+        if (!a.alive) continue;
+        a.x += alienDirection * 1.2;
+        if (a.x + a.w > canvas.width - 10 || a.x < 10) moveDown = true;
+        ctx.fillRect(a.x, a.y, a.w, a.h);
+
+        // Bullet hits alien
+        for (let i = bullets.length - 1; i >= 0; i--) {
+          let b = bullets[i];
+          if (b.x > a.x && b.x < a.x + a.w && b.y > a.y && b.y < a.y + a.h) {
+            a.alive = false;
+            bullets.splice(i, 1);
+            score += 20;
+            document.getElementById('score').textContent = score;
+          }
+        }
+      }
+
+      if (moveDown) {
+        alienDirection *= -1;
+        for (let a of aliens) a.y += 12;
+      }
+
+      requestAnimationFrame(draw);
+    }
+
+    function fire() {
+      if (!gameRunning) return;
+      bullets.push({ x: player.x + player.w / 2 - 2, y: player.y });
+    }
+
+    document.getElementById('btnLeft').addEventListener('click', () => { if (player.x > 10) player.x -= 20; });
+    document.getElementById('btnRight').addEventListener('click', () => { if (player.x < canvas.width - 50) player.x += 20; });
+    document.getElementById('btnFire').addEventListener('click', fire);
+
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowLeft' && player.x > 10) player.x -= 15;
+      if (e.key === 'ArrowRight' && player.x < canvas.width - 50) player.x += 15;
+      if (e.key === ' ' || e.key === 'Spacebar') fire();
+    });
+
+    document.getElementById('btnStart').addEventListener('click', () => {
+      score = 0;
+      document.getElementById('score').textContent = score;
+      initAliens();
+      gameRunning = true;
+      draw();
+    });
+  </script>
+</body>
+</html>
