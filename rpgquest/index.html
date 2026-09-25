@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Leyenda Heroica: RPG Quest - Link Minigames</title>
+  <link rel="stylesheet" href="../assets/css/link-theme.css">
+  <style>
+    .game-layout {
+      display: grid;
+      grid-template-columns: 1fr 300px;
+      gap: 1.5rem;
+      align-items: start;
+    }
+
+    @media (max-width: 900px) {
+      .game-layout {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .canvas-container {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    canvas {
+      background: #022c22;
+      border-radius: var(--radius-md);
+      box-shadow: 0 0 20px rgba(0,0,0,0.7);
+      max-width: 100%;
+      height: auto;
+    }
+
+    .rpg-panel {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      padding: 1.25rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+    }
+
+    .quest-card {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 0.85rem;
+    }
+
+    .quest-title {
+      font-size: 0.9rem;
+      font-weight: bold;
+      color: var(--accent-primary);
+      margin-bottom: 0.35rem;
+    }
+
+    .quest-desc {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      line-height: 1.3;
+    }
+
+    .dialog-box {
+      background: #090d16;
+      border: 2px solid var(--accent-primary);
+      border-radius: var(--radius-md);
+      padding: 0.85rem;
+      font-size: 0.85rem;
+      min-height: 80px;
+      color: var(--text-primary);
+      line-height: 1.4;
+    }
+
+    .controls-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+      width: 180px;
+      margin: 1rem auto 0;
+    }
+
+    .btn-ctrl {
+      padding: 0.75rem;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      color: white;
+      border-radius: var(--radius-md);
+      font-size: 1.25rem;
+      cursor: pointer;
+    }
+
+    .btn-ctrl:active {
+      background: var(--accent-primary);
+    }
+  </style>
+</head>
+<body>
+
+  <header class="link-header">
+    <a href="../" class="btn-back"><span>← Volver al Catálogo</span></a>
+    <div class="link-logo">
+      <div class="link-logo-icon">🛡️</div>
+      <span>Leyenda Heroica: RPG Quest</span>
+    </div>
+  </header>
+
+  <main class="container">
+    <div class="game-layout">
+      <div class="canvas-container">
+        <canvas id="rpgCanvas" width="480" height="480"></canvas>
+
+        <div class="controls-grid">
+          <div></div>
+          <button class="btn-ctrl" onclick="move(0, -1)">▲</button>
+          <div></div>
+          <button class="btn-ctrl" onclick="move(-1, 0)">◄</button>
+          <button class="btn-ctrl" onclick="interact()">💬</button>
+          <button class="btn-ctrl" onclick="move(1, 0)">►</button>
+          <div></div>
+          <button class="btn-ctrl" onclick="move(0, 1)">▼</button>
+          <div></div>
+        </div>
+      </div>
+
+      <div class="rpg-panel">
+        <div>
+          <h2 style="font-size:1.1rem; margin-bottom:0.75rem; display:flex; justify-content:space-between;">
+            <span>Caballero Link</span>
+            <span style="color:#fde047; font-size:0.85rem;">Nivel <span id="lblLvl">1</span></span>
+          </h2>
+          <div style="font-size:0.85rem; color:var(--text-secondary); margin-bottom:0.5rem;">
+            ❤️ HP: <strong id="lblHp" style="color:#f87171;">120/120</strong> | ⚔️ ATK: <strong id="lblAtk" style="color:#60a5fa;">20</strong>
+          </div>
+          <div style="font-size:0.85rem; color:var(--text-secondary);">
+            💰 Oro: <strong id="lblGold" style="color:#facc15;">50</strong> | ⭐ XP: <strong id="lblXp">0/100</strong>
+          </div>
+        </div>
+
+        <div>
+          <h3 style="font-size:0.9rem; margin-bottom:0.5rem; color:var(--text-secondary);">Misión Activa</h3>
+          <div class="quest-card">
+            <div class="quest-title" id="questTitle">📜 Habla con el Rey del Poblado</div>
+            <div class="quest-desc" id="questDesc">Encuentra al Rey en el centro de la aldea para recibir tu primera misión sagrada.</div>
+          </div>
+        </div>
+
+        <div>
+          <h3 style="font-size:0.9rem; margin-bottom:0.5rem; color:var(--text-secondary);">Diálogo e Interacción</h3>
+          <div class="dialog-box" id="dialogBox">
+            Presiona el botón 💬 o acércate a los personajes para hablar con ellos. Usa las flechas o WASD para moverte.
+          </div>
+        </div>
+
+        <button class="btn btn-secondary" onclick="saveGame()">💾 Guardar Partida</button>
+        <button class="btn btn-secondary" onclick="resetRPG()">🔄 Reiniciar Aventura</button>
+      </div>
+    </div>
+  </main>
+
+  <footer class="link-footer"><p>Leyenda Heroica RPG — Licencia MIT | Link Minigames</p></footer>
+
+  <script>
+    const canvas = document.getElementById('rpgCanvas');
+    const ctx = canvas.getContext('2d');
+
+    const GRID = 15;
+    const TILE = 32;
+
+    let hero = {
+      x: 2, y: 2,
+      hp: 120, maxHp: 120,
+      atk: 20,
+      gold: 50,
+      xp: 0, maxXp: 100,
+      lvl: 1,
+      questStep: 0
+    };
+
+    const npcs = [
+      { x: 7, y: 3, name: 'Rey Eldrin', symbol: '👑', dialog: ['¡Bienvenido héroe! Las sombras acechan el calabozo sur.', 'Derrota a 3 monstruos y vuelve conmigo para tu recompensa.'] },
+      { x: 12, y: 4, name: 'Aldeana Mia', symbol: '👩', dialog: ['¡Ten cuidado aventurero! Los trasgos merodean por el bosque.'] },
+      { x: 3, y: 11, name: 'Herrero Thor', symbol: '🧔', dialog: ['Puedo afilar tu espada si tienes 40 monedas de oro.', '¡Toma! Tu ataque ha aumentado +10 ATK.'] }
+    ];
+
+    let monsters = [
+      { x: 10, y: 10, hp: 40, maxHp: 40, atk: 10, symbol: '👾', name: 'Goblin' },
+      { x: 12, y: 11, hp: 50, maxHp: 50, atk: 12, symbol: '🕷️', name: 'Araña Gigante' },
+      { x: 8, y: 13, hp: 80, maxHp: 80, atk: 18, symbol: '👹', name: 'Ogro Guerrero' }
+    ];
+
+    let defeatedCount = 0;
+
+    function move(dx, dy) {
+      if (hero.hp <= 0) return;
+
+      let nx = hero.x + dx;
+      let ny = hero.y + dy;
+
+      if (nx < 0 || nx >= GRID || ny < 0 || ny >= GRID) return;
+
+      // Obstáculos (Casas / Paredes)
+      if ((nx >= 5 && nx <= 9 && ny >= 1 && ny <= 2) || (nx >= 1 && nx <= 3 && ny >= 9 && ny <= 10)) {
+        setDialog('🧱 Hay un edificio bloqueando el paso.');
+        return;
+      }
+
+      // Comprobar monstruos
+      let m = monsters.find(mon => mon.x === nx && mon.y === ny);
+      if (m) {
+        fightMonster(m);
+        draw();
+        return;
+      }
+
+      // Comprobar NPCs
+      let npc = npcs.find(n => n.x === nx && n.y === ny);
+      if (npc) {
+        talkToNPC(npc);
+        return;
+      }
+
+      hero.x = nx;
+      hero.y = ny;
+      updateUI();
+      draw();
+    }
+
+    function fightMonster(m) {
+      let dmg = hero.atk + Math.floor(Math.random() * 5);
+      m.hp -= dmg;
+
+      if (m.hp <= 0) {
+        hero.xp += 40;
+        hero.gold += 25;
+        defeatedCount++;
+        setDialog(`⚔️ ¡Derrotaste a ${m.name}! +40 XP, +25 Oro.`);
+        monsters = monsters.filter(mon => mon !== m);
+
+        if (defeatedCount >= 3 && hero.questStep === 1) {
+          hero.questStep = 2;
+          document.getElementById('questTitle').textContent = '📜 Regresa con el Rey Eldrin';
+          document.getElementById('questDesc').textContent = '¡Has derrotado a los monstruos! Ve al centro del poblado.';
+        }
+
+        checkLevelUp();
+      } else {
+        let mDmg = Math.max(1, m.atk - 2);
+        hero.hp -= mDmg;
+        setDialog(`⚔️ Le infligiste ${dmg} de daño a ${m.name}. Te devolvió ${mDmg} de daño.`);
+        if (hero.hp <= 0) {
+          hero.hp = 0;
+          setDialog('☠️ ¡Has caído en batalla! Fin de la partida.');
+          alert('☠️ ¡Has sido derrotado por los monstruos!');
+        }
+      }
+      updateUI();
+    }
+
+    function talkToNPC(npc) {
+      if (npc.name === 'Rey Eldrin') {
+        if (hero.questStep === 0) {
+          hero.questStep = 1;
+          setDialog(`👑 ${npc.name}: "${npc.dialog[0]} ${npc.dialog[1]}"`);
+          document.getElementById('questTitle').textContent = '📜 Elimina 3 Cuerpos de Monstruos';
+          document.getElementById('questDesc').textContent = 'Dirígete al calabozo sur y elimina 3 criaturas amenazantes.';
+        } else if (hero.questStep === 2) {
+          hero.questStep = 3;
+          hero.gold += 100;
+          hero.xp += 100;
+          setDialog(`👑 ${npc.name}: "¡Sagradas gracias, héroe! Toma 100 monedas de oro y mi bendición suprema."`);
+          document.getElementById('questTitle').textContent = '🌟 ¡Misión Cumplida!';
+          document.getElementById('questDesc').textContent = 'Has salvado al reino de Link. Explora libremente el mundo.';
+          checkLevelUp();
+        } else {
+          setDialog(`👑 ${npc.name}: "Gracias por tu valentía en el reino."`);
+        }
+      } else if (npc.name === 'Herrero Thor') {
+        if (hero.gold >= 40) {
+          hero.gold -= 40;
+          hero.atk += 10;
+          setDialog(`🧔 ${npc.name}: "${npc.dialog[1]}"`);
+        } else {
+          setDialog(`🧔 ${npc.name}: "${npc.dialog[0]}"`);
+        }
+      } else {
+        setDialog(`👩 ${npc.name}: "${npc.dialog[0]}"`);
+      }
+      updateUI();
+    }
+
+    function interact() {
+      // Buscar NPC cercano
+      for (let npc of npcs) {
+        if (Math.abs(npc.x - hero.x) <= 1 && Math.abs(npc.y - hero.y) <= 1) {
+          talkToNPC(npc);
+          return;
+        }
+      }
+      setDialog('🔍 No hay nadie cerca con quien interactuar.');
+    }
+
+    function checkLevelUp() {
+      if (hero.xp >= hero.maxXp) {
+        hero.lvl++;
+        hero.xp -= hero.maxXp;
+        hero.maxXp = Math.floor(hero.maxXp * 1.5);
+        hero.maxHp += 30;
+        hero.hp = hero.maxHp;
+        hero.atk += 8;
+        setDialog(`🎉 ¡SUBISTE AL NIVEL ${hero.lvl}! Vida y Ataque aumentados.`);
+      }
+      updateUI();
+    }
+
+    function setDialog(msg) {
+      document.getElementById('dialogBox').textContent = msg;
+    }
+
+    function updateUI() {
+      document.getElementById('lblLvl').textContent = hero.lvl;
+      document.getElementById('lblHp').textContent = `${hero.hp}/${hero.maxHp}`;
+      document.getElementById('lblAtk').textContent = hero.atk;
+      document.getElementById('lblGold').textContent = hero.gold;
+      document.getElementById('lblXp').textContent = `${hero.xp}/${hero.maxXp}`;
+    }
+
+    function draw() {
+      ctx.fillStyle = '#022c22';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Dibujar suelo / césped
+      for (let r = 0; r < GRID; r++) {
+        for (let c = 0; c < GRID; c++) {
+          ctx.strokeStyle = '#064e3b';
+          ctx.strokeRect(c * TILE, r * TILE, TILE, TILE);
+        }
+      }
+
+      // Dibujar Edificios
+      ctx.fillStyle = '#78350f';
+      ctx.fillRect(5 * TILE, 1 * TILE, 5 * TILE, 2 * TILE); // Castillo Rey
+      ctx.fillRect(1 * TILE, 9 * TILE, 3 * TILE, 2 * TILE); // Herrería
+
+      ctx.font = '16px sans-serif';
+      ctx.fillStyle = '#fff';
+      ctx.fillText('🏰 Castillo', 6 * TILE, 2 * TILE);
+      ctx.fillText('🔨 Herrería', 1.2 * TILE, 10 * TILE);
+
+      // Dibujar NPCs
+      npcs.forEach(n => {
+        ctx.font = '22px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(n.symbol, n.x * TILE + TILE / 2, n.y * TILE + TILE / 2 + 7);
+      });
+
+      // Dibujar Monstruos
+      monsters.forEach(m => {
+        ctx.font = '22px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(m.symbol, m.x * TILE + TILE / 2, m.y * TILE + TILE / 2 + 7);
+      });
+
+      // Dibujar Héroe
+      ctx.font = '24px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('🛡️', hero.x * TILE + TILE / 2, hero.y * TILE + TILE / 2 + 8);
+    }
+
+    function saveGame() {
+      localStorage.setItem('link_rpg_save', JSON.stringify({ hero, defeatedCount }));
+      setDialog('💾 ¡Progreso guardado correctamente!');
+    }
+
+    function resetRPG() {
+      hero = { x: 2, y: 2, hp: 120, maxHp: 120, atk: 20, gold: 50, xp: 0, maxXp: 100, lvl: 1, questStep: 0 };
+      defeatedCount = 0;
+      monsters = [
+        { x: 10, y: 10, hp: 40, maxHp: 40, atk: 10, symbol: '👾', name: 'Goblin' },
+        { x: 12, y: 11, hp: 50, maxHp: 50, atk: 12, symbol: '🕷️', name: 'Araña Gigante' },
+        { x: 8, y: 13, hp: 80, maxHp: 80, atk: 18, symbol: '👹', name: 'Ogro Guerrero' }
+      ];
+      document.getElementById('questTitle').textContent = '📜 Habla con el Rey del Poblado';
+      document.getElementById('questDesc').textContent = 'Encuentra al Rey en el centro de la aldea para recibir tu primera misión sagrada.';
+      setDialog('Aventura reiniciada.');
+      updateUI();
+      draw();
+    }
+
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') move(0, -1);
+      if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') move(0, 1);
+      if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') move(-1, 0);
+      if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') move(1, 0);
+      if (e.key === 'e' || e.key === 'E' || e.key === ' ') interact();
+    });
+
+    updateUI();
+    draw();
+  </script>
+</body>
+</html>

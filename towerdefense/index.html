@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kingdom Defense: Defensa de Torres - Link Minigames</title>
+  <link rel="stylesheet" href="../assets/css/link-theme.css">
+  <style>
+    .game-layout {
+      display: grid;
+      grid-template-columns: 1fr 280px;
+      gap: 1.5rem;
+      align-items: start;
+    }
+
+    @media (max-width: 900px) {
+      .game-layout {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .canvas-container {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    canvas {
+      background: #0f172a;
+      border-radius: var(--radius-md);
+      box-shadow: 0 0 20px rgba(0,0,0,0.6);
+      max-width: 100%;
+      height: auto;
+      cursor: pointer;
+    }
+
+    .td-panel {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      padding: 1.25rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+    }
+
+    .td-stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.5rem;
+      background: rgba(0,0,0,0.25);
+      padding: 0.75rem;
+      border-radius: var(--radius-md);
+      text-align: center;
+    }
+
+    .stat-item {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+    }
+
+    .stat-item strong {
+      font-size: 1.1rem;
+      color: var(--text-primary);
+    }
+
+    .tower-selector {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.75rem;
+    }
+
+    .tower-card {
+      background: var(--bg-secondary);
+      border: 2px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 0.75rem;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.25rem;
+      transition: var(--transition);
+      user-select: none;
+    }
+
+    .tower-card:hover, .tower-card.selected {
+      border-color: var(--accent-primary);
+      background: rgba(99, 102, 241, 0.15);
+      transform: translateY(-2px);
+    }
+
+    .tower-icon {
+      font-size: 1.5rem;
+    }
+
+    .tower-name {
+      font-size: 0.85rem;
+      font-weight: bold;
+    }
+
+    .tower-cost {
+      font-size: 0.75rem;
+      color: #facc15;
+    }
+
+    .btn-wave {
+      width: 100%;
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      color: white;
+      font-weight: bold;
+    }
+
+    .btn-wave:hover {
+      box-shadow: 0 0 20px rgba(16, 185, 129, 0.4);
+    }
+  </style>
+</head>
+<body>
+
+  <header class="link-header">
+    <a href="../" class="btn-back"><span>← Volver al Catálogo</span></a>
+    <div class="link-logo">
+      <div class="link-logo-icon">🏰</div>
+      <span>Kingdom Defense: Defensa de Torres</span>
+    </div>
+  </header>
+
+  <main class="container">
+    <div class="game-layout">
+      <div class="canvas-container">
+        <canvas id="tdCanvas" width="600" height="400"></canvas>
+      </div>
+
+      <div class="td-panel">
+        <div class="td-stats">
+          <div class="stat-item">❤️ Vida<strong id="lblLives" style="color:#f87171;">20</strong></div>
+          <div class="stat-item">💰 Oro<strong id="lblGold" style="color:#facc15;">150</strong></div>
+          <div class="stat-item">🌊 Oleada<strong id="lblWave" style="color:#38bdf8;">1</strong></div>
+        </div>
+
+        <div>
+          <h3 style="font-size:0.9rem; margin-bottom:0.75rem; color:var(--text-secondary);">Seleccionar Torre a Construir</h3>
+          <div class="tower-selector">
+            <div class="tower-card selected" id="card-archer" onclick="selectTowerType('archer')">
+              <span class="tower-icon">🏹</span>
+              <span class="tower-name">Arquero</span>
+              <span class="tower-cost">💰 60 Oro</span>
+            </div>
+            <div class="tower-card" id="card-cannon" onclick="selectTowerType('cannon')">
+              <span class="tower-icon">💣</span>
+              <span class="tower-name">Cañón</span>
+              <span class="tower-cost">💰 100 Oro</span>
+            </div>
+            <div class="tower-card" id="card-ice" onclick="selectTowerType('ice')">
+              <span class="tower-icon">❄️</span>
+              <span class="tower-name">Hielo</span>
+              <span class="tower-cost">💰 80 Oro</span>
+            </div>
+            <div class="tower-card" id="card-magic" onclick="selectTowerType('magic')">
+              <span class="tower-icon">🔮</span>
+              <span class="tower-name">Mago</span>
+              <span class="tower-cost">💰 120 Oro</span>
+            </div>
+          </div>
+        </div>
+
+        <button class="btn btn-wave" id="btnWave" onclick="startNextWave()">🌊 Iniciar Próxima Oleada</button>
+        <button class="btn btn-secondary" onclick="resetTD()">🔄 Reiniciar Juego</button>
+      </div>
+    </div>
+  </main>
+
+  <footer class="link-footer"><p>Kingdom Defense — Licencia MIT | Link Minigames</p></footer>
+
+  <script>
+    const canvas = document.getElementById('tdCanvas');
+    const ctx = canvas.getContext('2d');
+
+    const WAYPOINTS = [
+      { x: 0, y: 100 },
+      { x: 180, y: 100 },
+      { x: 180, y: 280 },
+      { x: 380, y: 280 },
+      { x: 380, y: 120 },
+      { x: 600, y: 120 }
+    ];
+
+    const TOWER_TYPES = {
+      archer: { name: 'Arquero', cost: 60, range: 110, rate: 25, dmg: 12, symbol: '🏹', color: '#38bdf8' },
+      cannon: { name: 'Cañón', cost: 100, range: 90, rate: 50, dmg: 35, symbol: '💣', color: '#f97316' },
+      ice: { name: 'Hielo', cost: 80, range: 100, rate: 35, dmg: 8, slow: 0.5, symbol: '❄️', color: '#38bdf8' },
+      magic: { name: 'Mago', cost: 120, range: 130, rate: 30, dmg: 25, symbol: '🔮', color: '#a855f7' }
+    };
+
+    let selectedType = 'archer';
+    let gold = 150;
+    let lives = 20;
+    let wave = 1;
+    let waveInProgress = false;
+
+    let towers = [];
+    let enemies = [];
+    let projectiles = [];
+
+    function selectTowerType(type) {
+      selectedType = type;
+      document.querySelectorAll('.tower-card').forEach(c => c.classList.remove('selected'));
+      document.getElementById(`card-${type}`).classList.add('selected');
+    }
+
+    function updateUI() {
+      document.getElementById('lblGold').textContent = gold;
+      document.getElementById('lblLives').textContent = lives;
+      document.getElementById('lblWave').textContent = wave;
+      document.getElementById('btnWave').disabled = waveInProgress;
+    }
+
+    function startNextWave() {
+      if (waveInProgress) return;
+      waveInProgress = true;
+      updateUI();
+
+      let count = 6 + wave * 3;
+      let spawned = 0;
+
+      let spawnInterval = setInterval(() => {
+        if (spawned >= count) {
+          clearInterval(spawnInterval);
+          return;
+        }
+
+        let isBoss = (spawned === count - 1 && wave % 3 === 0);
+        let hp = isBoss ? 300 + wave * 100 : 40 + wave * 20;
+        let speed = isBoss ? 0.7 : (Math.random() < 0.3 ? 1.8 : 1.2);
+
+        enemies.push({
+          x: WAYPOINTS[0].x,
+          y: WAYPOINTS[0].y,
+          targetIdx: 1,
+          hp: hp,
+          maxHp: hp,
+          speed: speed,
+          origSpeed: speed,
+          reward: isBoss ? 50 : 12,
+          isBoss: isBoss,
+          symbol: isBoss ? '👹' : (speed > 1.5 ? '🐕' : '👾')
+        });
+
+        spawned++;
+      }, 900);
+    }
+
+    canvas.addEventListener('click', (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+
+      // Verificar si se hace clic cerca del camino
+      if (isNearPath(x, y, 30)) return;
+
+      // Verificar si ya existe una torre
+      if (towers.some(t => Math.hypot(t.x - x, t.y - y) < 30)) return;
+
+      const tSpec = TOWER_TYPES[selectedType];
+      if (gold >= tSpec.cost) {
+        gold -= tSpec.cost;
+        towers.push({
+          x: x,
+          y: y,
+          type: selectedType,
+          spec: tSpec,
+          cooldown: 0
+        });
+        updateUI();
+      }
+    });
+
+    function isNearPath(x, y, threshold) {
+      for (let i = 0; i < WAYPOINTS.length - 1; i++) {
+        let p1 = WAYPOINTS[i];
+        let p2 = WAYPOINTS[i + 1];
+
+        let dist = distToSegment({ x: x, y: y }, p1, p2);
+        if (dist < threshold) return true;
+      }
+      return false;
+    }
+
+    function distToSegment(p, v, w) {
+      let l2 = (v.x - w.x) ** 2 + (v.y - w.y) ** 2;
+      if (l2 === 0) return Math.hypot(p.x - v.x, p.y - v.y);
+      let t = ((p.x - v.x) * (w.x - v.x) + (p.y - v.y) * (w.y - v.y)) / l2;
+      t = Math.max(0, Math.min(1, t));
+      return Math.hypot(p.x - (v.x + t * (w.x - v.x)), p.y - (v.y + t * (w.y - v.y)));
+    }
+
+    function gameLoop() {
+      update();
+      draw();
+      requestAnimationFrame(gameLoop);
+    }
+
+    function update() {
+      // Actualizar enemigos
+      for (let i = enemies.length - 1; i >= 0; i--) {
+        let e = enemies[i];
+        let target = WAYPOINTS[e.targetIdx];
+
+        let dx = target.x - e.x;
+        let dy = target.y - e.y;
+        let dist = Math.hypot(dx, dy);
+
+        if (dist < e.speed) {
+          e.x = target.x;
+          e.y = target.y;
+          e.targetIdx++;
+          if (e.targetIdx >= WAYPOINTS.length) {
+            lives--;
+            enemies.splice(i, 1);
+            updateUI();
+            if (lives <= 0) {
+              alert('💥 ¡El Reino ha caído! Fin de la partida.');
+              resetTD();
+            }
+            continue;
+          }
+        } else {
+          e.x += (dx / dist) * e.speed;
+          e.y += (dy / dist) * e.speed;
+        }
+      }
+
+      // Comprobar fin de oleada
+      if (waveInProgress && enemies.length === 0) {
+        waveInProgress = false;
+        gold += 40 + wave * 10;
+        wave++;
+        updateUI();
+      }
+
+      // Torres atacar
+      towers.forEach(t => {
+        if (t.cooldown > 0) {
+          t.cooldown--;
+          return;
+        }
+
+        // Buscar enemigo en rango
+        let target = enemies.find(e => Math.hypot(e.x - t.x, e.y - t.y) <= t.spec.range);
+        if (target) {
+          projectiles.push({
+            x: t.x,
+            y: t.y,
+            tx: target.x,
+            ty: target.y,
+            target: target,
+            dmg: t.spec.dmg,
+            type: t.type,
+            speed: 6
+          });
+          t.cooldown = t.spec.rate;
+        }
+      });
+
+      // Actualizar proyectiles
+      for (let i = projectiles.length - 1; i >= 0; i--) {
+        let p = projectiles[i];
+        let dx = p.target.x - p.x;
+        let dy = p.target.y - p.y;
+        let dist = Math.hypot(dx, dy);
+
+        if (dist < p.speed || !enemies.includes(p.target)) {
+          // Impacto
+          p.target.hp -= p.dmg;
+          if (p.type === 'ice') {
+            p.target.speed = p.target.origSpeed * 0.5;
+          }
+          if (p.target.hp <= 0) {
+            gold += p.target.reward;
+            enemies = enemies.filter(e => e !== p.target);
+            updateUI();
+          }
+          projectiles.splice(i, 1);
+        } else {
+          p.x += (dx / dist) * p.speed;
+          p.y += (dy / dist) * p.speed;
+        }
+      }
+    }
+
+    function draw() {
+      ctx.fillStyle = '#0f172a';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Dibujar camino
+      ctx.strokeStyle = '#334155';
+      ctx.lineWidth = 36;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.beginPath();
+      ctx.moveTo(WAYPOINTS[0].x, WAYPOINTS[0].y);
+      WAYPOINTS.forEach(pt => ctx.lineTo(pt.x, pt.y));
+      ctx.stroke();
+
+      ctx.strokeStyle = '#475569';
+      ctx.lineWidth = 28;
+      ctx.stroke();
+
+      // Dibujar torres
+      towers.forEach(t => {
+        // Rango (suave)
+        ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(t.x, t.y, t.spec.range, 0, Math.PI * 2);
+        ctx.stroke();
+
+        ctx.font = '22px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(t.spec.symbol, t.x, t.y);
+      });
+
+      // Dibujar enemigos
+      enemies.forEach(e => {
+        ctx.font = e.isBoss ? '26px sans-serif' : '20px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(e.symbol, e.x, e.y);
+
+        // Barra de vida
+        let bw = 24;
+        let bh = 4;
+        ctx.fillStyle = '#000';
+        ctx.fillRect(e.x - bw / 2, e.y - 18, bw, bh);
+        ctx.fillStyle = '#ef4444';
+        ctx.fillRect(e.x - bw / 2, e.y - 18, (e.hp / e.maxHp) * bw, bh);
+      });
+
+      // Dibujar proyectiles
+      projectiles.forEach(p => {
+        ctx.fillStyle = p.type === 'ice' ? '#38bdf8' : (p.type === 'cannon' ? '#f97316' : '#facc15');
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
+        ctx.fill();
+      });
+    }
+
+    function resetTD() {
+      gold = 150;
+      lives = 20;
+      wave = 1;
+      waveInProgress = false;
+      towers = [];
+      enemies = [];
+      projectiles = [];
+      updateUI();
+    }
+
+    updateUI();
+    requestAnimationFrame(gameLoop);
+  </script>
+</body>
+</html>

@@ -24,10 +24,13 @@ Cada minijuego se organiza en su propia carpeta raíz dentro del repositorio:
 ```text
 /
 ├── index.html              # Catálogo principal dinámico con buscador y favoritos
-├── games.json              # Registro unificado de juegos (27 juegos integrados)
+├── games.json              # Registro unificado de juegos (30 juegos integrados)
 ├── assets/
 │   └── css/
 │       └── link-theme.css  # Tema visual unificado de Link
+├── dungeon/               # Dungeon Crawler: El Laberinto Sombrío
+├── towerdefense/          # Kingdom Defense: Defensa de Torres
+├── rpgquest/              # Leyenda Heroica: RPG Quest
 ├── tictactoe/             # Tres en Raya
 ├── connect4/              # 4 en Raya
 ├── pong/                  # Pong Clásico
@@ -67,63 +70,30 @@ Para agregar o modificar un juego, únicamente edita el archivo `games.json`. El
 
 ```json
 {
-  "id": "tictactoe",
-  "name": "Tres en Raya",
-  "description": "Clásico juego de Tres en Raya con modo 1 vs AI o 2 jugadores local.",
-  "category": "board",
-  "players": 2,
-  "mode": ["solo", "multiplayer"],
+  "id": "dungeon",
+  "name": "Dungeon Crawler: El Laberinto Sombrío",
+  "description": "Peligrosa aventura en mazmorra con niveles, niebla de guerra, combate por turnos, magia, pociones y NPCs.",
+  "category": "rpg",
+  "players": 1,
+  "mode": ["solo"],
   "mobile": true,
   "requiresServer": false,
   "license": "MIT",
-  "url": "./tictactoe/"
+  "url": "./dungeon/"
 }
 ```
 
-### Campos requeridos:
-- **`id`** (string): Identificador único en minúsculas.
-- **`name`** (string): Nombre visible del juego.
-- **`description`** (string): Descripción corta del juego.
-- **`category`** (string): Categoría (`board`, `arcade`, `puzzle`, `trivia`).
-- **`players`** (number): Número máximo de jugadores locales/soportados.
-- **`mode`** (array): `["solo"]`, `["multiplayer"]` o ambos `["solo", "multiplayer"]`.
-- **`mobile`** (boolean): `true` si cuenta con controles táctiles/diseño responsive.
-- **`requiresServer`** (boolean): `false` para cliente estático (GitHub Pages), `true` si requiere servidor/WebSocket en Render.
-- **`license`** (string): Licencia Open Source (`MIT`, `CC0`, `BSD`, `Apache-2.0`).
-- **`url`** (string): Ruta relativa al juego (`./nombre-juego/`).
-
 ---
 
-## ➕ 4. Cómo agregar un nuevo juego
-
-1. Crea una carpeta dentro del repositorio con el identificador del juego (p. ej. `/mi-juego/`).
-2. Agrega dentro el archivo `index.html` del juego asegurándote de:
-   - Incluir la hoja de estilos global con ruta relativa: `<link rel="stylesheet" href="../assets/css/link-theme.css">`.
-   - Incluir un botón de retorno: `<a href="../" class="btn-back">← Volver al Catálogo</a>`.
-   - Utilizar únicamente rutas relativas (`./` o `../`) para que funcione en subdirectorios de GitHub Pages.
-3. Agrega la entrada correspondiente en `games.json`.
-4. ¡Listo! `index.html` mostrará automáticamente la nueva tarjeta sin modificar código HTML.
-
----
-
-## 🔎 5. Comprobar la URL de un juego
-
-En GitHub Pages, la URL de cada juego será:
-`https://<USUARIO>.github.io/<REPOSITORIO>/<ID_JUEGO>/`
-
-Por ejemplo:
-- `https://USUARIO.github.io/REPOSITORIO/tictactoe/`
-- `https://USUARIO.github.io/REPOSITORIO/wordle/`
-- `https://USUARIO.github.io/REPOSITORIO/pacman/`
-
----
-
-## 📜 6. Catálogo e Información de Licencias (27 Minijuegos)
+## 📜 6. Catálogo e Información de Licencias (30 Minijuegos)
 
 Todos los minijuegos integrados son open-source con licencias compatibles (MIT / CC0 / Apache-2.0 / BSD):
 
 | Juego | Categoría | Licencia | Sin Servidor | Descripción |
 | :--- | :--- | :---: | :---: | :--- |
+| **Dungeon Crawler** | RPG | MIT | Sí | Aventura en mazmorras con niveles, niebla, magia y NPCs |
+| **Kingdom Defense** | RPG | MIT | Sí | Defensa de torres con 4 tipos de torres, oleadas y jefes |
+| **Leyenda Heroica RPG** | RPG | MIT | Sí | RPG de exploración 2D, misiones con NPCs y batallas |
 | **Tres en Raya** | Board | MIT | Sí | Modo 1 vs IA y 2 Jugadores local |
 | **4 en Raya** | Board | MIT | Sí | Conecta 4 fichas en línea contra IA o local |
 | **Pong Clásico** | Arcade | MIT | Sí | Arcade 2D con IA o 2 jugadores |
@@ -158,7 +128,7 @@ Todos los minijuegos integrados son open-source con licencias compatibles (MIT /
 
 - **¡Juego Aleatorio!**: Selecciona instantáneamente un juego al azar del catálogo.
 - **Sistema de Favoritos**: Guarda tus minijuegos preferidos persistiendo tus datos en `localStorage`.
-- **Filtros por Categoría**: Explora según categorías (Tablero, Arcade, Puzzle, Trivia) y Favoritos.
+- **Filtros por Categoría**: Explora según categorías (RPG/Aventura, Tablero, Arcade, Puzzle, Trivia) y Favoritos.
 - **Contador de Estadísticas**: Vista rápida del número de juegos disponibles, soporte móvil e infraestructura.
 
 ---
@@ -166,13 +136,4 @@ Todos los minijuegos integrados son open-source con licencias compatibles (MIT /
 ## 🖥️ 8. Juegos Cliente-Side vs Infraestructura Adicional
 
 - **Servidor Estático (GitHub Pages):**
-  Todos los 27 juegos actuales son **100% cliente-side (`requiresServer: false`)**. Se ejecutan completamente en el navegador del usuario.
-
-- **Infraestructura Adicional para Multijugador Online:**
-  Si en el futuro se agregan juegos que requieran partidas multijugador online en tiempo real (mediante WebSockets o Node.js), deben marcarse en `games.json` con `"requiresServer": true`. Estos juegos requerirán desplegar su backend en plataformas como **Render**.
-
----
-
-## 🤖 9. Integración con Link AI
-
-La IA de Link puede consumir directamente `https://<USUARIO>.github.io/<REPOSITORIO>/games.json` para descubrir dinámicamente el catálogo completo de 27 juegos, sus descripciones, categorías, requisitos y enlaces.
+  Todos los 30 juegos actuales son **100% cliente-side (`requiresServer: false`)**. Se ejecutan completamente en el navegador del usuario.
