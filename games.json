@@ -322,5 +322,41 @@
     "requiresServer": false,
     "license": "MIT",
     "url": "./wordsearch/"
+  },
+  {
+    "id": "dungeon",
+    "name": "Dungeon Crawler: El Laberinto Sombrío",
+    "description": "Peligrosa aventura en mazmorra con niveles, niebla de guerra, combate por turnos, magia, pociones y NPCs.",
+    "category": "rpg",
+    "players": 1,
+    "mode": ["solo"],
+    "mobile": true,
+    "requiresServer": false,
+    "license": "MIT",
+    "url": "./dungeon/"
+  },
+  {
+    "id": "towerdefense",
+    "name": "Kingdom Defense: Defensa de Torres",
+    "description": "Juego de estrategia en tiempo real. Construye torres de arqueros, cañones y magia para contener oleadas enemigas.",
+    "category": "rpg",
+    "players": 1,
+    "mode": ["solo"],
+    "mobile": true,
+    "requiresServer": false,
+    "license": "MIT",
+    "url": "./towerdefense/"
+  },
+  {
+    "id": "rpgquest",
+    "name": "Leyenda Heroica: RPG Quest",
+    "description": "RPG de exploración de mundo abierto 2D, interacciones y misiones con NPCs, batallas contra monstruos y mejoras.",
+    "category": "rpg",
+    "players": 1,
+    "mode": ["solo"],
+    "mobile": true,
+    "requiresServer": false,
+    "license": "MIT",
+    "url": "./rpgquest/"
   }
 ]
