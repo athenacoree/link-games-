@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Tres en Raya - Link Minigames</title>
+  <title>Tres en Raya Pro - Link Minigames</title>
   <link rel="stylesheet" href="../assets/css/link-theme.css">
   <style>
     .game-container {
@@ -60,8 +60,8 @@
       background: var(--bg-card);
       padding: 12px;
       border-radius: var(--radius-lg);
-      border: 1px solid var(--border-color);
-      box-shadow: var(--shadow-md);
+      border: 1px solid var(--border-highlight);
+      box-shadow: var(--shadow-glow);
       margin-bottom: 1.5rem;
     }
 
@@ -86,10 +86,18 @@
 
     .cell.x {
       color: #6366f1;
+      text-shadow: 0 0 15px rgba(99, 102, 241, 0.6);
     }
 
     .cell.o {
       color: #ec4899;
+      text-shadow: 0 0 15px rgba(236, 72, 153, 0.6);
+    }
+
+    .cell.winning {
+      background: rgba(16, 185, 129, 0.2);
+      border-color: #10b981;
+      animation: neonPulse 1s infinite alternate;
     }
 
     .scores {
@@ -131,7 +139,7 @@
     </a>
     <div class="link-logo">
       <div class="link-logo-icon">❌</div>
-      <span>Tres en Raya</span>
+      <span>Tres en Raya Pro</span>
     </div>
   </header>
 
@@ -139,7 +147,7 @@
     <div class="game-container">
 
       <div class="mode-selector">
-        <button class="mode-btn active" id="btnVsAi">vs IA</button>
+        <button class="mode-btn active" id="btnVsAi">vs IA Imbatible</button>
         <button class="mode-btn" id="btnVsP2">2 Jugadores</button>
       </div>
 
@@ -178,10 +186,13 @@
   </main>
 
   <footer class="link-footer">
-    <p>Licencia MIT — Link Minigames</p>
+    <p>Licencia MIT — Link Minigames Super Edition</p>
   </footer>
 
+  <script src="../assets/js/super-engine.js"></script>
   <script>
+    const stats = new window.SuperEngine.Stats('tictactoe');
+
     let boardState = Array(9).fill(null);
     let currentPlayer = 'X';
     let gameActive = true;
@@ -201,13 +212,14 @@
     const statusPanel = document.getElementById('statusPanel');
 
     function handleClick(e) {
+      window.SuperEngine.Audio.init();
       const idx = e.target.dataset.index;
       if (boardState[idx] || !gameActive) return;
 
       makeMove(idx, currentPlayer);
 
       if (gameActive && vsAi && currentPlayer === 'O') {
-        setTimeout(aiMove, 300);
+        setTimeout(aiMoveMinimax, 250);
       }
     }
 
@@ -216,12 +228,21 @@
       const cell = cells[index];
       cell.textContent = player;
       cell.classList.add(player.toLowerCase());
+      window.SuperEngine.Audio.play(player === 'X' ? 'pop' : 'eat');
 
-      if (checkWin(player)) {
+      const winningLine = getWinningLine(player);
+      if (winningLine) {
+        winningLine.forEach(i => cells[i].classList.add('winning'));
         statusPanel.textContent = `¡Jugador ${player} ha ganado! 🎉`;
         gameActive = false;
-        if (player === 'X') scoreX++;
-        else scoreO++;
+        window.SuperEngine.Audio.play('win');
+
+        if (player === 'X') {
+          scoreX++;
+          if (vsAi) stats.unlockAchievement('ttt_ai_master', 'Vencedor de la IA', 'Gana una partida de Tres en Raya contra la IA');
+        } else {
+          scoreO++;
+        }
         updateScores();
         return;
       }
@@ -229,6 +250,7 @@
       if (boardState.every(cell => cell !== null)) {
         statusPanel.textContent = '¡Empate! 🤝';
         gameActive = false;
+        window.SuperEngine.Audio.play('hit');
         scoreTies++;
         updateScores();
         return;
@@ -238,52 +260,62 @@
       statusPanel.textContent = `Turno de ${currentPlayer}`;
     }
 
-    function checkWin(player) {
-      return winConditions.some(condition => {
-        return condition.every(index => boardState[index] === player);
-      });
+    function getWinningLine(player) {
+      return winConditions.find(condition => condition.every(index => boardState[index] === player));
     }
 
-    function aiMove() {
+    function checkWinBoard(board, player) {
+      return winConditions.some(condition => condition.every(index => board[index] === player));
+    }
+
+    // Minimax Unbeatable AI
+    function aiMoveMinimax() {
       if (!gameActive) return;
+      let bestScore = -Infinity;
+      let bestMove = -1;
 
-      // 1. Try to win
       for (let i = 0; i < 9; i++) {
-        if (!boardState[i]) {
+        if (boardState[i] === null) {
           boardState[i] = 'O';
-          if (checkWin('O')) {
-            boardState[i] = null;
-            makeMove(i, 'O');
-            return;
-          }
+          let score = minimax(boardState, 0, false);
           boardState[i] = null;
+          if (score > bestScore) {
+            bestScore = score;
+            bestMove = i;
+          }
         }
       }
 
-      // 2. Try to block opponent
-      for (let i = 0; i < 9; i++) {
-        if (!boardState[i]) {
-          boardState[i] = 'X';
-          if (checkWin('X')) {
-            boardState[i] = null;
-            makeMove(i, 'O');
-            return;
+      if (bestMove !== -1) {
+        makeMove(bestMove, 'O');
+      }
+    }
+
+    function minimax(board, depth, isMaximizing) {
+      if (checkWinBoard(board, 'O')) return 10 - depth;
+      if (checkWinBoard(board, 'X')) return depth - 10;
+      if (board.every(c => c !== null)) return 0;
+
+      if (isMaximizing) {
+        let best = -Infinity;
+        for (let i = 0; i < 9; i++) {
+          if (board[i] === null) {
+            board[i] = 'O';
+            best = Math.max(best, minimax(board, depth + 1, false));
+            board[i] = null;
           }
-          boardState[i] = null;
         }
-      }
-
-      // 3. Center if available
-      if (!boardState[4]) {
-        makeMove(4, 'O');
-        return;
-      }
-
-      // 4. Random available move
-      const available = boardState.map((val, idx) => val === null ? idx : null).filter(val => val !== null);
-      if (available.length > 0) {
-        const randomIdx = available[Math.floor(Math.random() * available.length)];
-        makeMove(randomIdx, 'O');
+        return best;
+      } else {
+        let best = Infinity;
+        for (let i = 0; i < 9; i++) {
+          if (board[i] === null) {
+            board[i] = 'X';
+            best = Math.min(best, minimax(board, depth + 1, true));
+            board[i] = null;
+          }
+        }
+        return best;
       }
     }
 
@@ -300,7 +332,7 @@
       statusPanel.textContent = 'Turno de X';
       cells.forEach(cell => {
         cell.textContent = '';
-        cell.classList.remove('x', 'o');
+        cell.classList.remove('x', 'o', 'winning');
       });
     }
 
@@ -312,7 +344,7 @@
       vsAi = true;
       document.getElementById('btnVsAi').classList.add('active');
       document.getElementById('btnVsP2').classList.remove('active');
-      document.getElementById('labelO').textContent = 'O (IA)';
+      document.getElementById('labelO').textContent = 'O (IA Imbatible)';
       resetBoard();
     });
 
