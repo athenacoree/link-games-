@@ -3,47 +3,52 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Serpiente Classic - Link Minigames</title>
+  <title>Serpiente Classic Pro - Link Minigames</title>
   <link rel="stylesheet" href="../assets/css/link-theme.css">
   <style>
     .game-container {
-      max-width: 480px;
+      max-width: 500px;
       margin: 0 auto;
       text-align: center;
     }
 
     .canvas-wrapper {
+      position: relative;
       background: var(--bg-card);
-      border: 1px solid var(--border-color);
+      border: 1px solid var(--border-highlight);
       border-radius: var(--radius-lg);
       padding: 10px;
-      box-shadow: var(--shadow-md);
+      box-shadow: var(--shadow-glow);
       margin-bottom: 1.5rem;
     }
 
     canvas {
       width: 100%;
       height: auto;
-      background: #0d1117;
+      background: #090d16;
       border-radius: var(--radius-md);
       display: block;
       touch-action: none;
     }
 
-    .score-board {
+    .legend-bar {
       display: flex;
-      justify-content: space-around;
-      background: var(--bg-card);
-      padding: 0.875rem;
-      border-radius: var(--radius-md);
-      border: 1px solid var(--border-color);
-      margin-bottom: 1.5rem;
+      justify-content: center;
+      gap: 12px;
+      margin-bottom: 1rem;
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      flex-wrap: wrap;
     }
 
-    .score-val {
-      font-size: 1.5rem;
-      font-weight: 800;
-      color: var(--accent-primary);
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      background: rgba(255,255,255,0.05);
+      padding: 2px 8px;
+      border-radius: var(--radius-full);
+      border: 1px solid var(--border-color);
     }
 
     .dpad {
@@ -64,6 +69,7 @@
       font-weight: bold;
       cursor: pointer;
       user-select: none;
+      transition: var(--transition);
     }
 
     .dpad-btn:active {
@@ -79,22 +85,40 @@
     </a>
     <div class="link-logo">
       <div class="link-logo-icon">🐍</div>
-      <span>Serpiente Classic</span>
+      <span>Serpiente Pro</span>
     </div>
   </header>
 
   <main class="container">
     <div class="game-container">
 
-      <div class="score-board">
-        <div>
-          <div style="font-size:0.75rem; color:var(--text-muted); text-transform:uppercase;">Puntos</div>
-          <div class="score-val" id="score">0</div>
+      <div class="difficulty-selector">
+        <button class="diff-btn" id="diffEasy">Fácil</button>
+        <button class="diff-btn active" id="diffNormal">Normal</button>
+        <button class="diff-btn" id="diffHard">Difícil</button>
+        <button class="diff-btn" id="diffExtreme">Extremo</button>
+      </div>
+
+      <div class="super-hud">
+        <div class="super-stat-box">
+          <div class="super-stat-label">Puntos</div>
+          <div class="super-stat-value" id="score">0</div>
         </div>
-        <div>
-          <div style="font-size:0.75rem; color:var(--text-muted); text-transform:uppercase;">RRecord</div>
-          <div class="score-val" id="highScore" style="color: #ec4899;">0</div>
+        <div class="super-stat-box">
+          <div class="super-stat-label">Combo</div>
+          <div class="super-stat-value" id="combo" style="color: #f59e0b;">x1</div>
         </div>
+        <div class="super-stat-box">
+          <div class="super-stat-label">Récord</div>
+          <div class="super-stat-value" id="highScore" style="color: #ec4899;">0</div>
+        </div>
+      </div>
+
+      <div class="legend-bar">
+        <div class="legend-item"><span style="color:#ef4444;">🍎</span> Normal</div>
+        <div class="legend-item"><span style="color:#f59e0b;">🌟</span> Dorada (x2)</div>
+        <div class="legend-item"><span style="color:#3b82f6;">❄️</span> Hielo (Lento)</div>
+        <div class="legend-item"><span style="color:#a855f7;">🧪</span> Poción (-Tail)</div>
       </div>
 
       <div class="canvas-wrapper">
@@ -113,15 +137,16 @@
         <div></div>
       </div>
 
-      <button class="btn btn-primary" id="btnStart" style="width: 100%;">Iniciar Juego</button>
+      <button class="btn btn-primary" id="btnStart" style="width: 100%;">Iniciar / Reiniciar Juego</button>
 
     </div>
   </main>
 
   <footer class="link-footer">
-    <p>Licencia MIT — Link Minigames</p>
+    <p>Licencia MIT — Link Minigames Super Edition</p>
   </footer>
 
+  <script src="../assets/js/super-engine.js"></script>
   <script>
     const canvas = document.getElementById('snakeCanvas');
     const ctx = canvas.getContext('2d');
@@ -129,34 +154,77 @@
     const GRID_SIZE = 20;
     const TILE_COUNT = canvas.width / GRID_SIZE;
 
+    const stats = new window.SuperEngine.Stats('snake');
+    const particles = new window.SuperEngine.ParticleSystem(ctx);
+
     let snake = [{ x: 10, y: 10 }];
-    let food = { x: 15, y: 15 };
-    let dx = 0;
+    let foods = []; // Multiple special foods
+    let dx = 1;
     let dy = 0;
     let score = 0;
-    let highScore = localStorage.getItem('snake_highscore') || 0;
+    let combo = 1;
+    let lastEatTime = 0;
+    let gameSpeed = 100;
     let gameInterval = null;
     let gameRunning = false;
 
-    document.getElementById('highScore').textContent = highScore;
+    document.getElementById('highScore').textContent = stats.data.highScore;
+
+    function setDifficulty(speed, btnId) {
+      document.querySelectorAll('.diff-btn').forEach(b => b.classList.remove('active'));
+      document.getElementById(btnId).classList.add('active');
+      gameSpeed = speed;
+      if (gameRunning) {
+        clearInterval(gameInterval);
+        gameInterval = setInterval(gameLoop, gameSpeed);
+      }
+    }
+
+    document.getElementById('diffEasy').addEventListener('click', () => setDifficulty(140, 'diffEasy'));
+    document.getElementById('diffNormal').addEventListener('click', () => setDifficulty(100, 'diffNormal'));
+    document.getElementById('diffHard').addEventListener('click', () => setDifficulty(70, 'diffHard'));
+    document.getElementById('diffExtreme').addEventListener('click', () => setDifficulty(45, 'diffExtreme'));
 
     function startGame() {
+      window.SuperEngine.Audio.init();
       clearInterval(gameInterval);
-      snake = [{ x: 10, y: 10 }];
-      generateFood();
+      snake = [{ x: 10, y: 10 }, { x: 9, y: 10 }, { x: 8, y: 10 }];
       dx = 1;
       dy = 0;
       score = 0;
+      combo = 1;
       document.getElementById('score').textContent = score;
+      document.getElementById('combo').textContent = 'x1';
+      spawnFoods();
       gameRunning = true;
-      gameInterval = setInterval(gameLoop, 100);
+      gameInterval = setInterval(gameLoop, gameSpeed);
+      window.SuperEngine.Audio.play('jump');
     }
 
-    function generateFood() {
-      food = {
-        x: Math.floor(Math.random() * TILE_COUNT),
-        y: Math.floor(Math.random() * TILE_COUNT)
-      };
+    function spawnFoods() {
+      foods = [];
+      // Always one primary red apple
+      foods.push(createFood('normal'));
+
+      // Chance for golden or special foods
+      if (Math.random() < 0.4) foods.push(createFood('gold'));
+      if (Math.random() < 0.25) foods.push(createFood('ice'));
+      if (Math.random() < 0.2) foods.push(createFood('shrink'));
+    }
+
+    function createFood(type) {
+      let f;
+      while (true) {
+        f = {
+          x: Math.floor(Math.random() * TILE_COUNT),
+          y: Math.floor(Math.random() * TILE_COUNT),
+          type: type
+        };
+        const onSnake = snake.some(s => s.x === f.x && s.y === f.y);
+        const onFood = foods.some(existing => existing.x === f.x && existing.y === f.y);
+        if (!onSnake && !onFood) break;
+      }
+      return f;
     }
 
     function gameLoop() {
@@ -178,64 +246,156 @@
 
       snake.unshift(head);
 
-      // Eat food
-      if (head.x === food.x && head.y === food.y) {
-        score += 10;
-        document.getElementById('score').textContent = score;
-        if (score > highScore) {
-          highScore = score;
-          localStorage.setItem('snake_highscore', highScore);
-          document.getElementById('highScore').textContent = highScore;
+      // Check eating foods
+      let ate = false;
+      for (let i = foods.length - 1; i >= 0; i--) {
+        const f = foods[i];
+        if (head.x === f.x && head.y === f.y) {
+          ate = true;
+          handleEat(f);
+          foods.splice(i, 1);
+          break;
         }
-        generateFood();
+      }
+
+      if (ate) {
+        if (foods.length === 0) spawnFoods();
       } else {
         snake.pop();
       }
 
+      particles.update();
       draw();
     }
 
+    function handleEat(foodItem) {
+      const now = Date.now();
+      if (now - lastEatTime < 2500) {
+        combo++;
+      } else {
+        combo = 1;
+      }
+      lastEatTime = now;
+      document.getElementById('combo').textContent = `x${combo}`;
+
+      let basePoints = 10;
+      let pColor = '#ef4444';
+
+      if (foodItem.type === 'gold') {
+        basePoints = 35;
+        pColor = '#f59e0b';
+        window.SuperEngine.Audio.play('powerup');
+        stats.unlockAchievement('gold_apple', 'Manzana Dorada', '¡Comiste una deliciosa Manzana Dorada!');
+      } else if (foodItem.type === 'ice') {
+        basePoints = 15;
+        pColor = '#3b82f6';
+        window.SuperEngine.Audio.play('point');
+      } else if (foodItem.type === 'shrink') {
+        basePoints = 20;
+        pColor = '#a855f7';
+        if (snake.length > 3) snake.pop();
+        window.SuperEngine.Audio.play('powerup');
+      } else {
+        window.SuperEngine.Audio.play('eat');
+      }
+
+      const gainedScore = basePoints * combo;
+      score += gainedScore;
+      document.getElementById('score').textContent = score;
+
+      const foodPx = (foodItem.x + 0.5) * GRID_SIZE;
+      const foodPy = (foodItem.y + 0.5) * GRID_SIZE;
+      particles.burst(foodPx, foodPy, pColor, 18, 5);
+      particles.addFloatingText(`+${gainedScore}`, foodPx, foodPy - 10, pColor);
+
+      if (score > stats.data.highScore) {
+        stats.data.highScore = score;
+        stats.save();
+        document.getElementById('highScore').textContent = score;
+      }
+
+      if (score >= 100) stats.unlockAchievement('snake_100', 'Centenario', 'Alcanza 100 puntos en Serpiente Pro');
+      if (score >= 300) stats.unlockAchievement('snake_300', 'Maestro de la Serpiente', 'Alcanza 300 puntos');
+    }
+
     function draw() {
-      // Background
-      ctx.fillStyle = '#0d1117';
+      // Background grid
+      ctx.fillStyle = '#090d16';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      // Draw Grid lines soft
       ctx.strokeStyle = 'rgba(255, 255, 255, 0.03)';
       for (let i = 0; i < canvas.width; i += GRID_SIZE) {
         ctx.beginPath();
-        ctx.moveTo(i, 0);
-        ctx.lineTo(i, canvas.height);
-        ctx.stroke();
-
+        ctx.moveTo(i, 0); ctx.lineTo(i, canvas.height); ctx.stroke();
         ctx.beginPath();
-        ctx.moveTo(0, i);
-        ctx.lineTo(canvas.width, i);
-        ctx.stroke();
+        ctx.moveTo(0, i); ctx.lineTo(canvas.width, i); ctx.stroke();
       }
 
-      // Draw Food
-      ctx.fillStyle = '#ef4444';
-      ctx.beginPath();
-      ctx.arc((food.x + 0.5) * GRID_SIZE, (food.y + 0.5) * GRID_SIZE, GRID_SIZE / 2 - 2, 0, Math.PI * 2);
-      ctx.fill();
+      // Draw Foods
+      foods.forEach(f => {
+        const fx = (f.x + 0.5) * GRID_SIZE;
+        const fy = (f.y + 0.5) * GRID_SIZE;
+        ctx.save();
+        ctx.shadowBlur = 12;
 
-      // Draw Snake
-      snake.forEach((segment, index) => {
-        ctx.fillStyle = index === 0 ? '#10b981' : '#34d399';
-        ctx.fillRect(
-          segment.x * GRID_SIZE + 1,
-          segment.y * GRID_SIZE + 1,
-          GRID_SIZE - 2,
-          GRID_SIZE - 2
-        );
+        if (f.type === 'gold') {
+          ctx.fillStyle = '#f59e0b';
+          ctx.shadowColor = '#f59e0b';
+        } else if (f.type === 'ice') {
+          ctx.fillStyle = '#3b82f6';
+          ctx.shadowColor = '#3b82f6';
+        } else if (f.type === 'shrink') {
+          ctx.fillStyle = '#a855f7';
+          ctx.shadowColor = '#a855f7';
+        } else {
+          ctx.fillStyle = '#ef4444';
+          ctx.shadowColor = '#ef4444';
+        }
+
+        ctx.beginPath();
+        ctx.arc(fx, fy, GRID_SIZE / 2 - 2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
       });
+
+      // Draw Snake with Glow & Gradient
+      snake.forEach((segment, index) => {
+        const sx = segment.x * GRID_SIZE + 1;
+        const sy = segment.y * GRID_SIZE + 1;
+        const sSize = GRID_SIZE - 2;
+
+        ctx.save();
+        if (index === 0) {
+          ctx.fillStyle = '#10b981';
+          ctx.shadowBlur = 15;
+          ctx.shadowColor = '#10b981';
+          ctx.fillRect(sx, sy, sSize, sSize);
+
+          // Eyes
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(sx + 4, sy + 4, 3, 3);
+          ctx.fillRect(sx + sSize - 7, sy + 4, 3, 3);
+        } else {
+          const greenVal = Math.max(120, 210 - index * 5);
+          ctx.fillStyle = `rgb(16, ${greenVal}, 129)`;
+          ctx.fillRect(sx, sy, sSize, sSize);
+        }
+        ctx.restore();
+      });
+
+      particles.draw();
     }
 
     function gameOver() {
       gameRunning = false;
       clearInterval(gameInterval);
-      alert(`💥 ¡Game Over! Conseguiste ${score} puntos.`);
+      window.SuperEngine.Audio.play('gameover');
+      window.SuperEngine.shakeCanvas(canvas, 10, 300);
+      stats.recordGame(score, combo);
+
+      setTimeout(() => {
+        alert(`💥 ¡Game Over! Puntuación Final: ${score} (Combo Máx: x${combo})`);
+      }, 200);
     }
 
     function setDirection(newDx, newDy) {
@@ -244,13 +404,14 @@
       if (newDy === -dy && newDy !== 0) return;
       dx = newDx;
       dy = newDy;
+      window.SuperEngine.Audio.init();
     }
 
     window.addEventListener('keydown', (e) => {
-      if (e.key === 'ArrowUp' || e.key === 'w') setDirection(0, -1);
-      if (e.key === 'ArrowDown' || e.key === 's') setDirection(0, 1);
-      if (e.key === 'ArrowLeft' || e.key === 'a') setDirection(-1, 0);
-      if (e.key === 'ArrowRight' || e.key === 'd') setDirection(1, 0);
+      if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') setDirection(0, -1);
+      if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') setDirection(0, 1);
+      if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') setDirection(-1, 0);
+      if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') setDirection(1, 0);
     });
 
     document.getElementById('btnUp').addEventListener('click', () => setDirection(0, -1));

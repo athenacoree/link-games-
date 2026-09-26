@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Pong Clásico - Link Minigames</title>
+  <title>Pong Clásico Pro - Link Minigames</title>
   <link rel="stylesheet" href="../assets/css/link-theme.css">
   <style>
     .game-container {
-      max-width: 600px;
+      max-width: 650px;
       margin: 0 auto;
       text-align: center;
       display: flex;
@@ -19,10 +19,10 @@
       position: relative;
       width: 100%;
       background: var(--bg-card);
-      border: 1px solid var(--border-color);
+      border: 1px solid var(--border-highlight);
       border-radius: var(--radius-lg);
       padding: 10px;
-      box-shadow: var(--shadow-md);
+      box-shadow: var(--shadow-glow);
       margin-bottom: 1.5rem;
     }
 
@@ -77,12 +77,33 @@
     </a>
     <div class="link-logo">
       <div class="link-logo-icon">🏓</div>
-      <span>Pong Clásico</span>
+      <span>Pong Pro</span>
     </div>
   </header>
 
   <main class="container">
     <div class="game-container">
+
+      <div class="difficulty-selector">
+        <button class="diff-btn" id="diffEasy">Fácil</button>
+        <button class="diff-btn active" id="diffNormal">Normal</button>
+        <button class="diff-btn" id="diffHard">Pro AI</button>
+      </div>
+
+      <div class="super-hud">
+        <div class="super-stat-box">
+          <div class="super-stat-label">Jugador</div>
+          <div class="super-stat-value" id="playerScore" style="color: #6366f1;">0</div>
+        </div>
+        <div class="super-stat-box">
+          <div class="super-stat-label">Power-Up Active</div>
+          <div class="super-stat-value" id="activePowerup" style="font-size:1rem; color: #f59e0b;">Ninguno</div>
+        </div>
+        <div class="super-stat-box">
+          <div class="super-stat-label">IA</div>
+          <div class="super-stat-value" id="aiScore" style="color: #ec4899;">0</div>
+        </div>
+      </div>
 
       <div class="canvas-wrapper">
         <canvas id="pongCanvas" width="600" height="400"></canvas>
@@ -104,127 +125,249 @@
   </main>
 
   <footer class="link-footer">
-    <p>Licencia MIT — Link Minigames</p>
+    <p>Licencia MIT — Link Minigames Super Edition</p>
   </footer>
 
+  <script src="../assets/js/super-engine.js"></script>
   <script>
     const canvas = document.getElementById('pongCanvas');
     const ctx = canvas.getContext('2d');
 
+    const stats = new window.SuperEngine.Stats('pong');
+    const particles = new window.SuperEngine.ParticleSystem(ctx);
+
     const PADDLE_WIDTH = 12;
-    const PADDLE_HEIGHT = 80;
-    const BALL_SIZE = 10;
+    let playerPaddleHeight = 80;
+    let aiPaddleHeight = 80;
 
-    let playerY = (canvas.height - PADDLE_HEIGHT) / 2;
-    let aiY = (canvas.height - PADDLE_HEIGHT) / 2;
+    let playerY = (canvas.height - playerPaddleHeight) / 2;
+    let aiY = (canvas.height - aiPaddleHeight) / 2;
 
-    let ballX = canvas.width / 2;
-    let ballY = canvas.height / 2;
-    let ballSpeedX = 5;
-    let ballSpeedY = 3;
+    let balls = [];
+    let powerups = [];
 
     let playerScore = 0;
     let aiScore = 0;
+    let aiSpeed = 4.5;
     let gameRunning = false;
 
     let upPressed = false;
     let downPressed = false;
+    let powerupTimer = null;
 
-    function resetBall() {
-      ballX = canvas.width / 2;
-      ballY = canvas.height / 2;
-      ballSpeedX = -ballSpeedX;
-      ballSpeedY = (Math.random() - 0.5) * 6;
+    function createBall() {
+      return {
+        x: canvas.width / 2,
+        y: canvas.height / 2,
+        vx: (Math.random() < 0.5 ? 1 : -1) * 5,
+        vy: (Math.random() - 0.5) * 6,
+        size: 10,
+        color: '#f8fafc',
+        isFireball: false
+      };
     }
 
+    function resetBalls() {
+      balls = [createBall()];
+    }
+
+    function spawnPowerup() {
+      if (powerups.length > 0 || Math.random() > 0.4) return;
+      const types = ['big_paddle', 'fireball', 'multiball'];
+      const chosenType = types[Math.floor(Math.random() * types.length)];
+      powerups.push({
+        x: canvas.width / 2 + (Math.random() - 0.5) * 150,
+        y: 50 + Math.random() * (canvas.height - 100),
+        size: 16,
+        type: chosenType
+      });
+    }
+
+    document.getElementById('diffEasy').addEventListener('click', () => {
+      document.querySelectorAll('.diff-btn').forEach(b => b.classList.remove('active'));
+      document.getElementById('diffEasy').classList.add('active');
+      aiSpeed = 3.2;
+    });
+    document.getElementById('diffNormal').addEventListener('click', () => {
+      document.querySelectorAll('.diff-btn').forEach(b => b.classList.remove('active'));
+      document.getElementById('diffNormal').classList.add('active');
+      aiSpeed = 4.8;
+    });
+    document.getElementById('diffHard').addEventListener('click', () => {
+      document.querySelectorAll('.diff-btn').forEach(b => b.classList.remove('active'));
+      document.getElementById('diffHard').classList.add('active');
+      aiSpeed = 6.2;
+    });
+
     function draw() {
-      // Clear screen
       ctx.fillStyle = '#090d16';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
       // Draw net
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
-      ctx.setLineDash([6, 6]);
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.12)';
+      ctx.setLineDash([8, 8]);
       ctx.beginPath();
       ctx.moveTo(canvas.width / 2, 0);
       ctx.lineTo(canvas.width / 2, canvas.height);
       ctx.stroke();
       ctx.setLineDash([]);
 
-      // Draw paddles
-      ctx.fillStyle = '#6366f1'; // Player
-      ctx.fillRect(15, playerY, PADDLE_WIDTH, PADDLE_HEIGHT);
+      // Draw Paddles with Glow
+      ctx.save();
+      ctx.fillStyle = '#6366f1';
+      ctx.shadowBlur = 12;
+      ctx.shadowColor = '#6366f1';
+      ctx.fillRect(15, playerY, PADDLE_WIDTH, playerPaddleHeight);
 
-      ctx.fillStyle = '#ec4899'; // AI
-      ctx.fillRect(canvas.width - 15 - PADDLE_WIDTH, aiY, PADDLE_WIDTH, PADDLE_HEIGHT);
+      ctx.fillStyle = '#ec4899';
+      ctx.shadowColor = '#ec4899';
+      ctx.fillRect(canvas.width - 15 - PADDLE_WIDTH, aiY, PADDLE_WIDTH, aiPaddleHeight);
+      ctx.restore();
 
-      // Draw ball
-      ctx.fillStyle = '#f8fafc';
-      ctx.beginPath();
-      ctx.arc(ballX, ballY, BALL_SIZE, 0, Math.PI * 2);
-      ctx.fill();
+      // Draw Powerups
+      powerups.forEach(p => {
+        ctx.save();
+        ctx.shadowBlur = 10;
+        if (p.type === 'big_paddle') ctx.fillStyle = '#10b981';
+        else if (p.type === 'fireball') ctx.fillStyle = '#f59e0b';
+        else ctx.fillStyle = '#a855f7';
+        ctx.shadowColor = ctx.fillStyle;
 
-      // Draw Scores
-      ctx.font = 'bold 36px system-ui';
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
-      ctx.fillText(playerScore, canvas.width / 4, 50);
-      ctx.fillText(aiScore, (3 * canvas.width) / 4, 50);
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      });
+
+      // Draw Balls
+      balls.forEach(b => {
+        ctx.save();
+        ctx.shadowBlur = b.isFireball ? 16 : 8;
+        ctx.shadowColor = b.isFireball ? '#f59e0b' : '#ffffff';
+        ctx.fillStyle = b.isFireball ? '#f59e0b' : '#f8fafc';
+        ctx.beginPath();
+        ctx.arc(b.x, b.y, b.size, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      });
+
+      particles.draw();
     }
 
     function update() {
       if (!gameRunning) return;
 
       // Player Movement
-      if (upPressed && playerY > 0) playerY -= 6;
-      if (downPressed && playerY < canvas.height - PADDLE_HEIGHT) playerY += 6;
+      if (upPressed && playerY > 0) playerY -= 6.5;
+      if (downPressed && playerY < canvas.height - playerPaddleHeight) playerY += 6.5;
 
-      // AI Movement
-      const aiCenter = aiY + PADDLE_HEIGHT / 2;
-      if (aiCenter < ballY - 20) {
-        aiY += 4.5;
-      } else if (aiCenter > ballY + 20) {
-        aiY -= 4.5;
+      // AI Movement targeting nearest ball
+      if (balls.length > 0) {
+        let targetBall = balls[0];
+        for (let b of balls) {
+          if (b.vx > 0 && b.x > targetBall.x) targetBall = b;
+        }
+        const aiCenter = aiY + aiPaddleHeight / 2;
+        if (aiCenter < targetBall.y - 15) aiY += aiSpeed;
+        else if (aiCenter > targetBall.y + 15) aiY -= aiSpeed;
       }
 
-      // Ball Movement
-      ballX += ballSpeedX;
-      ballY += ballSpeedY;
+      // Update Balls
+      for (let i = balls.length - 1; i >= 0; i--) {
+        const b = balls[i];
+        b.x += b.vx;
+        b.y += b.vy;
 
-      // Bounce top / bottom
-      if (ballY - BALL_SIZE <= 0 || ballY + BALL_SIZE >= canvas.height) {
-        ballSpeedY = -ballSpeedY;
+        // Bounce Top/Bottom
+        if (b.y - b.size <= 0 || b.y + b.size >= canvas.height) {
+          b.vy = -b.vy;
+          window.SuperEngine.Audio.play('bounce');
+          particles.burst(b.x, b.y, '#ffffff', 6, 2);
+        }
+
+        // Collision Player
+        if (
+          b.x - b.size <= 15 + PADDLE_WIDTH &&
+          b.y >= playerY &&
+          b.y <= playerY + playerPaddleHeight
+        ) {
+          b.vx = Math.abs(b.vx) * 1.06;
+          const deltaY = b.y - (playerY + playerPaddleHeight / 2);
+          b.vy = deltaY * 0.22;
+          window.SuperEngine.Audio.play('hit');
+          particles.burst(b.x, b.y, '#6366f1', 12, 4);
+
+          // Check Powerup collision
+          powerups.forEach((pu, pIdx) => {
+            if (Math.hypot(b.x - pu.x, b.y - pu.y) < b.size + pu.size) {
+              applyPowerup(pu.type);
+              powerups.splice(pIdx, 1);
+            }
+          });
+
+          if (Math.random() < 0.3) spawnPowerup();
+        }
+
+        // Collision AI
+        if (
+          b.x + b.size >= canvas.width - 15 - PADDLE_WIDTH &&
+          b.y >= aiY &&
+          b.y <= aiY + aiPaddleHeight
+        ) {
+          b.vx = -Math.abs(b.vx) * 1.06;
+          const deltaY = b.y - (aiY + aiPaddleHeight / 2);
+          b.vy = deltaY * 0.22;
+          window.SuperEngine.Audio.play('hit');
+          particles.burst(b.x, b.y, '#ec4899', 12, 4);
+        }
+
+        // Score Check
+        if (b.x < 0) {
+          aiScore++;
+          document.getElementById('aiScore').textContent = aiScore;
+          window.SuperEngine.Audio.play('lose');
+          window.SuperEngine.shakeCanvas(canvas, 8, 200);
+          balls.splice(i, 1);
+        } else if (b.x > canvas.width) {
+          playerScore++;
+          document.getElementById('playerScore').textContent = playerScore;
+          window.SuperEngine.Audio.play('score');
+          particles.burst(canvas.width - 20, b.y, '#10b981', 20, 6);
+          balls.splice(i, 1);
+
+          if (playerScore >= 5) stats.unlockAchievement('pong_winner', 'Campeón del Pong', 'Gana 5 puntos contra la IA');
+        }
       }
 
-      // Collision Player
-      if (
-        ballX - BALL_SIZE <= 15 + PADDLE_WIDTH &&
-        ballY >= playerY &&
-        ballY <= playerY + PADDLE_HEIGHT
-      ) {
-        ballSpeedX = -ballSpeedX * 1.05;
-        const deltaY = ballY - (playerY + PADDLE_HEIGHT / 2);
-        ballSpeedY = deltaY * 0.2;
+      if (balls.length === 0) resetBalls();
+
+      particles.update();
+    }
+
+    function applyPowerup(type) {
+      window.SuperEngine.Audio.play('powerup');
+      const hudTxt = document.getElementById('activePowerup');
+
+      if (type === 'big_paddle') {
+        playerPaddleHeight = 130;
+        hudTxt.textContent = 'Paleta Gigante';
+        hudTxt.style.color = '#10b981';
+      } else if (type === 'fireball') {
+        balls.forEach(b => { b.isFireball = true; b.vx *= 1.3; });
+        hudTxt.textContent = 'Bola de Fuego';
+        hudTxt.style.color = '#f59e0b';
+      } else if (type === 'multiball') {
+        balls.push(createBall());
+        hudTxt.textContent = 'Multibola';
+        hudTxt.style.color = '#a855f7';
       }
 
-      // Collision AI
-      if (
-        ballX + BALL_SIZE >= canvas.width - 15 - PADDLE_WIDTH &&
-        ballY >= aiY &&
-        ballY <= aiY + PADDLE_HEIGHT
-      ) {
-        ballSpeedX = -ballSpeedX * 1.05;
-        const deltaY = ballY - (aiY + PADDLE_HEIGHT / 2);
-        ballSpeedY = deltaY * 0.2;
-      }
-
-      // Score check
-      if (ballX < 0) {
-        aiScore++;
-        resetBall();
-      } else if (ballX > canvas.width) {
-        playerScore++;
-        resetBall();
-      }
+      clearTimeout(powerupTimer);
+      powerupTimer = setTimeout(() => {
+        playerPaddleHeight = 80;
+        hudTxt.textContent = 'Ninguno';
+        hudTxt.style.color = '#f59e0b';
+      }, 7000);
     }
 
     function gameLoop() {
@@ -235,8 +378,8 @@
 
     // Key listeners
     window.addEventListener('keydown', (e) => {
-      if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') upPressed = true;
-      if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') downPressed = true;
+      if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') { upPressed = true; window.SuperEngine.Audio.init(); }
+      if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') { downPressed = true; window.SuperEngine.Audio.init(); }
     });
 
     window.addEventListener('keyup', (e) => {
@@ -248,30 +391,19 @@
     const btnUp = document.getElementById('btnUp');
     const btnDown = document.getElementById('btnDown');
 
-    btnUp.addEventListener('touchstart', (e) => { e.preventDefault(); upPressed = true; });
+    btnUp.addEventListener('touchstart', (e) => { e.preventDefault(); upPressed = true; window.SuperEngine.Audio.init(); });
     btnUp.addEventListener('touchend', (e) => { e.preventDefault(); upPressed = false; });
-    btnDown.addEventListener('touchstart', (e) => { e.preventDefault(); downPressed = true; });
+    btnDown.addEventListener('touchstart', (e) => { e.preventDefault(); downPressed = true; window.SuperEngine.Audio.init(); });
     btnDown.addEventListener('touchend', (e) => { e.preventDefault(); downPressed = false; });
 
-    btnUp.addEventListener('mousedown', () => upPressed = true);
-    btnUp.addEventListener('mouseup', () => upPressed = false);
-    btnDown.addEventListener('mousedown', () => downPressed = true);
-    btnDown.addEventListener('mouseup', () => downPressed = false);
-
-    // Canvas touch move drag
-    canvas.addEventListener('touchmove', (e) => {
-      e.preventDefault();
-      const rect = canvas.getBoundingClientRect();
-      const touchY = e.touches[0].clientY - rect.top;
-      const scaleY = canvas.height / rect.height;
-      playerY = touchY * scaleY - PADDLE_HEIGHT / 2;
-    });
-
     document.getElementById('btnStart').addEventListener('click', () => {
+      window.SuperEngine.Audio.init();
       playerScore = 0;
       aiScore = 0;
+      document.getElementById('playerScore').textContent = 0;
+      document.getElementById('aiScore').textContent = 0;
       gameRunning = true;
-      resetBall();
+      resetBalls();
     });
 
     draw();
