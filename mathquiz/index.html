@@ -12,17 +12,17 @@
       text-align: center;
     }
     .math-card {
-      background: var(--bg-card);
+      background: rgba(19, 24, 37, 0.8);
       border: 1px solid var(--border-color);
       border-radius: var(--radius-lg);
-      padding: 2rem;
-      margin-bottom: 1.5rem;
+      padding: 1.5rem;
+      margin-bottom: 1.25rem;
     }
     .equation {
       font-size: 3rem;
       font-weight: 900;
       color: var(--accent-primary);
-      margin-bottom: 1.5rem;
+      margin-bottom: 1.25rem;
     }
     .options {
       display: grid;
@@ -33,27 +33,39 @@
       padding: 1rem;
       font-size: 1.5rem;
       font-weight: 800;
-      background: var(--bg-secondary);
+      background: rgba(255, 255, 255, 0.05);
       border: 1px solid var(--border-color);
       border-radius: var(--radius-md);
       color: white;
       cursor: pointer;
+      transition: var(--transition);
     }
+    .opt-btn:hover { background: var(--accent-primary); }
   </style>
 </head>
-<body>
+<body class="aurora-bg">
   <header class="link-header">
-    <a href="../" class="btn-back"><span>← Volver al Catálogo</span></a>
+    <a href="../" class="btn-back"><span>← Catálogo</span></a>
     <div class="link-logo">
       <div class="link-logo-icon">➕</div>
       <span>Reto Matemático</span>
     </div>
+    <button class="btn-guide" id="btnOpenGuide">📖 Guía / Lore</button>
   </header>
 
   <main class="container">
-    <div class="game-container">
-      <div style="margin-bottom:1rem; font-size:1.25rem; font-weight:bold;">
-        Puntos: <span id="score" style="color:var(--accent-primary);">0</span> | Tiempo: <span id="time">20s</span>
+    <div class="game-container glass-panel" style="padding: 1.5rem;">
+
+      <!-- Métricas Agrupadas -->
+      <div class="metrics-group">
+        <div class="metric-pill">
+          <span class="metric-label">Aciertos</span>
+          <span class="metric-value" id="score" style="color:#10b981;">0</span>
+        </div>
+        <div class="metric-pill">
+          <span class="metric-label">Tiempo</span>
+          <span class="metric-value" id="time" style="color:#f87171;">20s</span>
+        </div>
       </div>
 
       <div class="math-card">
@@ -61,9 +73,36 @@
         <div class="options" id="optContainer"></div>
       </div>
 
-      <button class="btn btn-primary" onclick="initGame()" style="width: 100%;">Iniciar Reto</button>
+      <button class="btn btn-primary anim-pulse" onclick="initGame()" style="width: 100%;">🚀 Iniciar Reto</button>
     </div>
   </main>
+
+  <!-- Modal Explicativo -->
+  <div class="guide-modal-overlay" id="guideModal">
+    <div class="guide-modal-content">
+      <div class="guide-modal-header">
+        <div class="guide-modal-title">➕ Reto Matemático — Guía Oficial</div>
+        <button class="guide-modal-close" id="btnCloseGuide">✕</button>
+      </div>
+
+      <div class="guide-section">
+        <div class="guide-section-title">📜 Lore Aritmético</div>
+        <p>Pon a prueba tus reflejos mentales resolviendo operaciones aritméticas veloces antes de que expire la cuenta regresiva.</p>
+      </div>
+
+      <div class="guide-section">
+        <div class="guide-section-title">🎯 Objetivo del Juego</div>
+        <p>Resuelve la mayor cantidad de sumas y multiplicaciones en 20 segundos seleccionando el resultado correcto entre 4 opciones.</p>
+      </div>
+
+      <div class="guide-section">
+        <div class="guide-section-title">📱 Controles Móviles</div>
+        <div class="guide-controls-list">
+          <div class="guide-control-item"><span class="guide-control-badge">Toque en Resultado</span> Elegir respuesta</div>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <footer class="link-footer"><p>Licencia MIT — Link Minigames</p></footer>
 
@@ -121,6 +160,10 @@
         nextEquation();
       }
     }
+
+    const guideModal = document.getElementById('guideModal');
+    document.getElementById('btnOpenGuide').addEventListener('click', () => guideModal.classList.add('active'));
+    document.getElementById('btnCloseGuide').addEventListener('click', () => guideModal.classList.remove('active'));
   </script>
 </body>
 </html>

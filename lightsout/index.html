@@ -15,10 +15,11 @@
       display: grid;
       grid-template-columns: repeat(5, 1fr);
       gap: 10px;
-      background: var(--bg-card);
+      background: rgba(30, 41, 59, 0.8);
+      backdrop-filter: blur(12px);
       padding: 12px;
       border-radius: var(--radius-lg);
-      margin-bottom: 1.5rem;
+      margin-bottom: 1.25rem;
     }
     .light-btn {
       aspect-ratio: 1;
@@ -30,28 +31,67 @@
     }
     .light-btn.on {
       background: #f59e0b;
-      box-shadow: 0 0 15px rgba(245, 158, 11, 0.6);
+      box-shadow: 0 0 20px rgba(245, 158, 11, 0.8);
     }
   </style>
 </head>
-<body>
+<body class="aurora-bg">
   <header class="link-header">
-    <a href="../" class="btn-back"><span>← Volver al Catálogo</span></a>
+    <a href="../" class="btn-back"><span>← Catálogo</span></a>
     <div class="link-logo">
       <div class="link-logo-icon">💡</div>
       <span>Luces Fuera</span>
     </div>
+    <button class="btn-guide" id="btnOpenGuide">📖 Guía / Lore</button>
   </header>
 
   <main class="container">
-    <div class="game-container">
-      <div style="margin-bottom:1rem; font-weight:bold;">Movimientos: <span id="moves" style="color:var(--accent-primary);">0</span></div>
+    <div class="game-container glass-panel" style="padding: 1.5rem;">
+
+      <!-- Métricas Agrupadas -->
+      <div class="metrics-group">
+        <div class="metric-pill">
+          <span class="metric-label">Movimientos</span>
+          <span class="metric-value" id="moves" style="color:#f59e0b;">0</span>
+        </div>
+      </div>
+
+      <div class="touch-hint-banner">
+        👆 Toca cualquier casilla para alternar su estado y el de sus casillas adyacentes
+      </div>
 
       <div class="grid" id="grid"></div>
 
-      <button class="btn btn-secondary" onclick="initGame()" style="width: 100%;">Nuevo Tablero</button>
+      <button class="btn btn-secondary" onclick="initGame()" style="width: 100%;">🔄 Nuevo Tablero</button>
     </div>
   </main>
+
+  <!-- Modal Explicativo -->
+  <div class="guide-modal-overlay" id="guideModal">
+    <div class="guide-modal-content">
+      <div class="guide-modal-header">
+        <div class="guide-modal-title">💡 Luces Fuera — Guía Oficial</div>
+        <button class="guide-modal-close" id="btnCloseGuide">✕</button>
+      </div>
+
+      <div class="guide-section">
+        <div class="guide-section-title">📜 Lore de los Interruptores</div>
+        <p>Un cortocircuito ha encendido el panel de control de Link. Debes apagar todas las luces invirtiendo sus interruptores interconectados.</p>
+      </div>
+
+      <div class="guide-section">
+        <div class="guide-section-title">🎯 Objetivo del Juego</div>
+        <p>Consigue que todas las luces del tablero se apaguen por completo. Al tocar una casilla, esta cambiará de estado junto a sus 4 vecinas.</p>
+      </div>
+
+      <div class="guide-section">
+        <div class="guide-section-title">📱 Controles Móviles</div>
+        <div class="guide-controls-list">
+          <div class="guide-control-item"><span class="guide-control-badge">Toque en Casilla</span> Invertir luz y adyacentes</div>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <footer class="link-footer"><p>Licencia MIT — Link Minigames</p></footer>
 
@@ -65,7 +105,6 @@
       moves = 0;
       document.getElementById('moves').textContent = moves;
 
-      // Random puzzle setup
       for (let i = 0; i < 8; i++) {
         let r = Math.floor(Math.random() * SIZE);
         let c = Math.floor(Math.random() * SIZE);
@@ -110,6 +149,10 @@
         alert(`🎉 ¡Felicidades! Apagaste todas las luces en ${moves} movimientos.`);
       }
     }
+
+    const guideModal = document.getElementById('guideModal');
+    document.getElementById('btnOpenGuide').addEventListener('click', () => guideModal.classList.add('active'));
+    document.getElementById('btnCloseGuide').addEventListener('click', () => guideModal.classList.remove('active'));
 
     initGame();
   </script>

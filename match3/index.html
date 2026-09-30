@@ -15,15 +15,16 @@
       display: grid;
       grid-template-columns: repeat(6, 1fr);
       gap: 6px;
-      background: var(--bg-card);
+      background: rgba(30, 41, 59, 0.8);
+      backdrop-filter: blur(12px);
       padding: 10px;
       border-radius: var(--radius-lg);
       border: 1px solid var(--border-color);
-      margin-bottom: 1.5rem;
+      margin-bottom: 1.25rem;
     }
     .gem {
       aspect-ratio: 1;
-      background: var(--bg-secondary);
+      background: rgba(19, 24, 37, 0.8);
       border-radius: var(--radius-md);
       display: flex;
       align-items: center;
@@ -31,30 +32,68 @@
       font-size: 2rem;
       cursor: pointer;
       user-select: none;
+      transition: var(--transition);
     }
-    .gem.selected { border: 2px solid var(--accent-primary); background: rgba(99, 102, 241, 0.3); }
+    .gem.selected { border: 2px solid var(--accent-primary); background: rgba(99, 102, 241, 0.3); transform: scale(1.05); }
   </style>
 </head>
-<body>
+<body class="aurora-bg">
   <header class="link-header">
-    <a href="../" class="btn-back"><span>← Volver al Catálogo</span></a>
+    <a href="../" class="btn-back"><span>← Catálogo</span></a>
     <div class="link-logo">
       <div class="link-logo-icon">💎</div>
       <span>Conecta 3</span>
     </div>
+    <button class="btn-guide" id="btnOpenGuide">📖 Guía / Lore</button>
   </header>
 
   <main class="container">
-    <div class="game-container">
-      <div style="margin-bottom:1rem; font-size:1.25rem; font-weight:bold;">
-        Puntos: <span id="score" style="color:var(--accent-primary);">0</span>
+    <div class="game-container glass-panel" style="padding: 1.5rem;">
+
+      <!-- Métricas Agrupadas -->
+      <div class="metrics-group">
+        <div class="metric-pill">
+          <span class="metric-label">Puntos</span>
+          <span class="metric-value" id="score" style="color:#a855f7;">0</span>
+        </div>
+      </div>
+
+      <div class="touch-hint-banner">
+        👆 Toca una gema y luego toca una adyacente para intercambiarlas
       </div>
 
       <div class="grid" id="grid"></div>
 
-      <button class="btn btn-secondary" onclick="initGame()" style="width: 100%;">Mezclar Gemas</button>
+      <button class="btn btn-secondary" onclick="initGame()" style="width: 100%;">🔄 Mezclar Gemas</button>
     </div>
   </main>
+
+  <!-- Modal Explicativo -->
+  <div class="guide-modal-overlay" id="guideModal">
+    <div class="guide-modal-content">
+      <div class="guide-modal-header">
+        <div class="guide-modal-title">💎 Conecta 3 — Guía Oficial</div>
+        <button class="guide-modal-close" id="btnCloseGuide">✕</button>
+      </div>
+
+      <div class="guide-section">
+        <div class="guide-section-title">📜 Lore de las Gemas</div>
+        <p>Cristales de energía de colores resplandecen en la caverna mística de Link. Alinea gemas elementales para liberar su poder oculto.</p>
+      </div>
+
+      <div class="guide-section">
+        <div class="guide-section-title">🎯 Objetivo del Juego</div>
+        <p>Intercambia gemas adyacentes para formar combinaciones de 3 o más gemas iguales en línea.</p>
+      </div>
+
+      <div class="guide-section">
+        <div class="guide-section-title">📱 Controles Móviles</div>
+        <div class="guide-controls-list">
+          <div class="guide-control-item"><span class="guide-control-badge">Toque en Gemas</span> Seleccionar dos gemas vecinas para intercambiar</div>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <footer class="link-footer"><p>Licencia MIT — Link Minigames</p></footer>
 
@@ -98,7 +137,6 @@
         const dc = Math.abs(selectedCell.c - c);
 
         if ((dr === 1 && dc === 0) || (dr === 0 && dc === 1)) {
-          // Swap
           let temp = board[r][c];
           board[r][c] = board[selectedCell.r][selectedCell.c];
           board[selectedCell.r][selectedCell.c] = temp;
@@ -109,6 +147,10 @@
         render();
       }
     }
+
+    const guideModal = document.getElementById('guideModal');
+    document.getElementById('btnOpenGuide').addEventListener('click', () => guideModal.classList.add('active'));
+    document.getElementById('btnCloseGuide').addEventListener('click', () => guideModal.classList.remove('active'));
 
     initGame();
   </script>

@@ -17,7 +17,7 @@
       border-radius: var(--radius-lg);
       padding: 10px;
       box-shadow: var(--shadow-md);
-      margin-bottom: 1.5rem;
+      margin-bottom: 1.25rem;
     }
     canvas {
       width: 100%;
@@ -29,28 +29,66 @@
     }
   </style>
 </head>
-<body>
+<body class="aurora-bg">
   <header class="link-header">
-    <a href="../" class="btn-back"><span>← Volver al Catálogo</span></a>
+    <a href="../" class="btn-back"><span>← Catálogo</span></a>
     <div class="link-logo">
       <div class="link-logo-icon">🏗️</div>
       <span>Torre de Bloques</span>
     </div>
+    <button class="btn-guide" id="btnOpenGuide">📖 Guía / Lore</button>
   </header>
 
   <main class="container">
-    <div class="game-container">
-      <div style="margin-bottom:1rem; font-size:1.25rem; font-weight:bold;">
-        Bloques Apilados: <span id="score" style="color:var(--accent-primary);">0</span>
+    <div class="game-container glass-panel" style="padding: 1.5rem;">
+
+      <!-- Métricas Agrupadas -->
+      <div class="metrics-group">
+        <div class="metric-pill">
+          <span class="metric-label">Bloques Apilados</span>
+          <span class="metric-value" id="score" style="color:#6366f1;">0</span>
+        </div>
+      </div>
+
+      <div class="touch-hint-banner">
+        👆 Toca en la pantalla para soltar el bloque móvil sobre la torre
       </div>
 
       <div class="canvas-wrapper">
         <canvas id="towerCanvas" width="360" height="480"></canvas>
       </div>
 
-      <button class="btn btn-primary" id="btnDrop" style="width: 100%; height: 50px; font-size: 1.1rem;">🧱 Soltar Bloque (Tap / Espacio)</button>
+      <button class="btn btn-primary anim-pulse" id="btnDrop" style="width: 100%; height: 50px; font-size: 1.1rem;">🧱 Soltar Bloque</button>
     </div>
   </main>
+
+  <!-- Modal Explicativo -->
+  <div class="guide-modal-overlay" id="guideModal">
+    <div class="guide-modal-content">
+      <div class="guide-modal-header">
+        <div class="guide-modal-title">🏗️ Torre de Bloques — Guía Oficial</div>
+        <button class="guide-modal-close" id="btnCloseGuide">✕</button>
+      </div>
+
+      <div class="guide-section">
+        <div class="guide-section-title">📜 Lore de la Arquitectura</div>
+        <p>Construye el rascacielos digital más alto de Link calculando el momento justo para encajar cada bloque sobre la base.</p>
+      </div>
+
+      <div class="guide-section">
+        <div class="guide-section-title">🎯 Objetivo del Juego</div>
+        <p>Apila la mayor cantidad posible de bloques. La parte del bloque sobrante que sobresalga de los límites se recortará, reduciendo el tamaño de la superficie para el siguiente piso.</p>
+      </div>
+
+      <div class="guide-section">
+        <div class="guide-section-title">📱 Controles Móviles</div>
+        <div class="guide-controls-list">
+          <div class="guide-control-item"><span class="guide-control-badge">Toque en Pantalla</span> Soltar bloque</div>
+          <div class="guide-control-item"><span class="guide-control-badge">Espacio</span> Soltar en PC</div>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <footer class="link-footer"><p>Licencia MIT — Link Minigames</p></footer>
 
@@ -104,19 +142,16 @@
         currentBlock.dir *= -1;
       }
 
-      // Draw
       ctx.fillStyle = '#090d16';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
       const offsetY = Math.max(0, (stack.length - 12) * 24);
 
-      // Stacked blocks
       stack.forEach((b, i) => {
         ctx.fillStyle = `hsl(${(i * 20) % 360}, 80%, 60%)`;
         ctx.fillRect(b.x, b.y + offsetY, b.width, 22);
       });
 
-      // Moving block
       const currentY = 440 - stack.length * 24 + offsetY;
       ctx.fillStyle = `hsl(${(stack.length * 20) % 360}, 80%, 60%)`;
       ctx.fillRect(currentBlock.x, currentY, currentBlock.width, 22);
@@ -127,6 +162,10 @@
     window.addEventListener('keydown', (e) => { if (e.code === 'Space') dropBlock(); });
     canvas.addEventListener('touchstart', (e) => { e.preventDefault(); dropBlock(); });
     document.getElementById('btnDrop').addEventListener('click', dropBlock);
+
+    const guideModal = document.getElementById('guideModal');
+    document.getElementById('btnOpenGuide').addEventListener('click', () => guideModal.classList.add('active'));
+    document.getElementById('btnCloseGuide').addEventListener('click', () => guideModal.classList.remove('active'));
 
     initGame();
   </script>

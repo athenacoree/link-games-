@@ -8,7 +8,7 @@
   <style>
     .game-layout {
       display: grid;
-      grid-template-columns: 1fr 280px;
+      grid-template-columns: 1fr 300px;
       gap: 1.5rem;
       align-items: start;
     }
@@ -27,48 +27,28 @@
       display: flex;
       flex-direction: column;
       align-items: center;
+      position: relative;
     }
 
     canvas {
       background: #0f172a;
       border-radius: var(--radius-md);
-      box-shadow: 0 0 20px rgba(0,0,0,0.6);
+      box-shadow: 0 0 25px rgba(0,0,0,0.6);
       max-width: 100%;
       height: auto;
       cursor: pointer;
+      touch-action: none;
     }
 
     .td-panel {
-      background: var(--bg-card);
+      background: rgba(26, 33, 51, 0.7);
+      backdrop-filter: blur(12px);
       border: 1px solid var(--border-color);
       border-radius: var(--radius-lg);
       padding: 1.25rem;
       display: flex;
       flex-direction: column;
       gap: 1.25rem;
-    }
-
-    .td-stats {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 0.5rem;
-      background: rgba(0,0,0,0.25);
-      padding: 0.75rem;
-      border-radius: var(--radius-md);
-      text-align: center;
-    }
-
-    .stat-item {
-      display: flex;
-      flex-direction: column;
-      gap: 2px;
-      font-size: 0.8rem;
-      color: var(--text-secondary);
-    }
-
-    .stat-item strong {
-      font-size: 1.1rem;
-      color: var(--text-primary);
     }
 
     .tower-selector {
@@ -78,7 +58,7 @@
     }
 
     .tower-card {
-      background: var(--bg-secondary);
+      background: rgba(19, 24, 37, 0.8);
       border: 2px solid var(--border-color);
       border-radius: var(--radius-md);
       padding: 0.75rem;
@@ -93,23 +73,14 @@
 
     .tower-card:hover, .tower-card.selected {
       border-color: var(--accent-primary);
-      background: rgba(99, 102, 241, 0.15);
+      background: rgba(99, 102, 241, 0.2);
       transform: translateY(-2px);
+      box-shadow: 0 0 15px rgba(99, 102, 241, 0.3);
     }
 
-    .tower-icon {
-      font-size: 1.5rem;
-    }
-
-    .tower-name {
-      font-size: 0.85rem;
-      font-weight: bold;
-    }
-
-    .tower-cost {
-      font-size: 0.75rem;
-      color: #facc15;
-    }
+    .tower-icon { font-size: 1.5rem; }
+    .tower-name { font-size: 0.85rem; font-weight: bold; }
+    .tower-cost { font-size: 0.75rem; color: #facc15; }
 
     .btn-wave {
       width: 100%;
@@ -118,36 +89,48 @@
       font-weight: bold;
     }
 
-    .btn-wave:hover {
-      box-shadow: 0 0 20px rgba(16, 185, 129, 0.4);
-    }
+    .btn-wave:hover { box-shadow: 0 0 20px rgba(16, 185, 129, 0.4); }
   </style>
 </head>
-<body>
+<body class="aurora-bg">
 
   <header class="link-header">
-    <a href="../" class="btn-back"><span>← Volver al Catálogo</span></a>
+    <a href="../" class="btn-back"><span>← Catálogo</span></a>
     <div class="link-logo">
       <div class="link-logo-icon">🏰</div>
-      <span>Kingdom Defense: Defensa de Torres</span>
+      <span>Kingdom Defense</span>
     </div>
+    <button class="btn-guide" id="btnOpenGuide">📖 Guía / Lore</button>
   </header>
 
   <main class="container">
+    <!-- Métricas Agrupadas Glassmorphism -->
+    <div class="metrics-group">
+      <div class="metric-pill">
+        <span class="metric-label">Vida Castillo</span>
+        <span class="metric-value" id="lblLives" style="color:#f87171;">20</span>
+      </div>
+      <div class="metric-pill">
+        <span class="metric-label">Oro Real</span>
+        <span class="metric-value" id="lblGold" style="color:#facc15;">150</span>
+      </div>
+      <div class="metric-pill">
+        <span class="metric-label">Oleada</span>
+        <span class="metric-value" id="lblWave" style="color:#38bdf8;">1</span>
+      </div>
+    </div>
+
     <div class="game-layout">
-      <div class="canvas-container">
+      <div class="canvas-container glass-panel">
+        <div class="touch-hint-banner">
+          👆 Toca en cualquier lugar fuera del camino para construir la torre seleccionada
+        </div>
         <canvas id="tdCanvas" width="600" height="400"></canvas>
       </div>
 
-      <div class="td-panel">
-        <div class="td-stats">
-          <div class="stat-item">❤️ Vida<strong id="lblLives" style="color:#f87171;">20</strong></div>
-          <div class="stat-item">💰 Oro<strong id="lblGold" style="color:#facc15;">150</strong></div>
-          <div class="stat-item">🌊 Oleada<strong id="lblWave" style="color:#38bdf8;">1</strong></div>
-        </div>
-
+      <div class="td-panel glass-panel">
         <div>
-          <h3 style="font-size:0.9rem; margin-bottom:0.75rem; color:var(--text-secondary);">Seleccionar Torre a Construir</h3>
+          <h3 style="font-size:0.95rem; margin-bottom:0.75rem; color:var(--text-secondary);">Torre Activa a Construir</h3>
           <div class="tower-selector">
             <div class="tower-card selected" id="card-archer" onclick="selectTowerType('archer')">
               <span class="tower-icon">🏹</span>
@@ -173,10 +156,38 @@
         </div>
 
         <button class="btn btn-wave" id="btnWave" onclick="startNextWave()">🌊 Iniciar Próxima Oleada</button>
-        <button class="btn btn-secondary" onclick="resetTD()">🔄 Reiniciar Juego</button>
+        <button class="btn btn-secondary" onclick="resetTD()">🔄 Reiniciar Batalla</button>
       </div>
     </div>
   </main>
+
+  <!-- Modal Explicativo -->
+  <div class="guide-modal-overlay" id="guideModal">
+    <div class="guide-modal-content">
+      <div class="guide-modal-header">
+        <div class="guide-modal-title">🏰 Kingdom Defense — Guía Oficial</div>
+        <button class="guide-modal-close" id="btnCloseGuide">✕</button>
+      </div>
+
+      <div class="guide-section">
+        <div class="guide-section-title">📜 Lore de la Fortaleza</div>
+        <p>Las hordas orcas y criaturas del inframundo marchan hacia la capital de Link. Tu misión estratégica consiste en apostar torres defensivas a lo largo del sendero para evitar que sobrepasen las murallas del reino.</p>
+      </div>
+
+      <div class="guide-section">
+        <div class="guide-section-title">🛡️ Tipos de Torres</div>
+        <p>🏹 <b>Arquero:</b> Rápido ataque a distancia. <br>💣 <b>Cañón:</b> Daño explosivo de gran impacto. <br>❄️ <b>Hielo:</b> Ralentiza enemigos en un 50%. <br>🔮 <b>Mago:</b> Ataque místico penetrante.</p>
+      </div>
+
+      <div class="guide-section">
+        <div class="guide-section-title">📱 Controles Móviles</div>
+        <div class="guide-controls-list">
+          <div class="guide-control-item"><span class="guide-control-badge">Toque en Pantalla</span> Emplazar torre</div>
+          <div class="guide-control-item"><span class="guide-control-badge">Toque en Tarjeta</span> Seleccionar tipo de torre</div>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <footer class="link-footer"><p>Kingdom Defense — Licencia MIT | Link Minigames</p></footer>
 
@@ -258,36 +269,45 @@
       }, 900);
     }
 
-    canvas.addEventListener('click', (e) => {
+    canvas.addEventListener('touchstart', handleCanvasTouch, { passive: false });
+    canvas.addEventListener('click', handleCanvasClick);
+
+    function handleCanvasTouch(e) {
+      e.preventDefault();
+      const rect = canvas.getBoundingClientRect();
+      const x = e.touches[0].clientX - rect.left;
+      const y = e.touches[0].clientY - rect.top;
+      placeTower(x, y);
+    }
+
+    function handleCanvasClick(e) {
       const rect = canvas.getBoundingClientRect();
       const x = e.clientX - rect.left;
       const y = e.clientY - rect.top;
+      placeTower(x, y);
+    }
 
-      // Verificar si se hace clic cerca del camino
+    function placeTower(x, y) {
       if (isNearPath(x, y, 30)) return;
-
-      // Verificar si ya existe una torre
       if (towers.some(t => Math.hypot(t.x - x, t.y - y) < 30)) return;
 
       const tSpec = TOWER_TYPES[selectedType];
       if (gold >= tSpec.cost) {
         gold -= tSpec.cost;
         towers.push({
-          x: x,
-          y: y,
+          x: x, y: y,
           type: selectedType,
           spec: tSpec,
           cooldown: 0
         });
         updateUI();
       }
-    });
+    }
 
     function isNearPath(x, y, threshold) {
       for (let i = 0; i < WAYPOINTS.length - 1; i++) {
         let p1 = WAYPOINTS[i];
         let p2 = WAYPOINTS[i + 1];
-
         let dist = distToSegment({ x: x, y: y }, p1, p2);
         if (dist < threshold) return true;
       }
@@ -309,11 +329,9 @@
     }
 
     function update() {
-      // Actualizar enemigos
       for (let i = enemies.length - 1; i >= 0; i--) {
         let e = enemies[i];
         let target = WAYPOINTS[e.targetIdx];
-
         let dx = target.x - e.x;
         let dy = target.y - e.y;
         let dist = Math.hypot(dx, dy);
@@ -327,7 +345,7 @@
             enemies.splice(i, 1);
             updateUI();
             if (lives <= 0) {
-              alert('💥 ¡El Reino ha caído! Fin de la partida.');
+              alert('💥 ¡El Reino ha caído! Fin de la batalla.');
               resetTD();
             }
             continue;
@@ -338,7 +356,6 @@
         }
       }
 
-      // Comprobar fin de oleada
       if (waveInProgress && enemies.length === 0) {
         waveInProgress = false;
         gold += 40 + wave * 10;
@@ -346,21 +363,17 @@
         updateUI();
       }
 
-      // Torres atacar
       towers.forEach(t => {
         if (t.cooldown > 0) {
           t.cooldown--;
           return;
         }
 
-        // Buscar enemigo en rango
         let target = enemies.find(e => Math.hypot(e.x - t.x, e.y - t.y) <= t.spec.range);
         if (target) {
           projectiles.push({
-            x: t.x,
-            y: t.y,
-            tx: target.x,
-            ty: target.y,
+            x: t.x, y: t.y,
+            tx: target.x, ty: target.y,
             target: target,
             dmg: t.spec.dmg,
             type: t.type,
@@ -370,7 +383,6 @@
         }
       });
 
-      // Actualizar proyectiles
       for (let i = projectiles.length - 1; i >= 0; i--) {
         let p = projectiles[i];
         let dx = p.target.x - p.x;
@@ -378,7 +390,6 @@
         let dist = Math.hypot(dx, dy);
 
         if (dist < p.speed || !enemies.includes(p.target)) {
-          // Impacto
           p.target.hp -= p.dmg;
           if (p.type === 'ice') {
             p.target.speed = p.target.origSpeed * 0.5;
@@ -400,7 +411,6 @@
       ctx.fillStyle = '#0f172a';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      // Dibujar camino
       ctx.strokeStyle = '#334155';
       ctx.lineWidth = 36;
       ctx.lineCap = 'round';
@@ -414,9 +424,7 @@
       ctx.lineWidth = 28;
       ctx.stroke();
 
-      // Dibujar torres
       towers.forEach(t => {
-        // Rango (suave)
         ctx.strokeStyle = 'rgba(255,255,255,0.08)';
         ctx.lineWidth = 1;
         ctx.beginPath();
@@ -429,14 +437,12 @@
         ctx.fillText(t.spec.symbol, t.x, t.y);
       });
 
-      // Dibujar enemigos
       enemies.forEach(e => {
         ctx.font = e.isBoss ? '26px sans-serif' : '20px sans-serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText(e.symbol, e.x, e.y);
 
-        // Barra de vida
         let bw = 24;
         let bh = 4;
         ctx.fillStyle = '#000';
@@ -445,7 +451,6 @@
         ctx.fillRect(e.x - bw / 2, e.y - 18, (e.hp / e.maxHp) * bw, bh);
       });
 
-      // Dibujar proyectiles
       projectiles.forEach(p => {
         ctx.fillStyle = p.type === 'ice' ? '#38bdf8' : (p.type === 'cannon' ? '#f97316' : '#facc15');
         ctx.beginPath();
@@ -464,6 +469,10 @@
       projectiles = [];
       updateUI();
     }
+
+    const guideModal = document.getElementById('guideModal');
+    document.getElementById('btnOpenGuide').addEventListener('click', () => guideModal.classList.add('active'));
+    document.getElementById('btnCloseGuide').addEventListener('click', () => guideModal.classList.remove('active'));
 
     updateUI();
     requestAnimationFrame(gameLoop);

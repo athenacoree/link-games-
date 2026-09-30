@@ -17,7 +17,7 @@
       border-radius: var(--radius-lg);
       padding: 10px;
       box-shadow: var(--shadow-md);
-      margin-bottom: 1.5rem;
+      margin-bottom: 1.25rem;
     }
     canvas {
       width: 100%;
@@ -27,51 +27,72 @@
       display: block;
       touch-action: none;
     }
-    .score-board {
-      display: flex;
-      justify-content: space-around;
-      background: var(--bg-card);
-      padding: 0.875rem;
-      border-radius: var(--radius-md);
-      border: 1px solid var(--border-color);
-      margin-bottom: 1.5rem;
-    }
-    .score-val {
-      font-size: 1.5rem;
-      font-weight: 800;
-      color: var(--accent-primary);
-    }
   </style>
 </head>
-<body>
+<body class="aurora-bg">
   <header class="link-header">
-    <a href="../" class="btn-back"><span>← Volver al Catálogo</span></a>
+    <a href="../" class="btn-back"><span>← Catálogo</span></a>
     <div class="link-logo">
       <div class="link-logo-icon">🐤</div>
       <span>Flappy Link</span>
     </div>
+    <button class="btn-guide" id="btnOpenGuide">📖 Guía / Lore</button>
   </header>
 
   <main class="container">
-    <div class="game-container">
-      <div class="score-board">
-        <div>
-          <div style="font-size:0.75rem; color:var(--text-muted); text-transform:uppercase;">Puntos</div>
-          <div class="score-val" id="score">0</div>
+    <div class="game-container glass-panel" style="padding: 1.5rem;">
+
+      <!-- Métricas Agrupadas -->
+      <div class="metrics-group">
+        <div class="metric-pill">
+          <span class="metric-label">Puntos</span>
+          <span class="metric-value" id="score" style="color:#60a5fa;">0</span>
         </div>
-        <div>
-          <div style="font-size:0.75rem; color:var(--text-muted); text-transform:uppercase;">RRecord</div>
-          <div class="score-val" id="highScore" style="color: #ec4899;">0</div>
+        <div class="metric-pill">
+          <span class="metric-label">Récord</span>
+          <span class="metric-value" id="highScore" style="color:#ec4899;">0</span>
         </div>
+      </div>
+
+      <div class="touch-hint-banner">
+        👆 Toca cualquier parte de la pantalla o presiona el botón para aletear
       </div>
 
       <div class="canvas-wrapper">
         <canvas id="flappyCanvas" width="360" height="500"></canvas>
       </div>
 
-      <button class="btn btn-primary" id="btnTap" style="width: 100%; height: 50px; font-size: 1.1rem;">🚀 Aletear / Saltar (Espacio / Tap)</button>
+      <button class="btn btn-primary anim-pulse" id="btnTap" style="width: 100%; height: 50px; font-size: 1.1rem;">🚀 Aletear / Volar</button>
     </div>
   </main>
+
+  <!-- Modal Explicativo -->
+  <div class="guide-modal-overlay" id="guideModal">
+    <div class="guide-modal-content">
+      <div class="guide-modal-header">
+        <div class="guide-modal-title">🐤 Flappy Link — Guía Oficial</div>
+        <button class="guide-modal-close" id="btnCloseGuide">✕</button>
+      </div>
+
+      <div class="guide-section">
+        <div class="guide-section-title">📜 Lore del Vuelo</div>
+        <p>El entrañable pajarito Link realiza su travesía por los cañones digitales. Las tuberías de energía obstaculizan su vuelo y requieren precisión absoluta.</p>
+      </div>
+
+      <div class="guide-section">
+        <div class="guide-section-title">🎯 Objetivo del Juego</div>
+        <p>Mantente en el aire y atraviesa la mayor cantidad de tuberías sin chocar contra los obstáculos o caer al suelo.</p>
+      </div>
+
+      <div class="guide-section">
+        <div class="guide-section-title">📱 Controles Móviles</div>
+        <div class="guide-controls-list">
+          <div class="guide-control-item"><span class="guide-control-badge">Toque Pantalla</span> Impulso / Aletear</div>
+          <div class="guide-control-item"><span class="guide-control-badge">Barra Espaciadora</span> Aletear en PC</div>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <footer class="link-footer"><p>Licencia MIT — Link Minigames</p></footer>
 
@@ -121,12 +142,10 @@
           let p = pipes[i];
           p.x -= 2.5;
 
-          // Draw pipe top & bottom
           ctx.fillStyle = '#10b981';
           ctx.fillRect(p.x, 0, 48, p.top);
           ctx.fillRect(p.x, canvas.height - p.bottom, 48, p.bottom);
 
-          // Collision check
           if (
             bird.x + bird.radius > p.x && bird.x - bird.radius < p.x + 48 &&
             (bird.y - bird.radius < p.top || bird.y + bird.radius > canvas.height - p.bottom)
@@ -148,20 +167,18 @@
           if (p.x < -50) pipes.splice(i, 1);
         }
 
-        // Boundary collision
         if (bird.y + bird.radius >= canvas.height || bird.y - bird.radius <= 0) {
           gameOver();
         }
 
         frame++;
       } else {
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
         ctx.font = 'bold 20px system-ui';
         ctx.textAlign = 'center';
-        ctx.fillText('Toca para empezar 🎮', canvas.width / 2, canvas.height / 2);
+        ctx.fillText('Toca para Volar 🎮', canvas.width / 2, canvas.height / 2);
       }
 
-      // Draw Bird
       ctx.fillStyle = '#f59e0b';
       ctx.beginPath();
       ctx.arc(bird.x, bird.y, bird.radius, 0, Math.PI * 2);
@@ -178,6 +195,10 @@
     canvas.addEventListener('touchstart', (e) => { e.preventDefault(); flap(); });
     canvas.addEventListener('mousedown', flap);
     document.getElementById('btnTap').addEventListener('click', flap);
+
+    const guideModal = document.getElementById('guideModal');
+    document.getElementById('btnOpenGuide').addEventListener('click', () => guideModal.classList.add('active'));
+    document.getElementById('btnCloseGuide').addEventListener('click', () => guideModal.classList.remove('active'));
 
     loop();
   </script>

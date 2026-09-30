@@ -8,7 +8,7 @@
   <style>
     .game-layout {
       display: grid;
-      grid-template-columns: 1fr 300px;
+      grid-template-columns: 1fr 320px;
       gap: 1.5rem;
       align-items: start;
     }
@@ -33,14 +33,16 @@
     canvas {
       background: #05070e;
       border-radius: var(--radius-md);
-      box-shadow: 0 0 20px rgba(0,0,0,0.8);
+      box-shadow: 0 0 25px rgba(0,0,0,0.8);
       max-width: 100%;
       height: auto;
+      touch-action: none;
       image-rendering: pixelated;
     }
 
     .hud-panel {
-      background: var(--bg-card);
+      background: rgba(26, 33, 51, 0.7);
+      backdrop-filter: blur(12px);
       border: 1px solid var(--border-color);
       border-radius: var(--radius-lg);
       padding: 1.25rem;
@@ -80,20 +82,10 @@
     .bar-mp { background: linear-gradient(90deg, #3b82f6, #60a5fa); }
     .bar-xp { background: linear-gradient(90deg, #eab308, #fde047); }
 
-    .stats-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 0.5rem;
-      background: rgba(0,0,0,0.2);
-      padding: 0.75rem;
-      border-radius: var(--radius-md);
-      font-size: 0.85rem;
-    }
-
     .log-box {
       height: 140px;
       overflow-y: auto;
-      background: #080b12;
+      background: rgba(8, 11, 18, 0.8);
       border: 1px solid var(--border-color);
       border-radius: var(--radius-md);
       padding: 0.75rem;
@@ -105,36 +97,11 @@
       gap: 0.35rem;
     }
 
-    .log-entry {
-      line-height: 1.3;
-    }
+    .log-entry { line-height: 1.3; }
     .log-info { color: #38bdf8; }
     .log-combat { color: #f87171; }
     .log-item { color: #facc15; }
     .log-heal { color: #4ade80; }
-
-    .dpad-controls {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 6px;
-      width: 180px;
-      margin: 1rem auto 0;
-    }
-
-    .dpad-btn {
-      padding: 0.75rem;
-      background: var(--bg-secondary);
-      border: 1px solid var(--border-color);
-      color: white;
-      border-radius: var(--radius-md);
-      font-size: 1.25rem;
-      cursor: pointer;
-      user-select: none;
-    }
-
-    .dpad-btn:active {
-      background: var(--accent-primary);
-    }
 
     .inventory-list {
       display: flex;
@@ -143,21 +110,23 @@
     }
 
     .inv-slot {
-      width: 44px;
-      height: 44px;
-      background: rgba(0,0,0,0.3);
+      width: 48px;
+      height: 48px;
+      background: rgba(0,0,0,0.4);
       border: 1px solid var(--border-color);
-      border-radius: var(--radius-sm);
+      border-radius: var(--radius-md);
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 1.25rem;
+      font-size: 1.35rem;
       cursor: pointer;
       position: relative;
+      transition: var(--transition);
     }
 
     .inv-slot:hover {
       border-color: var(--accent-primary);
+      transform: scale(1.05);
     }
 
     .inv-count {
@@ -167,48 +136,72 @@
       font-size: 0.65rem;
       font-weight: bold;
       color: #fff;
-      background: rgba(0,0,0,0.7);
-      padding: 1px 3px;
+      background: rgba(0,0,0,0.8);
+      padding: 1px 4px;
       border-radius: 4px;
+    }
+
+    .action-row-mobile {
+      display: flex;
+      gap: 0.5rem;
+      width: 100%;
+      margin-top: 0.75rem;
     }
   </style>
 </head>
-<body>
+<body class="aurora-bg">
 
   <header class="link-header">
-    <a href="../" class="btn-back"><span>← Volver al Catálogo</span></a>
+    <a href="../" class="btn-back"><span>← Catálogo</span></a>
     <div class="link-logo">
       <div class="link-logo-icon">🗡️</div>
-      <span>Dungeon Crawler: El Laberinto Sombrío</span>
+      <span>El Laberinto Sombrío</span>
     </div>
+    <button class="btn-guide" id="btnOpenGuide">📖 Guía / Lore</button>
   </header>
 
   <main class="container">
-    <div class="game-layout">
-      <!-- Sección izquierda: Canvas y controles -->
-      <div class="canvas-container">
-        <canvas id="dungeonCanvas" width="512" height="512"></canvas>
+    <!-- Agrupación de Métricas en Cristal -->
+    <div class="metrics-group">
+      <div class="metric-pill">
+        <span class="metric-label">Piso</span>
+        <span class="metric-value" id="lblFloor" style="color:#38bdf8;">1</span>
+      </div>
+      <div class="metric-pill">
+        <span class="metric-label">Nivel</span>
+        <span class="metric-value" id="lblLevel" style="color:#c084fc;">1</span>
+      </div>
+      <div class="metric-pill">
+        <span class="metric-label">Ataque</span>
+        <span class="metric-value" id="lblAtk" style="color:#f87171;">15</span>
+      </div>
+      <div class="metric-pill">
+        <span class="metric-label">Defensa</span>
+        <span class="metric-value" id="lblDef" style="color:#60a5fa;">5</span>
+      </div>
+      <div class="metric-pill">
+        <span class="metric-label">Oro</span>
+        <span class="metric-value" id="lblGold" style="color:#facc15;">0</span>
+      </div>
+    </div>
 
-        <div class="dpad-controls">
-          <div></div>
-          <button class="dpad-btn" onclick="movePlayer(0, -1)">▲</button>
-          <div></div>
-          <button class="dpad-btn" onclick="movePlayer(-1, 0)">◄</button>
-          <button class="dpad-btn" onclick="useMagicSkill()">⚡</button>
-          <button class="dpad-btn" onclick="movePlayer(1, 0)">►</button>
-          <div></div>
-          <button class="dpad-btn" onclick="movePlayer(0, 1)">▼</button>
-          <div></div>
+    <div class="game-layout">
+      <div class="canvas-container glass-panel">
+        <div class="touch-hint-banner">
+          👆 Desliza el dedo en la pantalla para moverte en la mazmorra de 24x24
+        </div>
+        <canvas id="dungeonCanvas" width="576" height="576"></canvas>
+
+        <div class="action-row-mobile">
+          <button class="btn btn-primary" onclick="useMagicSkill()" style="flex:1;">⚡ Lanzar Rayo (15 MP)</button>
+          <button class="btn btn-secondary" onclick="useItem('potion_hp')" style="flex:1;">🧪 Vida</button>
+          <button class="btn btn-secondary" onclick="useItem('potion_mp')" style="flex:1;">💙 Maná</button>
         </div>
       </div>
 
-      <!-- Sección derecha: HUD, Inventario, Estadísticas, Mensajes -->
-      <div class="hud-panel">
+      <div class="hud-panel glass-panel">
         <div>
-          <h2 style="font-size:1.1rem; margin-bottom:0.75rem; display:flex; justify-content:space-between;">
-            <span>Héroe (Nivel <span id="lblLevel">1</span>)</span>
-            <span style="color:var(--text-muted); font-size:0.85rem;" id="lblFloor">Piso 1</span>
-          </h2>
+          <h2 style="font-size:1.1rem; margin-bottom:0.75rem;">Métricas del Héroe</h2>
 
           <div class="stat-bar-container">
             <div class="stat-label"><span>Vida (HP)</span><span id="lblHp">100/100</span></div>
@@ -226,37 +219,60 @@
           </div>
         </div>
 
-        <div class="stats-grid">
-          <div>⚔️ Ataque: <strong id="lblAtk">15</strong></div>
-          <div>🛡️ Defensa: <strong id="lblDef">5</strong></div>
-          <div>💰 Oro: <strong id="lblGold">0</strong></div>
-          <div>✨ Magia: <strong id="lblMag">⚡ Rayo (15 MP)</strong></div>
-        </div>
-
         <div>
-          <h3 style="font-size:0.9rem; margin-bottom:0.5rem; color:var(--text-secondary);">Inventario / Pociones</h3>
+          <h3 style="font-size:0.9rem; margin-bottom:0.5rem; color:var(--text-secondary);">Inventario Activo</h3>
           <div class="inventory-list">
             <div class="inv-slot" onclick="useItem('potion_hp')" title="Poción de Vida (+40 HP)">
               🧪<span class="inv-count" id="countHpPot">2</span>
             </div>
             <div class="inv-slot" onclick="useItem('potion_mp')" title="Poción de Maná (+30 MP)">
-              🧪<span class="inv-count" id="countMpPot" style="color:#60a5fa;">1</span>
+              💙<span class="inv-count" id="countMpPot">1</span>
             </div>
-            <div class="inv-slot" onclick="useMagicSkill()" title="Usar Hechizo de Rayo (Teclado: Espacio/M)">
+            <div class="inv-slot" onclick="useMagicSkill()" title="Hechizo de Rayo (Espacio / Botón ⚡)">
               ⚡
             </div>
           </div>
         </div>
 
         <div>
-          <h3 style="font-size:0.9rem; margin-bottom:0.5rem; color:var(--text-secondary);">Registro de Aventuras</h3>
+          <h3 style="font-size:0.9rem; margin-bottom:0.5rem; color:var(--text-secondary);">Bitácora de Aventuras</h3>
           <div class="log-box" id="logBox"></div>
         </div>
 
-        <button class="btn btn-secondary" onclick="restartGame()" style="width:100%;">Reiniciar Partida</button>
+        <button class="btn btn-secondary" onclick="restartGame()" style="width:100%;">🔄 Reiniciar Mazmorra</button>
       </div>
     </div>
   </main>
+
+  <!-- Modal Explicativo / Lore -->
+  <div class="guide-modal-overlay" id="guideModal">
+    <div class="guide-modal-content">
+      <div class="guide-modal-header">
+        <div class="guide-modal-title">🗡️ El Laberinto Sombrío — Guía Oficial</div>
+        <button class="guide-modal-close" id="btnCloseGuide">✕</button>
+      </div>
+
+      <div class="guide-section">
+        <div class="guide-section-title">📜 Historia & Historia</div>
+        <p>Una niebla anciana y tenebrosa ha cubierto las profundidades de la Gran Mazmorra de Link. Monstruos legendarios, demonios y jefes ancestrales se ocultan en pisos expansivos de 24x24 casillas. Como héroe elegido, debes explorar las tinieblas, encontrar tesoros y derrotar al mal que mora en el fondo.</p>
+      </div>
+
+      <div class="guide-section">
+        <div class="guide-section-title">🎯 Objetivo del Juego</div>
+        <p>Avanza piso por piso buscando las escaleras (🪜). Junta oro (💰) para curarte con los magos mercaderes (🧙‍♂️), sube de nivel matando monstruos y utiliza tu magia de rayo para despejar hordas de enemigos.</p>
+      </div>
+
+      <div class="guide-section">
+        <div class="guide-section-title">📱 Controles Móviles & Teclado</div>
+        <div class="guide-controls-list">
+          <div class="guide-control-item"><span class="guide-control-badge">Swipe / Deslizar</span> Mover al héroe</div>
+          <div class="guide-control-item"><span class="guide-control-badge">Teclas W/A/S/D</span> Movimiento clásico</div>
+          <div class="guide-control-item"><span class="guide-control-badge">Espacio / ⚡</span> Magia de Rayo en área</div>
+          <div class="guide-control-item"><span class="guide-control-badge">Toque Ítem</span> Usar Poción de Vida/Maná</div>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <footer class="link-footer"><p>Dungeon Crawler — Licencia MIT | Link Minigames</p></footer>
 
@@ -264,10 +280,9 @@
     const canvas = document.getElementById('dungeonCanvas');
     const ctx = canvas.getContext('2d');
 
-    const MAP_SIZE = 16;
-    const TILE_SIZE = 32; // 16x32 = 512
+    const MAP_SIZE = 24; // Ampliado a 24x24
+    const TILE_SIZE = 24; // 24x24 = 576
 
-    // Tipos de celdas
     const TILE_WALL = 1;
     const TILE_FLOOR = 0;
     const TILE_STAIRS = 2;
@@ -277,25 +292,18 @@
     let fog = [];
 
     let player = {
-      x: 1,
-      y: 1,
-      hp: 100,
-      maxHp: 100,
-      mp: 50,
-      maxMp: 50,
-      atk: 15,
-      def: 5,
-      level: 1,
-      xp: 0,
-      maxXp: 100,
-      gold: 0,
-      hpPots: 2,
-      mpPots: 1
+      x: 1, y: 1,
+      hp: 100, maxHp: 100,
+      mp: 50, maxMp: 50,
+      atk: 15, def: 5,
+      level: 1, xp: 0, maxXp: 100,
+      gold: 0, hpPots: 2, mpPots: 1
     };
 
     let enemies = [];
     let npcs = [];
     let items = [];
+    let particles = [];
 
     function addLog(msg, type = 'info') {
       const box = document.getElementById('logBox');
@@ -308,15 +316,14 @@
 
     function generateDungeon() {
       map = Array(MAP_SIZE).fill(0).map(() => Array(MAP_SIZE).fill(TILE_WALL));
-      fog = Array(MAP_SIZE).fill(0).map(() => Array(MAP_SIZE).fill(true)); // true = oculto
+      fog = Array(MAP_SIZE).fill(0).map(() => Array(MAP_SIZE).fill(true));
 
-      // Algoritmo de generación de mazmorra simple (Habitaciones conectadas)
       let rooms = [];
-      const numRooms = 5 + Math.floor(Math.random() * 3);
+      const numRooms = 8 + Math.floor(Math.random() * 4);
 
       for (let i = 0; i < numRooms; i++) {
-        let w = 3 + Math.floor(Math.random() * 3);
-        let h = 3 + Math.floor(Math.random() * 3);
+        let w = 3 + Math.floor(Math.random() * 4);
+        let h = 3 + Math.floor(Math.random() * 4);
         let x = 1 + Math.floor(Math.random() * (MAP_SIZE - w - 2));
         let y = 1 + Math.floor(Math.random() * (MAP_SIZE - h - 2));
 
@@ -325,15 +332,12 @@
             map[r][c] = TILE_FLOOR;
           }
         }
-
         rooms.push({ x: Math.floor(x + w / 2), y: Math.floor(y + h / 2) });
       }
 
-      // Conectar habitaciones
       for (let i = 0; i < rooms.length - 1; i++) {
         let r1 = rooms[i];
         let r2 = rooms[i + 1];
-
         let cx = r1.x;
         let cy = r1.y;
 
@@ -347,73 +351,63 @@
         }
       }
 
-      // Posicionar Jugador
       player.x = rooms[0].x;
       player.y = rooms[0].y;
 
-      // Posicionar Escaleras de salida en la última habitación
       let lastRoom = rooms[rooms.length - 1];
       map[lastRoom.y][lastRoom.x] = TILE_STAIRS;
 
-      // Generar Enemigos
       enemies = [];
       for (let i = 1; i < rooms.length; i++) {
         let rx = rooms[i].x;
         let ry = rooms[i].y;
 
-        let enemyType = (i === rooms.length - 1 && floor % 3 === 0) ? 'Boss' : (Math.random() < 0.5 ? 'Goblin' : 'Esqueleto');
-        let hp = enemyType === 'Boss' ? 120 + floor * 20 : (enemyType === 'Goblin' ? 30 + floor * 8 : 45 + floor * 10);
-        let atk = enemyType === 'Boss' ? 20 + floor * 4 : (enemyType === 'Goblin' ? 8 + floor * 2 : 12 + floor * 3);
+        let isBoss = (i === rooms.length - 1 && floor % 3 === 0);
+        let enemyType = isBoss ? 'Jefe Demonio' : (Math.random() < 0.5 ? 'Goblin' : 'Esqueleto');
+        let hp = isBoss ? 150 + floor * 30 : (enemyType === 'Goblin' ? 30 + floor * 8 : 45 + floor * 10);
+        let atk = isBoss ? 22 + floor * 5 : (enemyType === 'Goblin' ? 8 + floor * 2 : 12 + floor * 3);
 
         enemies.push({
-          x: rx,
-          y: ry,
+          x: rx, y: ry,
           type: enemyType,
-          symbol: enemyType === 'Boss' ? '🐲' : (enemyType === 'Goblin' ? '👺' : '💀'),
-          hp: hp,
-          maxHp: hp,
-          atk: atk,
-          xpReward: enemyType === 'Boss' ? 100 : (enemyType === 'Goblin' ? 25 : 40),
-          goldReward: enemyType === 'Boss' ? 50 : 15
+          symbol: isBoss ? '👹' : (enemyType === 'Goblin' ? '👺' : '💀'),
+          hp: hp, maxHp: hp, atk: atk,
+          xpReward: isBoss ? 120 : (enemyType === 'Goblin' ? 25 : 40),
+          goldReward: isBoss ? 60 : 15
         });
       }
 
-      // Generar NPCs (Comerciante o Curandero)
       npcs = [];
       if (rooms.length > 2) {
         let nPos = rooms[1];
         npcs.push({
-          x: nPos.x,
-          y: nPos.y,
-          name: Math.random() > 0.5 ? 'Mago Curandero' : 'Mercader Ambulante',
-          symbol: '🧙‍♂️',
-          type: 'healer'
+          x: nPos.x, y: nPos.y,
+          name: 'Mago Curandero', symbol: '🧙‍♂️', type: 'healer'
         });
       }
 
-      // Generar ítems tirados
       items = [];
-      for (let i = 0; i < 3; i++) {
+      for (let i = 0; i < 5; i++) {
         let rx = 1 + Math.floor(Math.random() * (MAP_SIZE - 2));
         let ry = 1 + Math.floor(Math.random() * (MAP_SIZE - 2));
         if (map[ry][rx] === TILE_FLOOR && (rx !== player.x || ry !== player.y)) {
-          let type = Math.random() < 0.5 ? 'hp_pot' : (Math.random() < 0.8 ? 'mp_pot' : 'gold');
+          let type = Math.random() < 0.4 ? 'hp_pot' : (Math.random() < 0.7 ? 'mp_pot' : 'gold');
           items.push({ x: rx, y: ry, type: type, symbol: type === 'hp_pot' ? '🧪' : (type === 'mp_pot' ? '💙' : '💰') });
         }
       }
 
       updateFogOfWar();
-      addLog(`🏰 Has descendido al Piso ${floor} del laberinto.`, 'info');
+      addLog(`🏰 Piso ${floor} generado. Mapa de 24x24 descubierto.`, 'info');
       updateHUD();
       draw();
     }
 
     function updateFogOfWar() {
-      let radius = 3;
+      let radius = 4;
       for (let r = player.y - radius; r <= player.y + radius; r++) {
         for (let c = player.x - radius; c <= player.x + radius; c++) {
           if (r >= 0 && r < MAP_SIZE && c >= 0 && c < MAP_SIZE) {
-            fog[r][c] = false; // Revelado
+            fog[r][c] = false;
           }
         }
       }
@@ -428,7 +422,6 @@
       if (nx < 0 || nx >= MAP_SIZE || ny < 0 || ny >= MAP_SIZE) return;
       if (map[ny][nx] === TILE_WALL) return;
 
-      // Comprobar combate con enemigo
       let enemy = enemies.find(e => e.x === nx && e.y === ny);
       if (enemy) {
         attackEnemy(enemy);
@@ -437,7 +430,6 @@
         return;
       }
 
-      // Comprobar interacción NPC
       let npc = npcs.find(n => n.x === nx && n.y === ny);
       if (npc) {
         interactNPC(npc);
@@ -445,29 +437,22 @@
         return;
       }
 
-      // Mover jugador
       player.x = nx;
       player.y = ny;
 
-      // Comprobar recogida de ítems
       let itemIdx = items.findIndex(i => i.x === nx && i.y === ny);
       if (itemIdx !== -1) {
         let item = items[itemIdx];
-        if (item.type === 'hp_pot') {
-          player.hpPots++;
-          addLog('🧪 Recogiste una Poción de Vida.', 'item');
-        } else if (item.type === 'mp_pot') {
-          player.mpPots++;
-          addLog('💙 Recogiste una Poción de Maná.', 'item');
-        } else if (item.type === 'gold') {
-          let g = 10 + Math.floor(Math.random() * 20);
+        if (item.type === 'hp_pot') { player.hpPots++; addLog('🧪 Recogiste una Poción de Vida.', 'item'); }
+        else if (item.type === 'mp_pot') { player.mpPots++; addLog('💙 Recogiste una Poción de Maná.', 'item'); }
+        else if (item.type === 'gold') {
+          let g = 15 + Math.floor(Math.random() * 25);
           player.gold += g;
-          addLog(`💰 Encontraste ${g} monedas de oro.`, 'item');
+          addLog(`💰 Encontraste ${g} de oro.`, 'item');
         }
         items.splice(itemIdx, 1);
       }
 
-      // Comprobar si llega a las escaleras
       if (map[ny][nx] === TILE_STAIRS) {
         floor++;
         addLog(`🪜 Descendiendo al piso ${floor}...`, 'info');
@@ -482,7 +467,7 @@
     }
 
     function attackEnemy(enemy) {
-      let dmg = Math.max(1, player.atk + Math.floor(Math.random() * 5));
+      let dmg = Math.max(1, player.atk + Math.floor(Math.random() * 6));
       enemy.hp -= dmg;
       addLog(`⚔️ Atacaste al ${enemy.type} e infligiste ${dmg} de daño.`, 'combat');
 
@@ -498,27 +483,25 @@
     function useMagicSkill() {
       if (player.hp <= 0) return;
       if (player.mp < 15) {
-        addLog('⚠️ No tienes suficiente Maná (requiere 15 MP).', 'combat');
+        addLog('⚠️ Maná insuficiente (requiere 15 MP).', 'combat');
         return;
       }
 
       player.mp -= 15;
-      addLog('⚡ ¡Lanzaste Rayo Mágico a todos los enemigos cercanos!', 'combat');
+      addLog('⚡ ¡Lanzaste Rayo Mágico Fulminante!', 'combat');
 
-      let hit = false;
       enemies.forEach(e => {
         let dist = Math.abs(e.x - player.x) + Math.abs(e.y - player.y);
-        if (dist <= 3) {
-          let dmg = 25 + Math.floor(Math.random() * 15);
+        if (dist <= 4) {
+          let dmg = 30 + Math.floor(Math.random() * 20);
           e.hp -= dmg;
-          addLog(`⚡ Rayo impactó a ${e.type} por ${dmg} de daño.`, 'combat');
-          hit = true;
+          addLog(`⚡ Rayo achicharró a ${e.type} (${dmg} daño).`, 'combat');
         }
       });
 
       enemies = enemies.filter(e => {
         if (e.hp <= 0) {
-          addLog(`💀 ¡${e.type} fue calcinado por la magia! +${e.xpReward} XP.`, 'heal');
+          addLog(`💀 ¡${e.type} fue destruido! +${e.xpReward} XP.`, 'heal');
           player.xp += e.xpReward;
           player.gold += e.goldReward;
           checkLevelUp();
@@ -538,9 +521,9 @@
           player.gold -= 20;
           player.hp = player.maxHp;
           player.mp = player.maxMp;
-          addLog('🧙‍♂️ El Mago te ha bendecido. ¡Vida y Maná restaurados por 20 oro!', 'heal');
+          addLog('🧙‍♂️ ¡Mago restauró tu Vida y Maná por 20 oro!', 'heal');
         } else {
-          addLog('🧙‍♂️ "Necesitas 20 de oro para mi bendición curativa, aventurero."', 'info');
+          addLog('🧙‍♂️ "Necesitas 20 oro para curarte, aventurero."', 'info');
         }
       }
       updateHUD();
@@ -552,21 +535,18 @@
         let dy = Math.abs(e.y - player.y);
 
         if (dx <= 1 && dy <= 1) {
-          // Atacar al jugador
           let dmg = Math.max(1, e.atk - Math.floor(player.def / 2));
           player.hp -= dmg;
-          addLog(`💥 El ${e.type} te atacó y te causó ${dmg} de daño.`, 'combat');
+          addLog(`💥 El ${e.type} te dañó por ${dmg} HP.`, 'combat');
 
           if (player.hp <= 0) {
             player.hp = 0;
-            addLog('☠️ ¡Has sido derrotado en la mazmorra! Fin de la partida.', 'combat');
+            addLog('☠️ ¡Has sido derrotado! Fin de la partida.', 'combat');
             alert('☠️ ¡Has muerto! Inténtalo de nuevo.');
           }
-        } else if (dx <= 4 && dy <= 4) {
-          // Moverse hacia el jugador
+        } else if (dx <= 5 && dy <= 5) {
           let mx = e.x < player.x ? 1 : (e.x > player.x ? -1 : 0);
           let my = e.y < player.y ? 1 : (e.y > player.y ? -1 : 0);
-
           let nx = e.x + mx;
           let ny = e.y + my;
 
@@ -584,13 +564,13 @@
         player.level++;
         player.xp -= player.maxXp;
         player.maxXp = Math.floor(player.maxXp * 1.5);
-        player.maxHp += 20;
+        player.maxHp += 25;
         player.hp = player.maxHp;
-        player.maxMp += 10;
+        player.maxMp += 15;
         player.mp = player.maxMp;
-        player.atk += 5;
-        player.def += 2;
-        addLog(`🎉 ¡HAS SUBIDO AL NIVEL ${player.level}! Estadísticas mejoradas.`, 'heal');
+        player.atk += 6;
+        player.def += 3;
+        addLog(`🎉 ¡HAS SUBIDO AL NIVEL ${player.level}!`, 'heal');
       }
     }
 
@@ -598,18 +578,18 @@
       if (type === 'potion_hp' && player.hpPots > 0) {
         player.hpPots--;
         player.hp = Math.min(player.maxHp, player.hp + 40);
-        addLog('🧪 Usaste una Poción de Vida (+40 HP).', 'heal');
+        addLog('🧪 Poción de Vida usada (+40 HP).', 'heal');
       } else if (type === 'potion_mp' && player.mpPots > 0) {
         player.mpPots--;
         player.mp = Math.min(player.maxMp, player.mp + 30);
-        addLog('💙 Usaste una Poción de Maná (+30 MP).', 'heal');
+        addLog('💙 Poción de Maná usada (+30 MP).', 'heal');
       }
       updateHUD();
     }
 
     function updateHUD() {
       document.getElementById('lblLevel').textContent = player.level;
-      document.getElementById('lblFloor').textContent = `Piso ${floor}`;
+      document.getElementById('lblFloor').textContent = player.floor || floor;
       document.getElementById('lblHp').textContent = `${player.hp}/${player.maxHp}`;
       document.getElementById('lblMp').textContent = `${player.mp}/${player.maxMp}`;
       document.getElementById('lblXp').textContent = `${player.xp}/${player.maxXp}`;
@@ -654,44 +634,41 @@
           } else if (map[r][c] === TILE_STAIRS) {
             ctx.fillStyle = '#0284c7';
             ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
-            ctx.font = '20px sans-serif';
+            ctx.font = '16px sans-serif';
             ctx.textAlign = 'center';
-            ctx.fillText('🪜', x + TILE_SIZE / 2, y + TILE_SIZE / 2 + 7);
+            ctx.fillText('🪜', x + TILE_SIZE / 2, y + TILE_SIZE / 2 + 5);
           }
         }
       }
 
-      // Dibujar Ítems
       items.forEach(i => {
         if (!fog[i.y][i.x]) {
-          ctx.font = '18px sans-serif';
+          ctx.font = '15px sans-serif';
           ctx.textAlign = 'center';
-          ctx.fillText(i.symbol, i.x * TILE_SIZE + TILE_SIZE / 2, i.y * TILE_SIZE + TILE_SIZE / 2 + 6);
+          ctx.fillText(i.symbol, i.x * TILE_SIZE + TILE_SIZE / 2, i.y * TILE_SIZE + TILE_SIZE / 2 + 5);
         }
       });
 
-      // Dibujar NPCs
       npcs.forEach(n => {
         if (!fog[n.y][n.x]) {
-          ctx.font = '20px sans-serif';
+          ctx.font = '16px sans-serif';
           ctx.textAlign = 'center';
-          ctx.fillText(n.symbol, n.x * TILE_SIZE + TILE_SIZE / 2, n.y * TILE_SIZE + TILE_SIZE / 2 + 7);
+          ctx.fillText(n.symbol, n.x * TILE_SIZE + TILE_SIZE / 2, n.y * TILE_SIZE + TILE_SIZE / 2 + 5);
         }
       });
 
-      // Dibujar Enemigos
       enemies.forEach(e => {
         if (!fog[e.y][e.x]) {
-          ctx.font = '20px sans-serif';
+          ctx.font = '16px sans-serif';
           ctx.textAlign = 'center';
-          ctx.fillText(e.symbol, e.x * TILE_SIZE + TILE_SIZE / 2, e.y * TILE_SIZE + TILE_SIZE / 2 + 7);
+          ctx.fillText(e.symbol, e.x * TILE_SIZE + TILE_SIZE / 2, e.y * TILE_SIZE + TILE_SIZE / 2 + 5);
         }
       });
 
       // Dibujar Jugador
-      ctx.font = '22px sans-serif';
+      ctx.font = '18px sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText('🧙‍♂️', player.x * TILE_SIZE + TILE_SIZE / 2, player.y * TILE_SIZE + TILE_SIZE / 2 + 8);
+      ctx.fillText('🧙‍♂️', player.x * TILE_SIZE + TILE_SIZE / 2, player.y * TILE_SIZE + TILE_SIZE / 2 + 6);
     }
 
     function restartGame() {
@@ -705,6 +682,28 @@
       generateDungeon();
     }
 
+    // Touch Swipe Gestures
+    let touchStartX = 0;
+    let touchStartY = 0;
+
+    canvas.addEventListener('touchstart', (e) => {
+      touchStartX = e.touches[0].clientX;
+      touchStartY = e.touches[0].clientY;
+    }, { passive: true });
+
+    canvas.addEventListener('touchend', (e) => {
+      const diffX = e.changedTouches[0].clientX - touchStartX;
+      const diffY = e.changedTouches[0].clientY - touchStartY;
+
+      if (Math.abs(diffX) > Math.abs(diffY)) {
+        if (diffX > 25) movePlayer(1, 0);
+        else if (diffX < -25) movePlayer(-1, 0);
+      } else {
+        if (diffY > 25) movePlayer(0, 1);
+        else if (diffY < -25) movePlayer(0, -1);
+      }
+    });
+
     window.addEventListener('keydown', (e) => {
       if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') movePlayer(0, -1);
       if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') movePlayer(0, 1);
@@ -712,6 +711,11 @@
       if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') movePlayer(1, 0);
       if (e.key === ' ' || e.key === 'm' || e.key === 'M') useMagicSkill();
     });
+
+    // Modal Guide Handler
+    const guideModal = document.getElementById('guideModal');
+    document.getElementById('btnOpenGuide').addEventListener('click', () => guideModal.classList.add('active'));
+    document.getElementById('btnCloseGuide').addEventListener('click', () => guideModal.classList.remove('active'));
 
     generateDungeon();
   </script>

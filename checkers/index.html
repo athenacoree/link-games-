@@ -7,7 +7,7 @@
   <link rel="stylesheet" href="../assets/css/link-theme.css">
   <style>
     .game-container {
-      max-width: 440px;
+      max-width: 460px;
       margin: 0 auto;
       text-align: center;
     }
@@ -15,10 +15,12 @@
       display: grid;
       grid-template-columns: repeat(8, 1fr);
       gap: 2px;
-      background: #1e293b;
+      background: rgba(30, 41, 59, 0.8);
+      backdrop-filter: blur(12px);
       padding: 6px;
       border-radius: var(--radius-lg);
-      margin-bottom: 1.5rem;
+      margin-bottom: 1.25rem;
+      border: 1px solid var(--border-color);
     }
     .cell {
       aspect-ratio: 1;
@@ -27,34 +29,77 @@
       justify-content: center;
       font-size: 2rem;
       cursor: pointer;
+      user-select: none;
     }
     .cell.dark { background: #0f172a; }
     .cell.light { background: #334155; }
-    .cell.selected { background: rgba(99, 102, 241, 0.4); }
+    .cell.selected { background: rgba(99, 102, 241, 0.5); }
   </style>
 </head>
-<body>
+<body class="aurora-bg">
   <header class="link-header">
-    <a href="../" class="btn-back"><span>← Volver al Catálogo</span></a>
+    <a href="../" class="btn-back"><span>← Catálogo</span></a>
     <div class="link-logo">
       <div class="link-logo-icon">⚪</div>
       <span>Damas Clásicas</span>
     </div>
+    <button class="btn-guide" id="btnOpenGuide">📖 Guía / Lore</button>
   </header>
 
   <main class="container">
-    <div class="game-container">
-      <div style="margin-bottom:1rem; font-weight:bold;" id="turnText">Turno: Rojas 🔴</div>
+    <div class="game-container glass-panel" style="padding: 1.5rem;">
+
+      <!-- Métricas Agrupadas -->
+      <div class="metrics-group">
+        <div class="metric-pill">
+          <span class="metric-label">Turno Activo</span>
+          <span class="metric-value" id="turnText" style="color:#f87171;">Rojas 🔴</span>
+        </div>
+      </div>
+
+      <div class="touch-hint-banner">
+        👆 Toca tu ficha para seleccionarla y luego toca la casilla oscura de destino
+      </div>
+
       <div class="checkers-board" id="board"></div>
-      <button class="btn btn-secondary" onclick="initGame()" style="width: 100%;">Reiniciar Partida</button>
+
+      <button class="btn btn-secondary" onclick="initGame()" style="width: 100%;">🔄 Reiniciar Partida</button>
     </div>
   </main>
+
+  <!-- Modal Explicativo -->
+  <div class="guide-modal-overlay" id="guideModal">
+    <div class="guide-modal-content">
+      <div class="guide-modal-header">
+        <div class="guide-modal-title">⚪ Damas Clásicas — Guía Oficial</div>
+        <button class="guide-modal-close" id="btnCloseGuide">✕</button>
+      </div>
+
+      <div class="guide-section">
+        <div class="guide-section-title">📜 Lore del Tablero</div>
+        <p>El juego ancestral de captura en cuadrícula de 8x8. Mueve tus peones en diagonal e inhabilita las fichas enemigas.</p>
+      </div>
+
+      <div class="guide-section">
+        <div class="guide-section-title">🎯 Objetivo del Juego</div>
+        <p>Captura o bloquea todas las fichas del oponente saltando sobre ellas en diagonal.</p>
+      </div>
+
+      <div class="guide-section">
+        <div class="guide-section-title">📱 Controles Móviles</div>
+        <div class="guide-controls-list">
+          <div class="guide-control-item"><span class="guide-control-badge">Toque en Ficha</span> Seleccionar pieza</div>
+          <div class="guide-control-item"><span class="guide-control-badge">Toque en Casilla</span> Mover a casilla vacía</div>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <footer class="link-footer"><p>Licencia MIT — Link Minigames</p></footer>
 
   <script>
     let boardState = [];
-    let turn = 'R'; // 'R' or 'B'
+    let turn = 'R';
     let selected = null;
 
     function initGame() {
@@ -92,7 +137,8 @@
           boardEl.appendChild(cell);
         }
       }
-      document.getElementById('turnText').textContent = turn === 'R' ? 'Turno: Rojas 🔴' : 'Turno: Blancas ⚪';
+      document.getElementById('turnText').textContent = turn === 'R' ? 'Rojas 🔴' : 'Blancas ⚪';
+      document.getElementById('turnText').style.color = turn === 'R' ? '#f87171' : '#f1f5f9';
     }
 
     function handleClick(r, c) {
@@ -108,6 +154,10 @@
         render();
       }
     }
+
+    const guideModal = document.getElementById('guideModal');
+    document.getElementById('btnOpenGuide').addEventListener('click', () => guideModal.classList.add('active'));
+    document.getElementById('btnCloseGuide').addEventListener('click', () => guideModal.classList.remove('active'));
 
     initGame();
   </script>

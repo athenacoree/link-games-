@@ -16,11 +16,12 @@
       justify-content: space-around;
       align-items: flex-end;
       height: 200px;
-      background: var(--bg-card);
+      background: rgba(30, 41, 59, 0.8);
+      backdrop-filter: blur(12px);
       border: 1px solid var(--border-color);
       border-radius: var(--radius-lg);
       padding: 10px;
-      margin-bottom: 1.5rem;
+      margin-bottom: 1.25rem;
     }
     .tower {
       width: 28%;
@@ -33,7 +34,7 @@
       cursor: pointer;
       position: relative;
     }
-    .tower.selected { background: rgba(99, 102, 241, 0.2); }
+    .tower.selected { background: rgba(99, 102, 241, 0.3); }
     .disc {
       height: 24px;
       border-radius: 6px;
@@ -42,18 +43,30 @@
     }
   </style>
 </head>
-<body>
+<body class="aurora-bg">
   <header class="link-header">
-    <a href="../" class="btn-back"><span>← Volver al Catálogo</span></a>
+    <a href="../" class="btn-back"><span>← Catálogo</span></a>
     <div class="link-logo">
       <div class="link-logo-icon">🗼</div>
       <span>Torres de Hanói</span>
     </div>
+    <button class="btn-guide" id="btnOpenGuide">📖 Guía / Lore</button>
   </header>
 
   <main class="container">
-    <div class="game-container">
-      <div style="margin-bottom:1rem; font-weight:bold;">Movimientos: <span id="moves" style="color:var(--accent-primary);">0</span></div>
+    <div class="game-container glass-panel" style="padding: 1.5rem;">
+
+      <!-- Métricas Agrupadas -->
+      <div class="metrics-group">
+        <div class="metric-pill">
+          <span class="metric-label">Movimientos</span>
+          <span class="metric-value" id="moves" style="color:#6366f1;">0</span>
+        </div>
+      </div>
+
+      <div class="touch-hint-banner">
+        👆 Toca sobre una torre para seleccionar el disco superior y toca la torre de destino
+      </div>
 
       <div class="hanoi-towers">
         <div class="tower" id="t0" onclick="selectTower(0)"></div>
@@ -61,9 +74,36 @@
         <div class="tower" id="t2" onclick="selectTower(2)"></div>
       </div>
 
-      <button class="btn btn-secondary" onclick="initGame()" style="width: 100%;">Reiniciar Torres</button>
+      <button class="btn btn-secondary" onclick="initGame()" style="width: 100%;">🔄 Reiniciar Torres</button>
     </div>
   </main>
+
+  <!-- Modal Explicativo -->
+  <div class="guide-modal-overlay" id="guideModal">
+    <div class="guide-modal-content">
+      <div class="guide-modal-header">
+        <div class="guide-modal-title">🗼 Torres de Hanói — Guía Oficial</div>
+        <button class="guide-modal-close" id="btnCloseGuide">✕</button>
+      </div>
+
+      <div class="guide-section">
+        <div class="guide-section-title">📜 Lore del Acertijo</div>
+        <p>El puzzle matemático milenario. Mueve los cuatro discos místico-energéticos de la primera torre a la última respetando las leyes sagradas de tamaño.</p>
+      </div>
+
+      <div class="guide-section">
+        <div class="guide-section-title">🎯 Objetivo del Juego</div>
+        <p>Traslada todos los discos a la tercera torre. Regla clave: jamás podrás colocar un disco grande sobre uno más pequeño.</p>
+      </div>
+
+      <div class="guide-section">
+        <div class="guide-section-title">📱 Controles Móviles</div>
+        <div class="guide-controls-list">
+          <div class="guide-control-item"><span class="guide-control-badge">Toque en Torre</span> Seleccionar / Mover disco</div>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <footer class="link-footer"><p>Licencia MIT — Link Minigames</p></footer>
 
@@ -128,6 +168,10 @@
         render();
       }
     }
+
+    const guideModal = document.getElementById('guideModal');
+    document.getElementById('btnOpenGuide').addEventListener('click', () => guideModal.classList.add('active'));
+    document.getElementById('btnCloseGuide').addEventListener('click', () => guideModal.classList.remove('active'));
 
     initGame();
   </script>

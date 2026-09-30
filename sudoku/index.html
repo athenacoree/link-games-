@@ -18,11 +18,11 @@
       background: #334155;
       padding: 4px;
       border-radius: var(--radius-md);
-      margin-bottom: 1.5rem;
+      margin-bottom: 1.25rem;
     }
     .cell {
       aspect-ratio: 1;
-      background: var(--bg-card);
+      background: rgba(26, 33, 51, 0.8);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -32,7 +32,7 @@
       user-select: none;
     }
     .cell.given { color: var(--accent-primary); font-weight: 900; }
-    .cell.selected { background: rgba(99, 102, 241, 0.3); border: 2px solid var(--accent-primary); }
+    .cell.selected { background: rgba(99, 102, 241, 0.4); border: 2px solid var(--accent-primary); }
     .num-pad {
       display: grid;
       grid-template-columns: repeat(5, 1fr);
@@ -41,7 +41,7 @@
     }
     .num-btn {
       padding: 0.75rem;
-      background: var(--bg-card);
+      background: rgba(255,255,255,0.05);
       border: 1px solid var(--border-color);
       border-radius: var(--radius-sm);
       color: white;
@@ -50,17 +50,27 @@
     }
   </style>
 </head>
-<body>
+<body class="aurora-bg">
   <header class="link-header">
-    <a href="../" class="btn-back"><span>← Volver al Catálogo</span></a>
+    <a href="../" class="btn-back"><span>← Catálogo</span></a>
     <div class="link-logo">
       <div class="link-logo-icon">🔢</div>
       <span>Sudoku Puzzle</span>
     </div>
+    <button class="btn-guide" id="btnOpenGuide">📖 Guía / Lore</button>
   </header>
 
   <main class="container">
-    <div class="game-container">
+    <div class="game-container glass-panel" style="padding: 1.5rem;">
+
+      <!-- Métricas Agrupadas -->
+      <div class="metrics-group">
+        <div class="metric-pill">
+          <span class="metric-label">Matriz</span>
+          <span class="metric-value" style="color:#6366f1;">9 x 9</span>
+        </div>
+      </div>
+
       <div class="sudoku-grid" id="grid"></div>
 
       <div class="num-pad">
@@ -76,9 +86,37 @@
         <button class="num-btn" onclick="enterNum(0)">❌</button>
       </div>
 
-      <button class="btn btn-secondary" onclick="initGame()" style="width: 100%;">Nuevo Sudoku</button>
+      <button class="btn btn-secondary" onclick="initGame()" style="width: 100%;">🔄 Nuevo Sudoku</button>
     </div>
   </main>
+
+  <!-- Modal Explicativo -->
+  <div class="guide-modal-overlay" id="guideModal">
+    <div class="guide-modal-content">
+      <div class="guide-modal-header">
+        <div class="guide-modal-title">🔢 Sudoku Puzzle — Guía Oficial</div>
+        <button class="guide-modal-close" id="btnCloseGuide">✕</button>
+      </div>
+
+      <div class="guide-section">
+        <div class="guide-section-title">📜 Lore de la Malla</div>
+        <p>El desafío lógico japonés. Completa la matriz de 9x9 casillas garantizando que cada fila, columna y subcuadrícula de 3x3 contenga los dígitos del 1 al 9 sin repetir.</p>
+      </div>
+
+      <div class="guide-section">
+        <div class="guide-section-title">🎯 Objetivo del Juego</div>
+        <p>Rellena todas las casillas vacías respetando las restricciones numéricas.</p>
+      </div>
+
+      <div class="guide-section">
+        <div class="guide-section-title">📱 Controles Móviles</div>
+        <div class="guide-controls-list">
+          <div class="guide-control-item"><span class="guide-control-badge">Toque en Casilla</span> Seleccionar casilla vacía</div>
+          <div class="guide-control-item"><span class="guide-control-badge">Botonera Numérica</span> Ingresar número del 1 al 9</div>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <footer class="link-footer"><p>Licencia MIT — Link Minigames</p></footer>
 
@@ -136,6 +174,10 @@
         render();
       }
     }
+
+    const guideModal = document.getElementById('guideModal');
+    document.getElementById('btnOpenGuide').addEventListener('click', () => guideModal.classList.add('active'));
+    document.getElementById('btnCloseGuide').addEventListener('click', () => guideModal.classList.remove('active'));
 
     initGame();
   </script>
