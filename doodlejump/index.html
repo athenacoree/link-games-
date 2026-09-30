@@ -16,7 +16,7 @@
       border: 1px solid var(--border-color);
       border-radius: var(--radius-lg);
       padding: 10px;
-      margin-bottom: 1.5rem;
+      margin-bottom: 1.25rem;
     }
     canvas {
       width: 100%;
@@ -24,49 +24,70 @@
       background: #0b1329;
       border-radius: var(--radius-md);
       display: block;
-    }
-    .controls {
-      display: flex;
-      gap: 1rem;
-      margin-bottom: 1rem;
-    }
-    .ctrl-btn {
-      flex: 1;
-      padding: 1rem;
-      background: var(--bg-card);
-      border: 1px solid var(--border-color);
-      border-radius: var(--radius-md);
-      color: white;
-      font-size: 1.25rem;
-      cursor: pointer;
+      touch-action: none;
     }
   </style>
 </head>
-<body>
+<body class="aurora-bg">
   <header class="link-header">
-    <a href="../" class="btn-back"><span>← Volver al Catálogo</span></a>
+    <a href="../" class="btn-back"><span>← Catálogo</span></a>
     <div class="link-logo">
       <div class="link-logo-icon">🦘</div>
       <span>Salto Infinito</span>
     </div>
+    <button class="btn-guide" id="btnOpenGuide">📖 Guía / Lore</button>
   </header>
 
   <main class="container">
-    <div class="game-container">
-      <div style="margin-bottom:1rem; font-weight:bold;">Altura: <span id="score" style="color:var(--accent-primary);">0</span>m</div>
+    <div class="game-container glass-panel" style="padding: 1.5rem;">
+
+      <!-- Métricas Agrupadas -->
+      <div class="metrics-group">
+        <div class="metric-pill">
+          <span class="metric-label">Altura Alcanzada</span>
+          <span class="metric-value" id="score" style="color:#10b981;">0</span><span style="font-size:0.75rem; color:#94a3b8;">m</span>
+        </div>
+      </div>
+
+      <div class="touch-hint-banner">
+        👆 Desliza a la izquierda o derecha en la pantalla para mover al saltador
+      </div>
 
       <div class="canvas-wrapper">
         <canvas id="doodleCanvas" width="360" height="480"></canvas>
       </div>
 
-      <div class="controls">
-        <button class="ctrl-btn" id="btnLeft">◄ Izquierda</button>
-        <button class="ctrl-btn" id="btnRight">► Derecha</button>
-      </div>
-
-      <button class="btn btn-primary" onclick="initGame()" style="width: 100%;">Iniciar Salto</button>
+      <button class="btn btn-primary anim-pulse" onclick="initGame()" style="width: 100%;">🚀 Iniciar Salto</button>
     </div>
   </main>
+
+  <!-- Modal Explicativo -->
+  <div class="guide-modal-overlay" id="guideModal">
+    <div class="guide-modal-content">
+      <div class="guide-modal-header">
+        <div class="guide-modal-title">🦘 Salto Infinito — Guía Oficial</div>
+        <button class="guide-modal-close" id="btnCloseGuide">✕</button>
+      </div>
+
+      <div class="guide-section">
+        <div class="guide-section-title">📜 Lore de las Planchas</div>
+        <p>Un pequeño ser del mundo Link intenta ascender a la estratosfera rebotando en plataformas gravitacionales flotantes.</p>
+      </div>
+
+      <div class="guide-section">
+        <div class="guide-section-title">🎯 Objetivo del Juego</div>
+        <p>Asciende lo más alto posible rebotando en las plataformas verdes. Si caes al vacío, la partida terminará.</p>
+      </div>
+
+      <div class="guide-section">
+        <div class="guide-section-title">📱 Controles Móviles</div>
+        <div class="guide-controls-list">
+          <div class="guide-control-item"><span class="guide-control-badge">Swipe Izq/Der</span> Mover lateralmente</div>
+          <div class="guide-control-item"><span class="guide-control-badge">Flechas Teclado</span> Teclas de dirección</div>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <footer class="link-footer"><p>Licencia MIT — Link Minigames</p></footer>
 
@@ -98,11 +119,9 @@
       player.x += player.vx;
       player.y += player.vy;
 
-      // Wrap around walls
       if (player.x < 0) player.x = canvas.width;
       if (player.x > canvas.width) player.x = 0;
 
-      // Platform bounce
       platforms.forEach(p => {
         if (
           player.vy > 0 &&
@@ -113,7 +132,6 @@
         }
       });
 
-      // Scroll camera
       if (player.y < 200) {
         let diff = 200 - player.y;
         player.y = 200;
@@ -129,12 +147,11 @@
       }
 
       if (player.y > canvas.height) {
-        alert(`💥 Game Over! Alcanzaste una altura de ${score}m.`);
+        alert(`💥 Game Over! Altura máxima alcanzada: ${score}m.`);
         gameActive = false;
         return;
       }
 
-      // Draw
       ctx.fillStyle = '#0b1329';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
@@ -149,13 +166,25 @@
       requestAnimationFrame(loop);
     }
 
-    document.getElementById('btnLeft').addEventListener('click', () => player.vx = -5);
-    document.getElementById('btnRight').addEventListener('click', () => player.vx = 5);
+    let touchStartX = 0;
+    canvas.addEventListener('touchstart', (e) => {
+      touchStartX = e.touches[0].clientX;
+    }, { passive: true });
+
+    canvas.addEventListener('touchmove', (e) => {
+      let diffX = e.touches[0].clientX - touchStartX;
+      if (diffX > 10) player.vx = 5;
+      else if (diffX < -10) player.vx = -5;
+    }, { passive: true });
 
     window.addEventListener('keydown', (e) => {
       if (e.key === 'ArrowLeft') player.vx = -5;
       if (e.key === 'ArrowRight') player.vx = 5;
     });
+
+    const guideModal = document.getElementById('guideModal');
+    document.getElementById('btnOpenGuide').addEventListener('click', () => guideModal.classList.add('active'));
+    document.getElementById('btnCloseGuide').addEventListener('click', () => guideModal.classList.remove('active'));
 
     initGame();
   </script>

@@ -13,17 +13,18 @@
     }
     .gallows {
       font-size: 3.5rem;
-      background: var(--bg-card);
+      background: rgba(30, 41, 59, 0.8);
+      backdrop-filter: blur(12px);
       padding: 1.5rem;
       border-radius: var(--radius-lg);
       border: 1px solid var(--border-color);
-      margin-bottom: 1.5rem;
+      margin-bottom: 1.25rem;
     }
     .word-display {
       font-size: 2rem;
       font-weight: 800;
       letter-spacing: 0.25em;
-      margin-bottom: 1.5rem;
+      margin-bottom: 1.25rem;
       color: var(--accent-primary);
     }
     .kb {
@@ -31,11 +32,11 @@
       flex-wrap: wrap;
       gap: 6px;
       justify-content: center;
-      margin-bottom: 1.5rem;
+      margin-bottom: 1.25rem;
     }
     .key-btn {
       padding: 0.6rem 0.8rem;
-      background: var(--bg-card);
+      background: rgba(255,255,255,0.05);
       border: 1px solid var(--border-color);
       border-radius: var(--radius-sm);
       color: white;
@@ -45,26 +46,63 @@
     .key-btn:disabled { opacity: 0.3; cursor: not-allowed; }
   </style>
 </head>
-<body>
+<body class="aurora-bg">
   <header class="link-header">
-    <a href="../" class="btn-back"><span>← Volver al Catálogo</span></a>
+    <a href="../" class="btn-back"><span>← Catálogo</span></a>
     <div class="link-logo">
       <div class="link-logo-icon">🪢</div>
       <span>El Ahorcado</span>
     </div>
+    <button class="btn-guide" id="btnOpenGuide">📖 Guía / Lore</button>
   </header>
 
   <main class="container">
-    <div class="game-container">
+    <div class="game-container glass-panel" style="padding: 1.5rem;">
+
+      <!-- Métricas Agrupadas -->
+      <div class="metrics-group">
+        <div class="metric-pill">
+          <span class="metric-label">Vidas Restantes</span>
+          <span class="metric-value" id="lblLives" style="color:#ef4444;">6</span>
+        </div>
+      </div>
+
       <div class="gallows" id="gallowsBox">🪢 (0/6)</div>
 
       <div class="word-display" id="wordBox">_ _ _ _ _</div>
 
       <div class="kb" id="kbBox"></div>
 
-      <button class="btn btn-primary" onclick="initGame()" style="width: 100%;">Nueva Palabra</button>
+      <button class="btn btn-secondary" onclick="initGame()" style="width: 100%;">🔄 Nueva Palabra</button>
     </div>
   </main>
+
+  <!-- Modal Explicativo -->
+  <div class="guide-modal-overlay" id="guideModal">
+    <div class="guide-modal-content">
+      <div class="guide-modal-header">
+        <div class="guide-modal-title">🪢 El Ahorcado — Guía Oficial</div>
+        <button class="guide-modal-close" id="btnCloseGuide">✕</button>
+      </div>
+
+      <div class="guide-section">
+        <div class="guide-section-title">📜 Lore de la horca</div>
+        <p>Adivina la palabra secreta seleccionando letras una a una antes de agotar tus 6 oportunidades de error.</p>
+      </div>
+
+      <div class="guide-section">
+        <div class="guide-section-title">🎯 Objetivo del Juego</div>
+        <p>Descubre el término oculto seleccionando las letras correctas del alfabeto.</p>
+      </div>
+
+      <div class="guide-section">
+        <div class="guide-section-title">📱 Controles Móviles</div>
+        <div class="guide-controls-list">
+          <div class="guide-control-item"><span class="guide-control-badge">Botonera de Letras</span> Tocar letras para probar</div>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <footer class="link-footer"><p>Licencia MIT — Link Minigames</p></footer>
 
@@ -90,6 +128,7 @@
 
     function updateDisplay() {
       document.getElementById('gallowsBox').textContent = `🪢 Errores: ${mistakes}/6`;
+      document.getElementById('lblLives').textContent = 6 - mistakes;
       const displayWord = word.split("").map(l => guessed.includes(l) ? l : "_").join(" ");
       document.getElementById('wordBox').textContent = displayWord;
     }
@@ -109,6 +148,10 @@
         setTimeout(() => alert(`💥 ¡Ahorcado! La palabra era: ${word}`), 100);
       }
     }
+
+    const guideModal = document.getElementById('guideModal');
+    document.getElementById('btnOpenGuide').addEventListener('click', () => guideModal.classList.add('active'));
+    document.getElementById('btnCloseGuide').addEventListener('click', () => guideModal.classList.remove('active'));
 
     initGame();
   </script>

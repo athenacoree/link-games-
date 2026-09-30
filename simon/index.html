@@ -15,10 +15,11 @@
       display: grid;
       grid-template-columns: repeat(2, 1fr);
       gap: 16px;
-      margin-bottom: 1.5rem;
+      margin-bottom: 1.25rem;
       aspect-ratio: 1;
       padding: 16px;
-      background: var(--bg-card);
+      background: rgba(30, 41, 59, 0.8);
+      backdrop-filter: blur(12px);
       border-radius: 50%;
       border: 2px solid var(--border-color);
       box-shadow: var(--shadow-md);
@@ -39,25 +40,28 @@
     .btn-red { background: #ef4444; color: #ef4444; }
     .btn-yellow { background: #f59e0b; color: #f59e0b; }
     .btn-blue { background: #3b82f6; color: #3b82f6; }
-    .score-board {
-      font-size: 1.5rem;
-      font-weight: 800;
-      margin-bottom: 1.5rem;
-    }
   </style>
 </head>
-<body>
+<body class="aurora-bg">
   <header class="link-header">
-    <a href="../" class="btn-back"><span>← Volver al Catálogo</span></a>
+    <a href="../" class="btn-back"><span>← Catálogo</span></a>
     <div class="link-logo">
       <div class="link-logo-icon">🔴</div>
       <span>Secuencia de Colores</span>
     </div>
+    <button class="btn-guide" id="btnOpenGuide">📖 Guía / Lore</button>
   </header>
 
   <main class="container">
-    <div class="game-container">
-      <div class="score-board">Nivel: <span id="level" style="color:var(--accent-primary);">0</span></div>
+    <div class="game-container glass-panel" style="padding: 1.5rem;">
+
+      <!-- Métricas Agrupadas -->
+      <div class="metrics-group">
+        <div class="metric-pill">
+          <span class="metric-label">Nivel</span>
+          <span class="metric-value" id="level" style="color:#ef4444;">0</span>
+        </div>
+      </div>
 
       <div class="simon-board">
         <button class="simon-btn btn-green" data-color="0"></button>
@@ -66,9 +70,36 @@
         <button class="simon-btn btn-blue" data-color="3"></button>
       </div>
 
-      <button class="btn btn-primary" id="btnStart" style="width: 100%;">Iniciar Secuencia</button>
+      <button class="btn btn-primary anim-pulse" id="btnStart" style="width: 100%;">🚀 Iniciar Secuencia</button>
     </div>
   </main>
+
+  <!-- Modal Explicativo -->
+  <div class="guide-modal-overlay" id="guideModal">
+    <div class="guide-modal-content">
+      <div class="guide-modal-header">
+        <div class="guide-modal-title">🔴 Secuencia de Colores — Guía Oficial</div>
+        <button class="guide-modal-close" id="btnCloseGuide">✕</button>
+      </div>
+
+      <div class="guide-section">
+        <div class="guide-section-title">📜 Lore de la Memoria</div>
+        <p>Simon Says en el mundo Link. Memoriza y repite el patrón de tonos de color que se genera en el círculo cromático.</p>
+      </div>
+
+      <div class="guide-section">
+        <div class="guide-section-title">🎯 Objetivo del Juego</div>
+        <p>Repite la secuencia exacta de botones iluminados. Con cada nivel superado se agregará un nuevo tono al patrón.</p>
+      </div>
+
+      <div class="guide-section">
+        <div class="guide-section-title">📱 Controles Móviles</div>
+        <div class="guide-controls-list">
+          <div class="guide-control-item"><span class="guide-control-badge">Toque en Botón</span> Repetir patrón de color</div>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <footer class="link-footer"><p>Licencia MIT — Link Minigames</p></footer>
 
@@ -130,6 +161,10 @@
     });
 
     document.getElementById('btnStart').addEventListener('click', startGame);
+
+    const guideModal = document.getElementById('guideModal');
+    document.getElementById('btnOpenGuide').addEventListener('click', () => guideModal.classList.add('active'));
+    document.getElementById('btnCloseGuide').addEventListener('click', () => guideModal.classList.remove('active'));
   </script>
 </body>
 </html>

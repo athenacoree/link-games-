@@ -12,7 +12,8 @@
     }
 
     .quiz-card {
-      background: var(--bg-card);
+      background: rgba(26, 33, 51, 0.7);
+      backdrop-filter: blur(12px);
       border: 1px solid var(--border-color);
       border-radius: var(--radius-lg);
       padding: 2rem;
@@ -23,8 +24,8 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 1.5rem;
-      padding-bottom: 1rem;
+      margin-bottom: 1.25rem;
+      padding-bottom: 0.75rem;
       border-bottom: 1px solid var(--border-color);
     }
 
@@ -45,7 +46,7 @@
 
     .option-btn {
       padding: 1rem 1.25rem;
-      background: var(--bg-secondary);
+      background: rgba(19, 24, 37, 0.8);
       border: 1px solid var(--border-color);
       border-radius: var(--radius-md);
       color: var(--text-primary);
@@ -91,22 +92,29 @@
     }
   </style>
 </head>
-<body>
+<body class="aurora-bg">
 
   <header class="link-header">
-    <a href="../" class="btn-back">
-      <span>← Volver al Catálogo</span>
-    </a>
+    <a href="../" class="btn-back"><span>← Catálogo</span></a>
     <div class="link-logo">
       <div class="link-logo-icon">🧠</div>
       <span>Trivia Quiz</span>
     </div>
+    <button class="btn-guide" id="btnOpenGuide">📖 Guía / Lore</button>
   </header>
 
   <main class="container">
-    <div class="game-container">
-      <div class="quiz-card" id="quizCard">
+    <div class="game-container glass-panel" style="padding: 1.5rem;">
 
+      <!-- Métricas Agrupadas -->
+      <div class="metrics-group">
+        <div class="metric-pill">
+          <span class="metric-label">Aciertos</span>
+          <span class="metric-value" id="scoreVal" style="color:#10b981;">0</span>
+        </div>
+      </div>
+
+      <div class="quiz-card" id="quizCard">
         <div class="quiz-header">
           <span class="badge badge-purple" id="categoryBadge">Tecnología</span>
           <span class="badge badge-blue" id="progressBadge">Pregunta 1/5</span>
@@ -116,14 +124,39 @@
           <h2 class="question-text" id="questionText">Cargando pregunta...</h2>
           <div class="options-grid" id="optionsContainer"></div>
         </div>
-
       </div>
+
     </div>
   </main>
 
-  <footer class="link-footer">
-    <p>Licencia MIT — Link Minigames</p>
-  </footer>
+  <!-- Modal Explicativo -->
+  <div class="guide-modal-overlay" id="guideModal">
+    <div class="guide-modal-content">
+      <div class="guide-modal-header">
+        <div class="guide-modal-title">🧠 Trivia Quiz — Guía Oficial</div>
+        <button class="guide-modal-close" id="btnCloseGuide">✕</button>
+      </div>
+
+      <div class="guide-section">
+        <div class="guide-section-title">📜 Lore del Cuestionario</div>
+        <p>Demuestra tu sabiduría en tecnología, ciencia, videojuegos y cultura general superando este reto intelectual de Link.</p>
+      </div>
+
+      <div class="guide-section">
+        <div class="guide-section-title">🎯 Objetivo del Juego</div>
+        <p>Responde correctamente cada pregunta de opción múltiple acumulando aciertos para alcanzar el 100% de precisión.</p>
+      </div>
+
+      <div class="guide-section">
+        <div class="guide-section-title">📱 Controles Móviles</div>
+        <div class="guide-controls-list">
+          <div class="guide-control-item"><span class="guide-control-badge">Toque en Opción</span> Seleccionar respuesta</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer class="link-footer"><p>Licencia MIT — Link Minigames</p></footer>
 
   <script>
     const questions = [
@@ -196,6 +229,7 @@
         buttons[idx].classList.add('correct');
         buttons[idx].querySelector('.opt-icon').textContent = '✅';
         score++;
+        document.getElementById('scoreVal').textContent = score;
       } else {
         buttons[idx].classList.add('wrong');
         buttons[idx].querySelector('.opt-icon').textContent = '❌';
@@ -210,7 +244,7 @@
         } else {
           showResults();
         }
-      }, 1500);
+      }, 1200);
     }
 
     function showResults() {
@@ -220,7 +254,7 @@
           <h2>¡Quiz Completado! 🎉</h2>
           <div class="score-big">${score} / ${questions.length}</div>
           <p style="color: var(--text-secondary); margin-bottom: 2rem;">
-            Acuracidad: ${percentage}%
+            Precisión: ${percentage}%
           </p>
           <button class="btn btn-primary" onclick="restartQuiz()" style="width: 100%;">Intentar de nuevo</button>
         </div>
@@ -230,12 +264,17 @@
     function restartQuiz() {
       currentIdx = 0;
       score = 0;
+      document.getElementById('scoreVal').textContent = '0';
       document.getElementById('quizBody').innerHTML = `
         <h2 class="question-text" id="questionText"></h2>
         <div class="options-grid" id="optionsContainer"></div>
       `;
       renderQuestion();
     }
+
+    const guideModal = document.getElementById('guideModal');
+    document.getElementById('btnOpenGuide').addEventListener('click', () => guideModal.classList.add('active'));
+    document.getElementById('btnCloseGuide').addEventListener('click', () => guideModal.classList.remove('active'));
 
     renderQuestion();
   </script>

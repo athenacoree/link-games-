@@ -15,7 +15,7 @@
       display: grid;
       grid-template-rows: repeat(6, 1fr);
       gap: 6px;
-      margin-bottom: 1.5rem;
+      margin-bottom: 1.25rem;
     }
     .wordle-row {
       display: grid;
@@ -32,10 +32,11 @@
       font-size: 1.5rem;
       font-weight: 800;
       text-transform: uppercase;
-      background: var(--bg-card);
+      background: rgba(19, 24, 37, 0.8);
+      transition: all 0.2s ease;
     }
-    .tile.correct { background: #10b981; border-color: #10b981; color: white; }
-    .tile.present { background: #f59e0b; border-color: #f59e0b; color: white; }
+    .tile.correct { background: #10b981; border-color: #10b981; color: white; box-shadow: 0 0 10px rgba(16,185,129,0.5); }
+    .tile.present { background: #f59e0b; border-color: #f59e0b; color: white; box-shadow: 0 0 10px rgba(245,158,11,0.5); }
     .tile.absent { background: #334155; border-color: #334155; color: white; }
     .keyboard {
       display: flex;
@@ -49,30 +50,44 @@
       gap: 4px;
     }
     .key {
-      padding: 0.75rem 0.5rem;
+      padding: 0.75rem 0.4rem;
       border-radius: var(--radius-sm);
-      background: var(--bg-card);
+      background: rgba(255, 255, 255, 0.05);
       border: 1px solid var(--border-color);
       color: white;
       font-weight: 700;
       cursor: pointer;
-      min-width: 32px;
+      min-width: 28px;
       user-select: none;
     }
     .key.wide { flex: 1.5; font-size: 0.8rem; }
   </style>
 </head>
-<body>
+<body class="aurora-bg">
   <header class="link-header">
-    <a href="../" class="btn-back"><span>← Volver al Catálogo</span></a>
+    <a href="../" class="btn-back"><span>← Catálogo</span></a>
     <div class="link-logo">
       <div class="link-logo-icon">🔤</div>
       <span>Adivina la Palabra</span>
     </div>
+    <button class="btn-guide" id="btnOpenGuide">📖 Guía / Lore</button>
   </header>
 
   <main class="container">
-    <div class="game-container">
+    <div class="game-container glass-panel" style="padding: 1.5rem;">
+
+      <!-- Métricas Agrupadas -->
+      <div class="metrics-group">
+        <div class="metric-pill">
+          <span class="metric-label">Intentos</span>
+          <span class="metric-value" id="lblAttempts" style="color:#38bdf8;">6</span>
+        </div>
+        <div class="metric-pill">
+          <span class="metric-label">Letras</span>
+          <span class="metric-value" style="color:#c084fc;">5 Letras</span>
+        </div>
+      </div>
+
       <div class="wordle-grid" id="grid"></div>
 
       <div class="keyboard" id="keyboard">
@@ -113,9 +128,36 @@
         </div>
       </div>
 
-      <button class="btn btn-secondary" onclick="initGame()" style="width:100%;">Nueva Palabra</button>
+      <button class="btn btn-secondary" onclick="initGame()" style="width:100%;">🔄 Nueva Palabra</button>
     </div>
   </main>
+
+  <!-- Modal Explicativo -->
+  <div class="guide-modal-overlay" id="guideModal">
+    <div class="guide-modal-content">
+      <div class="guide-modal-header">
+        <div class="guide-modal-title">🔤 Adivina la Palabra — Guía Oficial</div>
+        <button class="guide-modal-close" id="btnCloseGuide">✕</button>
+      </div>
+
+      <div class="guide-section">
+        <div class="guide-section-title">📜 Lore de la Palabra</div>
+        <p>Un enigma de 5 letras se oculta en el sistema de Link. Utiliza las pistas de color para deducir el término correcto.</p>
+      </div>
+
+      <div class="guide-section">
+        <div class="guide-section-title">🎯 Código de Colores</div>
+        <p>🟢 <b>Verde:</b> La letra está en la palabra y en la posición correcta. <br>🟡 <b>Amarillo:</b> La letra está en la palabra pero en otra posición. <br>⚪ <b>Gris:</b> La letra no forma parte de la palabra secreta.</p>
+      </div>
+
+      <div class="guide-section">
+        <div class="guide-section-title">📱 Controles Móviles</div>
+        <div class="guide-controls-list">
+          <div class="guide-control-item"><span class="guide-control-badge">Teclado en Pantalla</span> Tocar letras para escribir</div>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <footer class="link-footer"><p>Licencia MIT — Link Minigames</p></footer>
 
@@ -132,6 +174,7 @@
       currentRow = 0;
       currentTile = 0;
       guesses = Array(6).fill("").map(() => Array(5).fill(""));
+      document.getElementById('lblAttempts').textContent = "6";
       renderGrid();
     }
 
@@ -193,6 +236,7 @@
       } else {
         currentRow++;
         currentTile = 0;
+        document.getElementById('lblAttempts').textContent = 6 - currentRow;
       }
     }
 
@@ -202,6 +246,10 @@
       else if (k === 'BACKSPACE') handleKey('BACK');
       else if (/^[A-ZÑ]$/.test(k)) handleKey(k);
     });
+
+    const guideModal = document.getElementById('guideModal');
+    document.getElementById('btnOpenGuide').addEventListener('click', () => guideModal.classList.add('active'));
+    document.getElementById('btnCloseGuide').addEventListener('click', () => guideModal.classList.remove('active'));
 
     initGame();
   </script>

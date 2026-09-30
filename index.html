@@ -9,13 +9,13 @@
     .hero {
       text-align: center;
       padding: 3rem 1rem 2rem;
-      background: radial-gradient(circle at top, rgba(99, 102, 241, 0.15) 0%, transparent 70%);
+      background: radial-gradient(circle at top, rgba(99, 102, 241, 0.25) 0%, transparent 70%);
       border-bottom: 1px solid var(--border-color);
       margin-bottom: 2rem;
     }
 
     .hero-title {
-      font-size: 2.5rem;
+      font-size: 2.75rem;
       font-weight: 800;
       letter-spacing: -0.03em;
       margin-bottom: 0.75rem;
@@ -24,7 +24,7 @@
     .hero-subtitle {
       color: var(--text-secondary);
       font-size: 1.125rem;
-      max-width: 600px;
+      max-width: 620px;
       margin: 0 auto 1rem;
     }
 
@@ -54,7 +54,8 @@
     .search-input {
       width: 100%;
       padding: 0.75rem 1rem 0.75rem 2.5rem;
-      background: var(--bg-card);
+      background: rgba(26, 33, 51, 0.6);
+      backdrop-filter: blur(12px);
       border: 1px solid var(--border-color);
       border-radius: var(--radius-full);
       color: var(--text-primary);
@@ -65,7 +66,7 @@
 
     .search-input:focus {
       border-color: var(--accent-primary);
-      box-shadow: 0 0 15px rgba(99, 102, 241, 0.2);
+      box-shadow: 0 0 20px rgba(99, 102, 241, 0.3);
     }
 
     .search-icon {
@@ -88,7 +89,7 @@
     .category-btn {
       padding: 0.5rem 1rem;
       border-radius: var(--radius-full);
-      background: var(--bg-card);
+      background: rgba(26, 33, 51, 0.6);
       border: 1px solid var(--border-color);
       color: var(--text-secondary);
       font-size: 0.875rem;
@@ -111,7 +112,9 @@
     }
 
     .game-card {
-      background: var(--bg-card);
+      background: rgba(26, 33, 51, 0.65);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
       border: 1px solid var(--border-color);
       border-radius: var(--radius-lg);
       padding: 1.5rem;
@@ -125,9 +128,9 @@
 
     .game-card:hover {
       transform: translateY(-4px);
-      border-color: var(--border-highlight);
-      box-shadow: var(--shadow-glow);
-      background: var(--bg-card-hover);
+      border-color: rgba(168, 85, 247, 0.5);
+      box-shadow: 0 0 25px rgba(168, 85, 247, 0.3);
+      background: rgba(34, 43, 66, 0.85);
     }
 
     .game-card-header {
@@ -196,7 +199,7 @@
     }
   </style>
 </head>
-<body>
+<body class="aurora-bg">
 
   <header class="link-header">
     <a href="./" class="link-logo">
@@ -211,10 +214,10 @@
 
   <div class="hero">
     <h1 class="hero-title">Biblioteca Oficial de Minijuegos</h1>
-    <p class="hero-subtitle">Juegos HTML5 ultrarrápidos, optimizados para móviles y sin necesidad de instalación.</p>
+    <p class="hero-subtitle">Juegos HTML5 de alta respuesta táctil, mejorados visualmente, con mapas expansivos y hojas de guía en cada título.</p>
 
     <div class="hero-actions">
-      <button class="btn btn-primary" id="btnRandomGame">🎲 ¡Juego Aleatorio!</button>
+      <button class="btn btn-primary anim-pulse" id="btnRandomGame">🎲 ¡Juego Aleatorio!</button>
       <button class="btn btn-secondary" id="btnShowFavs">⭐ Ver Favoritos</button>
     </div>
 
@@ -229,7 +232,7 @@
     <div class="controls">
       <div class="search-box">
         <span class="search-icon">🔍</span>
-        <input type="text" id="searchInput" class="search-input" placeholder="Buscar minijuego...">
+        <input type="text" id="searchInput" class="search-input" placeholder="Buscar minijuego por nombre o descripción...">
       </div>
 
       <div class="categories" id="categoryList">

@@ -17,7 +17,7 @@
       border-radius: var(--radius-lg);
       padding: 10px;
       box-shadow: var(--shadow-md);
-      margin-bottom: 1.5rem;
+      margin-bottom: 1.25rem;
     }
     canvas {
       width: 100%;
@@ -27,51 +27,72 @@
       display: block;
       touch-action: none;
     }
-    .score-board {
-      display: flex;
-      justify-content: space-around;
-      background: var(--bg-card);
-      padding: 0.875rem;
-      border-radius: var(--radius-md);
-      border: 1px solid var(--border-color);
-      margin-bottom: 1.5rem;
-    }
-    .score-val {
-      font-size: 1.5rem;
-      font-weight: 800;
-      color: var(--accent-primary);
-    }
   </style>
 </head>
-<body>
+<body class="aurora-bg">
   <header class="link-header">
-    <a href="../" class="btn-back"><span>← Volver al Catálogo</span></a>
+    <a href="../" class="btn-back"><span>← Catálogo</span></a>
     <div class="link-logo">
       <div class="link-logo-icon">🧱</div>
       <span>Brick Breaker</span>
     </div>
+    <button class="btn-guide" id="btnOpenGuide">📖 Guía / Lore</button>
   </header>
 
   <main class="container">
-    <div class="game-container">
-      <div class="score-board">
-        <div>
-          <div style="font-size:0.75rem; color:var(--text-muted); text-transform:uppercase;">Puntos</div>
-          <div class="score-val" id="score">0</div>
+    <div class="game-container glass-panel" style="padding: 1.5rem;">
+
+      <!-- Métricas Agrupadas -->
+      <div class="metrics-group">
+        <div class="metric-pill">
+          <span class="metric-label">Puntos</span>
+          <span class="metric-value" id="score" style="color:#6366f1;">0</span>
         </div>
-        <div>
-          <div style="font-size:0.75rem; color:var(--text-muted); text-transform:uppercase;">Vidas</div>
-          <div class="score-val" id="lives" style="color:#ef4444;">3</div>
+        <div class="metric-pill">
+          <span class="metric-label">Vidas</span>
+          <span class="metric-value" id="lives" style="color:#ef4444;">3</span>
         </div>
+      </div>
+
+      <div class="touch-hint-banner">
+        👆 Desliza o mueve el dedo por la pantalla para desplazar la paleta
       </div>
 
       <div class="canvas-wrapper">
         <canvas id="breakoutCanvas" width="400" height="480"></canvas>
       </div>
 
-      <button class="btn btn-primary" id="btnStart" style="width: 100%;">Iniciar Juego</button>
+      <button class="btn btn-primary anim-pulse" id="btnStart" style="width: 100%;">🚀 Iniciar Juego</button>
     </div>
   </main>
+
+  <!-- Modal Explicativo -->
+  <div class="guide-modal-overlay" id="guideModal">
+    <div class="guide-modal-content">
+      <div class="guide-modal-header">
+        <div class="guide-modal-title">🧱 Brick Breaker — Guía Oficial</div>
+        <button class="guide-modal-close" id="btnCloseGuide">✕</button>
+      </div>
+
+      <div class="guide-section">
+        <div class="guide-section-title">📜 Lore de los Bloques</div>
+        <p>Una barrera de cristal energético impide la transmisión de datos en Link. Controla la pala reflectora para hacer rebotar la bola y destruir todos los bloques.</p>
+      </div>
+
+      <div class="guide-section">
+        <div class="guide-section-title">🎯 Objetivo del Juego</div>
+        <p>Rompe todas las capas de bloques sin dejar caer la pelota. Cada bloque destruido suma 10 puntos.</p>
+      </div>
+
+      <div class="guide-section">
+        <div class="guide-section-title">📱 Controles Móviles</div>
+        <div class="guide-controls-list">
+          <div class="guide-control-item"><span class="guide-control-badge">Arrastre Táctil</span> Mover pala lateralmente</div>
+          <div class="guide-control-item"><span class="guide-control-badge">Mouse</span> Mover pala en PC</div>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <footer class="link-footer"><p>Licencia MIT — Link Minigames</p></footer>
 
@@ -216,6 +237,10 @@
       gameRunning = true;
       draw();
     });
+
+    const guideModal = document.getElementById('guideModal');
+    document.getElementById('btnOpenGuide').addEventListener('click', () => guideModal.classList.add('active'));
+    document.getElementById('btnCloseGuide').addEventListener('click', () => guideModal.classList.remove('active'));
 
     initBricks();
   </script>

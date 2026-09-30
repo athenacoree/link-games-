@@ -18,8 +18,8 @@
     .mode-selector {
       display: flex;
       gap: 0.5rem;
-      margin-bottom: 1.5rem;
-      background: var(--bg-card);
+      margin-bottom: 1.25rem;
+      background: rgba(255,255,255,0.05);
       padding: 0.35rem;
       border-radius: var(--radius-full);
       border: 1px solid var(--border-color);
@@ -46,7 +46,7 @@
     .status-panel {
       font-size: 1.25rem;
       font-weight: 700;
-      margin-bottom: 1.5rem;
+      margin-bottom: 1.25rem;
       min-height: 2rem;
       color: var(--text-primary);
     }
@@ -57,7 +57,8 @@
       gap: 12px;
       width: 100%;
       aspect-ratio: 1;
-      background: var(--bg-card);
+      background: rgba(26, 33, 51, 0.6);
+      backdrop-filter: blur(12px);
       padding: 12px;
       border-radius: var(--radius-lg);
       border: 1px solid var(--border-color);
@@ -66,7 +67,7 @@
     }
 
     .cell {
-      background: var(--bg-secondary);
+      background: rgba(19, 24, 37, 0.8);
       border-radius: var(--radius-md);
       display: flex;
       align-items: center;
@@ -84,63 +85,43 @@
       border-color: var(--border-highlight);
     }
 
-    .cell.x {
-      color: #6366f1;
-    }
-
-    .cell.o {
-      color: #ec4899;
-    }
-
-    .scores {
-      display: flex;
-      justify-content: space-around;
-      width: 100%;
-      background: var(--bg-card);
-      padding: 1rem;
-      border-radius: var(--radius-md);
-      border: 1px solid var(--border-color);
-      margin-bottom: 1.5rem;
-    }
-
-    .score-box {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
-
-    .score-label {
-      font-size: 0.75rem;
-      color: var(--text-muted);
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-    }
-
-    .score-val {
-      font-size: 1.5rem;
-      font-weight: 800;
-      margin-top: 0.25rem;
-    }
+    .cell.x { color: #6366f1; }
+    .cell.o { color: #ec4899; }
   </style>
 </head>
-<body>
+<body class="aurora-bg">
 
   <header class="link-header">
-    <a href="../" class="btn-back">
-      <span>← Volver al Catálogo</span>
-    </a>
+    <a href="../" class="btn-back"><span>← Catálogo</span></a>
     <div class="link-logo">
       <div class="link-logo-icon">❌</div>
       <span>Tres en Raya</span>
     </div>
+    <button class="btn-guide" id="btnOpenGuide">📖 Guía / Lore</button>
   </header>
 
   <main class="container">
-    <div class="game-container">
+    <div class="game-container glass-panel" style="padding: 1.5rem;">
+
+      <!-- Métricas Agrupadas -->
+      <div class="metrics-group">
+        <div class="metric-pill">
+          <span class="metric-label">X (J1)</span>
+          <span class="metric-value" id="scoreX" style="color:#6366f1;">0</span>
+        </div>
+        <div class="metric-pill">
+          <span class="metric-label">Empates</span>
+          <span class="metric-value" id="scoreTies" style="color:#94a3b8;">0</span>
+        </div>
+        <div class="metric-pill">
+          <span class="metric-label" id="labelO">O (IA)</span>
+          <span class="metric-value" id="scoreO" style="color:#ec4899;">0</span>
+        </div>
+      </div>
 
       <div class="mode-selector">
-        <button class="mode-btn active" id="btnVsAi">vs IA</button>
-        <button class="mode-btn" id="btnVsP2">2 Jugadores</button>
+        <button class="mode-btn active" id="btnVsAi">vs IA Inteligente</button>
+        <button class="mode-btn" id="btnVsP2">2 Jugadores Local</button>
       </div>
 
       <div class="status-panel" id="statusPanel">Turno de X</div>
@@ -157,29 +138,39 @@
         <div class="cell" data-index="8"></div>
       </div>
 
-      <div class="scores">
-        <div class="score-box">
-          <span class="score-label">X (Jugador 1)</span>
-          <span class="score-val" id="scoreX" style="color: #6366f1;">0</span>
-        </div>
-        <div class="score-box">
-          <span class="score-label">Empates</span>
-          <span class="score-val" id="scoreTies" style="color: var(--text-secondary);">0</span>
-        </div>
-        <div class="score-box">
-          <span class="score-label" id="labelO">O (IA)</span>
-          <span class="score-val" id="scoreO" style="color: #ec4899;">0</span>
-        </div>
-      </div>
-
-      <button class="btn btn-secondary" id="btnReset" style="width: 100%;">Reiniciar Partida</button>
+      <button class="btn btn-secondary" id="btnReset" style="width: 100%;">🔄 Reiniciar Partida</button>
 
     </div>
   </main>
 
-  <footer class="link-footer">
-    <p>Licencia MIT — Link Minigames</p>
-  </footer>
+  <!-- Modal Explicativo -->
+  <div class="guide-modal-overlay" id="guideModal">
+    <div class="guide-modal-content">
+      <div class="guide-modal-header">
+        <div class="guide-modal-title">❌ Tres en Raya — Guía Oficial</div>
+        <button class="guide-modal-close" id="btnCloseGuide">✕</button>
+      </div>
+
+      <div class="guide-section">
+        <div class="guide-section-title">📜 Lore del Duelo</div>
+        <p>Un clásico enfrentamiento milenario de estrategia rápida. Coloca tus fichas en la cuadrícula de 3x3 y supera a tu contrincante.</p>
+      </div>
+
+      <div class="guide-section">
+        <div class="guide-section-title">🎯 Objetivo del Juego</div>
+        <p>Alinea 3 fichas de tu color (X u O) en línea horizontal, vertical o diagonal antes que tu oponente.</p>
+      </div>
+
+      <div class="guide-section">
+        <div class="guide-section-title">📱 Controles Móviles</div>
+        <div class="guide-controls-list">
+          <div class="guide-control-item"><span class="guide-control-badge">Toque en Casilla</span> Colocar ficha</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer class="link-footer"><p>Licencia MIT — Link Minigames</p></footer>
 
   <script>
     let boardState = Array(9).fill(null);
@@ -192,9 +183,9 @@
     let scoreTies = 0;
 
     const winConditions = [
-      [0,1,2], [3,4,5], [6,7,8], // Horizontales
-      [0,3,6], [1,4,7], [2,5,8], // Verticales
-      [0,4,8], [2,4,6]          // Diagonales
+      [0,1,2], [3,4,5], [6,7,8],
+      [0,3,6], [1,4,7], [2,5,8],
+      [0,4,8], [2,4,6]
     ];
 
     const cells = document.querySelectorAll('.cell');
@@ -247,7 +238,6 @@
     function aiMove() {
       if (!gameActive) return;
 
-      // 1. Try to win
       for (let i = 0; i < 9; i++) {
         if (!boardState[i]) {
           boardState[i] = 'O';
@@ -260,7 +250,6 @@
         }
       }
 
-      // 2. Try to block opponent
       for (let i = 0; i < 9; i++) {
         if (!boardState[i]) {
           boardState[i] = 'X';
@@ -273,13 +262,11 @@
         }
       }
 
-      // 3. Center if available
       if (!boardState[4]) {
         makeMove(4, 'O');
         return;
       }
 
-      // 4. Random available move
       const available = boardState.map((val, idx) => val === null ? idx : null).filter(val => val !== null);
       if (available.length > 0) {
         const randomIdx = available[Math.floor(Math.random() * available.length)];
@@ -305,10 +292,9 @@
     }
 
     cells.forEach(cell => cell.addEventListener('click', handleClick));
-
     document.getElementById('btnReset').addEventListener('click', resetBoard);
 
-    document.getElementById('btnVsAi').addEventListener('click', (e) => {
+    document.getElementById('btnVsAi').addEventListener('click', () => {
       vsAi = true;
       document.getElementById('btnVsAi').classList.add('active');
       document.getElementById('btnVsP2').classList.remove('active');
@@ -316,13 +302,17 @@
       resetBoard();
     });
 
-    document.getElementById('btnVsP2').addEventListener('click', (e) => {
+    document.getElementById('btnVsP2').addEventListener('click', () => {
       vsAi = false;
       document.getElementById('btnVsP2').classList.add('active');
       document.getElementById('btnVsAi').classList.remove('active');
       document.getElementById('labelO').textContent = 'O (Jugador 2)';
       resetBoard();
     });
+
+    const guideModal = document.getElementById('guideModal');
+    document.getElementById('btnOpenGuide').addEventListener('click', () => guideModal.classList.add('active'));
+    document.getElementById('btnCloseGuide').addEventListener('click', () => guideModal.classList.remove('active'));
   </script>
 </body>
 </html>

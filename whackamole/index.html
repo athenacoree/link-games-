@@ -15,11 +15,11 @@
       display: grid;
       grid-template-columns: repeat(3, 1fr);
       gap: 12px;
-      margin-bottom: 1.5rem;
+      margin-bottom: 1.25rem;
     }
     .hole {
       aspect-ratio: 1;
-      background: var(--bg-card);
+      background: rgba(19, 24, 37, 0.8);
       border: 1px solid var(--border-color);
       border-radius: var(--radius-lg);
       display: flex;
@@ -28,32 +28,38 @@
       font-size: 3rem;
       cursor: pointer;
       user-select: none;
+      transition: var(--transition);
     }
-    .score-board {
-      display: flex;
-      justify-content: space-around;
-      background: var(--bg-card);
-      padding: 0.875rem;
-      border-radius: var(--radius-md);
-      border: 1px solid var(--border-color);
-      margin-bottom: 1.5rem;
-    }
+    .hole:hover { border-color: var(--accent-primary); transform: scale(1.05); }
   </style>
 </head>
-<body>
+<body class="aurora-bg">
   <header class="link-header">
-    <a href="../" class="btn-back"><span>← Volver al Catálogo</span></a>
+    <a href="../" class="btn-back"><span>← Catálogo</span></a>
     <div class="link-logo">
       <div class="link-logo-icon">🔨</div>
       <span>Atrapa al Topo</span>
     </div>
+    <button class="btn-guide" id="btnOpenGuide">📖 Guía / Lore</button>
   </header>
 
   <main class="container">
-    <div class="game-container">
-      <div class="score-board">
-        <div>Puntos: <strong id="score" style="color:var(--accent-primary);">0</strong></div>
-        <div>Tiempo: <strong id="time">30s</strong></div>
+    <div class="game-container glass-panel" style="padding: 1.5rem;">
+
+      <!-- Métricas Agrupadas -->
+      <div class="metrics-group">
+        <div class="metric-pill">
+          <span class="metric-label">Puntos</span>
+          <span class="metric-value" id="score" style="color:#10b981;">0</span>
+        </div>
+        <div class="metric-pill">
+          <span class="metric-label">Tiempo</span>
+          <span class="metric-value" id="time" style="color:#f87171;">30s</span>
+        </div>
+      </div>
+
+      <div class="touch-hint-banner">
+        👆 Toca rápidamente sobre el topo 🐹 en cuanto asome la cabeza
       </div>
 
       <div class="grid" id="grid">
@@ -68,9 +74,36 @@
         <div class="hole" onclick="whack(8)">🕳️</div>
       </div>
 
-      <button class="btn btn-primary" onclick="startGame()" style="width: 100%;">Iniciar Juego</button>
+      <button class="btn btn-primary anim-pulse" onclick="startGame()" style="width: 100%;">🚀 Iniciar Juego</button>
     </div>
   </main>
+
+  <!-- Modal Explicativo -->
+  <div class="guide-modal-overlay" id="guideModal">
+    <div class="guide-modal-content">
+      <div class="guide-modal-header">
+        <div class="guide-modal-title">🔨 Atrapa al Topo — Guía Oficial</div>
+        <button class="guide-modal-close" id="btnCloseGuide">✕</button>
+      </div>
+
+      <div class="guide-section">
+        <div class="guide-section-title">📜 Lore del Jardín</div>
+        <p>Topos traviesos de neón están asomándose por las madrigueras del catálogo. Demuestra tu velocidad de reacción golpeándolos antes de que se escondan.</p>
+      </div>
+
+      <div class="guide-section">
+        <div class="guide-section-title">🎯 Objetivo del Juego</div>
+        <p>Golpea a la mayor cantidad de topos posibles en 30 segundos. Cada acierto te otorga 10 puntos.</p>
+      </div>
+
+      <div class="guide-section">
+        <div class="guide-section-title">📱 Controles Móviles</div>
+        <div class="guide-controls-list">
+          <div class="guide-control-item"><span class="guide-control-badge">Toque Directo</span> Tocar al topo inmediatamente</div>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <footer class="link-footer"><p>Licencia MIT — Link Minigames</p></footer>
 
@@ -95,7 +128,7 @@
         if (timeLeft <= 0) {
           clearInterval(gameTimer);
           clearInterval(moleTimer);
-          alert(`🎉 ¡Fin del juego! Conseguiste ${score} puntos.`);
+          alert(`🎉 ¡Fin del juego! Puntuación final: ${score} puntos.`);
         }
       }, 1000);
 
@@ -117,6 +150,10 @@
         activeHole = -1;
       }
     }
+
+    const guideModal = document.getElementById('guideModal');
+    document.getElementById('btnOpenGuide').addEventListener('click', () => guideModal.classList.add('active'));
+    document.getElementById('btnCloseGuide').addEventListener('click', () => guideModal.classList.remove('active'));
   </script>
 </body>
 </html>

@@ -15,11 +15,11 @@
       display: grid;
       grid-template-columns: repeat(7, 1fr);
       gap: 6px;
-      margin-bottom: 1.5rem;
+      margin-bottom: 1.25rem;
     }
     .card-slot {
       aspect-ratio: 0.7;
-      background: var(--bg-card);
+      background: rgba(26, 33, 51, 0.6);
       border: 1px dashed var(--border-color);
       border-radius: var(--radius-sm);
       display: flex;
@@ -28,27 +28,74 @@
       font-weight: 800;
       font-size: 1rem;
       cursor: pointer;
+      user-select: none;
     }
     .card-slot.active { background: #1e293b; border-style: solid; border-color: var(--accent-primary); }
     .card-red { color: #ef4444; }
     .card-black { color: #f8fafc; }
   </style>
 </head>
-<body>
+<body class="aurora-bg">
   <header class="link-header">
-    <a href="../" class="btn-back"><span>← Volver al Catálogo</span></a>
+    <a href="../" class="btn-back"><span>← Catálogo</span></a>
     <div class="link-logo">
       <div class="link-logo-icon">🎴</div>
       <span>Solitario Klondike</span>
     </div>
+    <button class="btn-guide" id="btnOpenGuide">📖 Guía / Lore</button>
   </header>
 
   <main class="container">
-    <div class="game-container">
+    <div class="game-container glass-panel" style="padding: 1.5rem;">
+
+      <!-- Métricas Agrupadas -->
+      <div class="metrics-group">
+        <div class="metric-pill">
+          <span class="metric-label">Baraja</span>
+          <span class="metric-value" style="color:#c084fc;">Klondike</span>
+        </div>
+        <div class="metric-pill">
+          <span class="metric-label">Cartas</span>
+          <span class="metric-value" style="color:#34d399;">52 Cartas</span>
+        </div>
+      </div>
+
+      <div class="touch-hint-banner">
+        👆 Toca sobre la baraja para reorganizar o repartir nuevas manos
+      </div>
+
       <div class="cards-grid" id="tableau"></div>
-      <button class="btn btn-primary" onclick="initGame()" style="width: 100%;">Repartir Cartas</button>
+
+      <button class="btn btn-primary anim-pulse" onclick="initGame()" style="width: 100%;">🎴 Repartir Cartas</button>
     </div>
   </main>
+
+  <!-- Modal Explicativo -->
+  <div class="guide-modal-overlay" id="guideModal">
+    <div class="guide-modal-content">
+      <div class="guide-modal-header">
+        <div class="guide-modal-title">🎴 Solitario Klondike — Guía Oficial</div>
+        <button class="guide-modal-close" id="btnCloseGuide">✕</button>
+      </div>
+
+      <div class="guide-section">
+        <div class="guide-section-title">📜 Lore de las Cartas</div>
+        <p>El juego paciencia por excelencia. Organiza la baraja francesa de 52 cartas por palos y orden ascendente en los cimientos del tablero.</p>
+      </div>
+
+      <div class="guide-section">
+        <div class="guide-section-title">🎯 Objetivo del Juego</div>
+        <p>Ordena las cartas desde el As hasta el Rey organizando columnas alternando colores rojo y negro.</p>
+      </div>
+
+      <div class="guide-section">
+        <div class="guide-section-title">📱 Controles Móviles</div>
+        <div class="guide-controls-list">
+          <div class="guide-control-item"><span class="guide-control-badge">Toque en Carta</span> Seleccionar o mover carta</div>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <footer class="link-footer"><p>Licencia MIT — Link Minigames</p></footer>
 
@@ -70,6 +117,10 @@
         grid.appendChild(slot);
       }
     }
+
+    const guideModal = document.getElementById('guideModal');
+    document.getElementById('btnOpenGuide').addEventListener('click', () => guideModal.classList.add('active'));
+    document.getElementById('btnCloseGuide').addEventListener('click', () => guideModal.classList.remove('active'));
 
     initGame();
   </script>

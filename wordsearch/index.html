@@ -16,29 +16,30 @@
       gap: 8px;
       justify-content: center;
       flex-wrap: wrap;
-      margin-bottom: 1.5rem;
+      margin-bottom: 1.25rem;
     }
     .word-tag {
       padding: 0.35rem 0.75rem;
-      background: var(--bg-card);
+      background: rgba(255, 255, 255, 0.05);
       border: 1px solid var(--border-color);
       border-radius: var(--radius-full);
       font-size: 0.85rem;
       font-weight: 700;
     }
-    .word-tag.found { background: #10b981; color: white; border-color: #10b981; }
+    .word-tag.found { background: #10b981; color: white; border-color: #10b981; box-shadow: 0 0 10px rgba(16,185,129,0.5); }
     .grid {
       display: grid;
       grid-template-columns: repeat(8, 1fr);
       gap: 4px;
-      background: var(--bg-card);
+      background: rgba(30, 41, 59, 0.8);
+      backdrop-filter: blur(12px);
       padding: 10px;
       border-radius: var(--radius-lg);
-      margin-bottom: 1.5rem;
+      margin-bottom: 1.25rem;
     }
     .cell {
       aspect-ratio: 1;
-      background: var(--bg-secondary);
+      background: rgba(19, 24, 37, 0.8);
       border-radius: var(--radius-sm);
       display: flex;
       align-items: center;
@@ -51,17 +52,27 @@
     .cell.selected { background: var(--accent-primary); color: white; }
   </style>
 </head>
-<body>
+<body class="aurora-bg">
   <header class="link-header">
-    <a href="../" class="btn-back"><span>← Volver al Catálogo</span></a>
+    <a href="../" class="btn-back"><span>← Catálogo</span></a>
     <div class="link-logo">
       <div class="link-logo-icon">🔠</div>
       <span>Sopa de Letras</span>
     </div>
+    <button class="btn-guide" id="btnOpenGuide">📖 Guía / Lore</button>
   </header>
 
   <main class="container">
-    <div class="game-container">
+    <div class="game-container glass-panel" style="padding: 1.5rem;">
+
+      <!-- Métricas Agrupadas -->
+      <div class="metrics-group">
+        <div class="metric-pill">
+          <span class="metric-label">Palabras Ocultas</span>
+          <span class="metric-value" style="color:#38bdf8;">3 Palabras</span>
+        </div>
+      </div>
+
       <div class="word-list">
         <span class="word-tag" id="tag-LINK">LINK</span>
         <span class="word-tag" id="tag-GAME">GAME</span>
@@ -70,9 +81,36 @@
 
       <div class="grid" id="grid"></div>
 
-      <button class="btn btn-primary" onclick="initGame()" style="width: 100%;">Nueva Sopa</button>
+      <button class="btn btn-secondary" onclick="initGame()" style="width: 100%;">🔄 Nueva Sopa</button>
     </div>
   </main>
+
+  <!-- Modal Explicativo -->
+  <div class="guide-modal-overlay" id="guideModal">
+    <div class="guide-modal-content">
+      <div class="guide-modal-header">
+        <div class="guide-modal-title">🔠 Sopa de Letras — Guía Oficial</div>
+        <button class="guide-modal-close" id="btnCloseGuide">✕</button>
+      </div>
+
+      <div class="guide-section">
+        <div class="guide-section-title">📜 Lore de la Cuadrícula</div>
+        <p>Busca palabras clave del catálogo escondidas entre la maraña de caracteres de la cuadrícula de 8x8.</p>
+      </div>
+
+      <div class="guide-section">
+        <div class="guide-section-title">🎯 Objetivo del Juego</div>
+        <p>Encuentra e identifica las palabras LINK, GAME y PLAY haciendo clic o tocando las letras que las componen.</p>
+      </div>
+
+      <div class="guide-section">
+        <div class="guide-section-title">📱 Controles Móviles</div>
+        <div class="guide-controls-list">
+          <div class="guide-control-item"><span class="guide-control-badge">Toque en Celdas</span> Marcar letras en orden</div>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <footer class="link-footer"><p>Licencia MIT — Link Minigames</p></footer>
 
@@ -91,11 +129,8 @@
         Array(SIZE).fill(null).map(() => alphabet[Math.floor(Math.random() * alphabet.length)])
       );
 
-      // Embed LINK horizontally row 0
       "LINK".split("").forEach((ch, idx) => gridData[0][idx] = ch);
-      // Embed GAME horizontally row 2
       "GAME".split("").forEach((ch, idx) => gridData[2][idx + 2] = ch);
-      // Embed PLAY vertically col 7
       "PLAY".split("").forEach((ch, idx) => gridData[idx + 1][7] = ch);
 
       render();
@@ -130,6 +165,10 @@
         }
       });
     }
+
+    const guideModal = document.getElementById('guideModal');
+    document.getElementById('btnOpenGuide').addEventListener('click', () => guideModal.classList.add('active'));
+    document.getElementById('btnCloseGuide').addEventListener('click', () => guideModal.classList.remove('active'));
 
     initGame();
   </script>
