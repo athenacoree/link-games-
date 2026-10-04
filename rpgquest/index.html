@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Leyenda Heroica: RPG Quest - Link Minigames</title>
+  <title>Leyenda Heroica: RPG Quest 3D - Link Minigames</title>
   <link rel="stylesheet" href="../assets/css/link-theme.css">
   <style>
     .game-layout {
@@ -37,6 +37,7 @@
       max-width: 100%;
       height: auto;
       touch-action: none;
+      cursor: crosshair;
     }
 
     .rpg-panel {
@@ -76,7 +77,9 @@
       border-radius: var(--radius-md);
       padding: 0.85rem;
       font-size: 0.85rem;
-      min-height: 90px;
+      min-height: 100px;
+      max-height: 140px;
+      overflow-y: auto;
       color: var(--text-primary);
       line-height: 1.4;
     }
@@ -96,18 +99,25 @@
       width: 100%;
     }
 
+    .rpg-actions-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 0.4rem;
+      width: 100%;
+    }
+
     .skill-btn {
       background: rgba(19, 24, 38, 0.85);
       border: 1px solid var(--border-highlight);
       border-radius: var(--radius-md);
-      padding: 0.5rem;
+      padding: 0.45rem 0.25rem;
       color: var(--text-primary);
       display: flex;
       flex-direction: column;
       align-items: center;
       gap: 0.2rem;
       cursor: pointer;
-      font-size: 0.75rem;
+      font-size: 0.72rem;
       transition: var(--transition);
       user-select: none;
     }
@@ -118,35 +128,21 @@
       transform: scale(1.03);
     }
 
-    .skill-icon { font-size: 1.3rem; }
+    .skill-icon { font-size: 1.25rem; }
 
-    .dpad-container {
-      display: grid;
-      grid-template-columns: repeat(3, 48px);
-      grid-template-rows: repeat(3, 48px);
-      gap: 6px;
-      justify-content: center;
-      margin: 0.5rem auto;
-      user-select: none;
+    .status-badge {
+      display: inline-block;
+      padding: 0.2rem 0.5rem;
+      border-radius: var(--radius-sm);
+      font-size: 0.75rem;
+      font-weight: bold;
+      margin-top: 0.25rem;
     }
 
-    .dpad-btn {
-      background: rgba(255, 255, 255, 0.08);
-      border: 1px solid var(--border-color);
-      border-radius: var(--radius-md);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1.25rem;
-      color: white;
-      cursor: pointer;
-      touch-action: none;
-    }
-
-    .dpad-btn:active {
-      background: var(--accent-gradient);
-      box-shadow: var(--shadow-glow);
-    }
+    .badge-hero { background: #0284c7; color: white; }
+    .badge-king { background: #eab308; color: black; }
+    .badge-fugitive { background: #ef4444; color: white; }
+    .badge-outlaw { background: #9333ea; color: white; }
   </style>
 </head>
 <body class="aurora-bg">
@@ -155,7 +151,7 @@
     <a href="../" class="btn-back"><span>← Catálogo</span></a>
     <div class="link-logo">
       <div class="link-logo-icon">🛡️</div>
-      <span>Leyenda Heroica: RPG Quest</span>
+      <span>Leyenda Heroica: RPG Quest 3D</span>
     </div>
     <button class="btn-guide" id="btnOpenGuide">📖 Guía / Lore</button>
   </header>
@@ -165,11 +161,15 @@
     <div class="metrics-group">
       <div class="metric-pill">
         <span class="metric-label">Héroe</span>
-        <span class="metric-value" style="color:#60a5fa;">Link</span>
+        <span class="metric-value" style="color:#60a5fa;" id="lblHeroName">Link</span>
+      </div>
+      <div class="metric-pill">
+        <span class="metric-label">Título</span>
+        <span class="metric-value" id="lblTitle" style="color:#fde047;">Caballero</span>
       </div>
       <div class="metric-pill">
         <span class="metric-label">Nivel</span>
-        <span class="metric-value" id="lblLvl" style="color:#fde047;">1</span>
+        <span class="metric-value" id="lblLvl" style="color:#c084fc;">1</span>
       </div>
       <div class="metric-pill">
         <span class="metric-label">Vida</span>
@@ -180,10 +180,6 @@
         <span class="metric-value" id="lblMp" style="color:#38bdf8;">70/70</span>
       </div>
       <div class="metric-pill">
-        <span class="metric-label">Ataque</span>
-        <span class="metric-value" id="lblAtk" style="color:#34d399;">25</span>
-      </div>
-      <div class="metric-pill">
         <span class="metric-label">Oro</span>
         <span class="metric-value" id="lblGold" style="color:#facc15;">100</span>
       </div>
@@ -192,7 +188,7 @@
     <div class="game-layout">
       <div class="canvas-container glass-panel">
         <div class="touch-hint-banner">
-          🗺️ Explora el vasto Reino de 200x200 casillas | Mantén presionado para moverte | Pulsa 💬 para conversar
+          👆 <b>Control Táctil Completo:</b> Toca cualquier lugar del Reino 200x200 para desplazarte. Usa el menú de acciones para robar, cortejar, veneno, pesca o tomar el trono.
         </div>
 
         <canvas id="rpgCanvas" width="640" height="480"></canvas>
@@ -217,33 +213,58 @@
             </button>
           </div>
 
-          <div class="dpad-container">
-            <div></div>
-            <div class="dpad-btn" id="btnUp">▲</div>
-            <div></div>
-            <div class="dpad-btn" id="btnLeft">◄</div>
-            <div class="dpad-btn" onclick="interact()">💬</div>
-            <div class="dpad-btn" id="btnRight">►</div>
-            <div></div>
-            <div class="dpad-btn" id="btnDown">▼</div>
-            <div></div>
+          <!-- 100+ Living World RPG Action Buttons -->
+          <div class="rpg-actions-grid">
+            <button class="skill-btn" onclick="actRobar()">
+              <span class="skill-icon">🪪</span>
+              <span>Robar</span>
+            </button>
+            <button class="skill-btn" onclick="actCortejar()">
+              <span class="skill-icon">💖</span>
+              <span>Cortejar</span>
+            </button>
+            <button class="skill-btn" onclick="actAsesinarEnvenenar()">
+              <span class="skill-icon">🧪</span>
+              <span>Envenenar</span>
+            </button>
+            <button class="skill-btn" onclick="actCoronarse()">
+              <span class="skill-icon">👑</span>
+              <span>Coronarse</span>
+            </button>
+            <button class="skill-btn" onclick="actEscaparCarcel()">
+              <span class="skill-icon">🔓</span>
+              <span>Fuga Cárcel</span>
+            </button>
+            <button class="skill-btn" onclick="actPescar()">
+              <span class="skill-icon">🎣</span>
+              <span>Pescar</span>
+            </button>
+            <button class="skill-btn" onclick="actMontarCaballo()">
+              <span class="skill-icon">🐎</span>
+              <span>Montar</span>
+            </button>
+            <button class="skill-btn" onclick="actProvocarGuerra()">
+              <span class="skill-icon">⚔️</span>
+              <span>Guerra</span>
+            </button>
           </div>
         </div>
       </div>
 
       <div class="rpg-panel glass-panel">
         <div>
-          <h3 style="font-size:0.95rem; margin-bottom:0.5rem; color:var(--text-secondary);">Misión Sagrada Activa</h3>
-          <div class="quest-card">
-            <div class="quest-title" id="questTitle">📜 Audicencia Real con el Rey Eldrin</div>
-            <div class="quest-desc" id="questDesc">Dirígete al Gran Castillo Real en el norte del mapa (x:100, y:30) y habla con el Rey Eldrin.</div>
+          <h3 style="font-size:0.95rem; margin-bottom:0.35rem; color:var(--text-secondary);">Estado del Reino & Reputación</h3>
+          <div id="statusBadge" class="status-badge badge-hero">Caballero del Reino</div>
+          <div class="quest-card" style="margin-top:0.5rem;">
+            <div class="quest-title" id="questTitle">📜 Audiencia Real con el Rey Eldrin</div>
+            <div class="quest-desc" id="questDesc">Dirígete al Gran Castillo Real en el norte del mapa (x:100, y:25) y habla con el Rey Eldrin.</div>
           </div>
         </div>
 
         <div>
-          <h3 style="font-size:0.95rem; margin-bottom:0.5rem; color:var(--text-secondary);">Diálogo & Bitácora</h3>
+          <h3 style="font-size:0.95rem; margin-bottom:0.5rem; color:var(--text-secondary);">Diálogo & Bitácora Real</h3>
           <div class="dialog-box" id="dialogBox">
-            Bienvenido al Reino de Link. Explora aldeas, ríos, castillos y bosques sombríos.
+            Bienvenido al Reino 3D de Link. Explora la corte del Rey, la Princesa, aldeas, ríos y bosques.
           </div>
         </div>
 
@@ -259,37 +280,36 @@
   <div class="guide-modal-overlay" id="guideModal">
     <div class="guide-modal-content">
       <div class="guide-modal-header">
-        <div class="guide-modal-title">🛡️ Leyenda Heroica — Guía Oficial</div>
+        <div class="guide-modal-title">🛡️ Leyenda Heroica 3D — Guía Oficial</div>
         <button class="guide-modal-close" id="btnCloseGuide">✕</button>
       </div>
 
       <div class="guide-section">
-        <div class="guide-section-title">🗺️ Un Reino 100 veces Más Extenso (200x200)</div>
-        <p>El mapa ha crecido a 200x200 casillas con reinos, reyes, princesas, facciones traidoras dentro del castillo, aldeas costeras, densos bosques de robles y guaridas de monstruos con invasiones automáticas.</p>
+        <div class="guide-section-title">🗺️ Navegación Táctil por Toque</div>
+        <p>Toca en cualquier parte del vasto Reino (200x200) para que tu héroe camine automáticamente hacia esa casilla usando navegación inteligente de caminos.</p>
       </div>
 
       <div class="guide-section">
-        <div class="guide-section-title">🏰 Reyes, Princesas & Mini-IA de Aldeanos</div>
-        <p>Los aldeanos y nobles tienen vida propia: caminan respetando la física de colisión, reaccionan con emotes y ofrecen misiones, curación y armas encantadas.</p>
-      </div>
-
-      <div class="guide-section">
-        <div class="guide-section-title">⚡ Habilidades Mágicas & Animaciones</div>
-        <p>Usa ⚡ Rayo, 🌀 Aurora, 💥 Choque e 🔥 Incendio para barrer con hordas enemigas y defender los portones del reino.</p>
+        <div class="guide-section-title">👑 Castillo 3D, Reyes, Princesas & 100+ Interacciones</div>
+        <p>• <b>Robar:</b> Hurta oro a aldeanos o la corte. Si te atrapan, los guardias te encarcelarán en la Mazmorra.<br>
+           • <b>Fuga de la Cárcel:</b> Forza la cerradura o soborna al carcelero para escapar.<br>
+           • <b>Cortejar & Casarse:</b> Gana el corazón de la Princesa Elena y celebra la boda real.<br>
+           • <b>Envenenar & Asesinar al Rey:</b> Envenena o derroca al Rey Eldrin para reclamar el Trono Real y coronarte Monarca Supremo.<br>
+           • <b>Provocar Guerras:</b> Desata conflictos entre facciones y castillos rivales.<br>
+           • <b>Pesca & Montura:</b> Pesca en los ríos del reino y monta a caballo para viajar al doble de velocidad.</p>
       </div>
     </div>
   </div>
 
-  <footer class="link-footer"><p>Leyenda Heroica RPG — Licencia MIT | Link Minigames</p></footer>
+  <footer class="link-footer"><p>Leyenda Heroica RPG 3D — Licencia MIT | Link Minigames</p></footer>
 
-  <!-- Shared Engine Script -->
   <script src="../assets/js/super-engine.js"></script>
 
   <script>
     const canvas = document.getElementById('rpgCanvas');
     const ctx = canvas.getContext('2d');
 
-    const MAP_SIZE = 200; // Ampliado a 200x200 casillas! (100 veces más extenso)
+    const MAP_SIZE = 200;
     const TILE_SIZE = 32;
 
     const TILE_GRASS = 0;
@@ -299,6 +319,7 @@
     const TILE_ROAD = 4;
     const TILE_CASTLE_WALL = 5;
     const TILE_HOUSE = 6;
+    const TILE_PRISON = 7;
 
     let map = [];
     let camera;
@@ -309,6 +330,7 @@
     let spawner;
 
     let hero = {
+      name: 'Link',
       x: 100, y: 110,
       hp: 150, maxHp: 150,
       mp: 70, maxMp: 70,
@@ -316,8 +338,18 @@
       gold: 100,
       xp: 0, maxXp: 100,
       lvl: 1,
-      questStep: 0
+      questStep: 0,
+      status: 'Caballero',
+      inPrison: false,
+      isMounted: false,
+      kingAlive: true,
+      marriedToPrincess: false,
+      inWar: false
     };
+
+    let walkPath = [];
+    let isWalking = false;
+    let walkTimer = null;
 
     let enemies = [];
     let defeatedCount = 0;
@@ -331,25 +363,25 @@
 
       input = new SuperEngine.Input(
         (dx, dy) => moveHero(dx, dy),
-        (action) => handleAction(action)
+        (action) => handleAction(action),
+        (tx, ty) => handleTileTap(tx, ty)
       );
 
-      input.bindTouchControl(document.getElementById('btnUp'), 0, -1);
-      input.bindTouchControl(document.getElementById('btnDown'), 0, 1);
-      input.bindTouchControl(document.getElementById('btnLeft'), -1, 0);
-      input.bindTouchControl(document.getElementById('btnRight'), 1, 0);
+      input.bindCanvasTouchTap(canvas, camera, MAP_SIZE, MAP_SIZE);
 
       generateWorldMap();
       setupWorldEntities();
 
-      // Load Save if exists
-      const saved = localStorage.getItem('link_rpg_save_v2');
+      const saved = localStorage.getItem('link_rpg_save_v3');
       if (saved) {
         try {
           const parsed = JSON.parse(saved);
           if (parsed.hero) Object.assign(hero, parsed.hero);
         } catch (e) {}
       }
+
+      camera.centerOn(hero.x, hero.y, MAP_SIZE, MAP_SIZE);
+      fog.update(hero.x, hero.y, 16);
 
       updateUI();
       requestAnimationFrame(gameLoop);
@@ -359,17 +391,49 @@
       document.getElementById('dialogBox').textContent = msg;
     }
 
+    function handleTileTap(tx, ty) {
+      if (hero.hp <= 0 || hero.inPrison) return;
+
+      const path = SuperEngine.Pathfinder.findPath(
+        { x: hero.x, y: hero.y },
+        { x: tx, y: ty },
+        MAP_SIZE, MAP_SIZE,
+        (x, y) => isTileBlocked(x, y)
+      );
+
+      if (path && path.length > 0) {
+        walkPath = path;
+        startAutoWalk();
+      }
+    }
+
+    function startAutoWalk() {
+      if (walkTimer) clearInterval(walkTimer);
+      isWalking = true;
+
+      const speed = hero.isMounted ? 60 : 110;
+
+      walkTimer = setInterval(() => {
+        if (walkPath.length === 0 || hero.hp <= 0) {
+          clearInterval(walkTimer);
+          isWalking = false;
+          return;
+        }
+
+        const next = walkPath.shift();
+        moveHero(next.dx, next.dy);
+      }, speed);
+    }
+
     function generateWorldMap() {
       map = Array(MAP_SIZE).fill(0).map(() => Array(MAP_SIZE).fill(TILE_GRASS));
 
-      // Forest patches
       for (let i = 0; i < 150; i++) {
         let fx = Math.floor(Math.random() * (MAP_SIZE - 10));
         let fy = Math.floor(Math.random() * (MAP_SIZE - 10));
         let fw = 4 + Math.floor(Math.random() * 8);
         let fh = 4 + Math.floor(Math.random() * 8);
 
-        // Keep castle and main town clear
         if (fx > 80 && fx < 120 && fy > 10 && fy < 130) continue;
 
         for (let r = fy; r < fy + fh; r++) {
@@ -379,22 +443,20 @@
         }
       }
 
-      // River flowing from north to south
+      // River flowing north to south
       for (let r = 0; r < MAP_SIZE; r++) {
         let rx = 60 + Math.floor(Math.sin(r / 10) * 8);
         map[r][rx] = TILE_WATER;
         map[r][rx + 1] = TILE_WATER;
       }
 
-      // Bridges over river
       map[50][60] = TILE_BRIDGE; map[50][61] = TILE_BRIDGE;
       map[110][60] = TILE_BRIDGE; map[110][61] = TILE_BRIDGE;
 
-      // Roads
       for (let r = 25; r < 160; r++) map[r][100] = TILE_ROAD;
       for (let c = 50; c < 150; c++) map[110][c] = TILE_ROAD;
 
-      // Royal Castle Walls (around x:90-110, y:20-35)
+      // Royal Castle Walls
       for (let c = 88; c <= 112; c++) {
         map[20][c] = TILE_CASTLE_WALL;
         map[35][c] = TILE_CASTLE_WALL;
@@ -403,7 +465,6 @@
         map[r][88] = TILE_CASTLE_WALL;
         map[r][112] = TILE_CASTLE_WALL;
       }
-      // Castle Gate
       map[35][100] = TILE_ROAD;
       for (let r = 21; r < 35; r++) {
         for (let c = 89; c < 112; c++) {
@@ -411,7 +472,9 @@
         }
       }
 
-      // Town Houses in Windvale (x:92-108, y:102-118)
+      // Dungeon Prison Cell inside Castle (x:90, y:22)
+      map[22][90] = TILE_PRISON;
+
       const houseCoords = [
         {x:93,y:104}, {x:105,y:104}, {x:93,y:114}, {x:105,y:114}
       ];
@@ -425,40 +488,37 @@
     }
 
     function setupWorldEntities() {
-      // Named NPCs with Mini-AI
       npcManager.npcs = [];
       npcManager.addNPC({
         id: 'king', name: 'Rey Eldrin', symbol: '👑', x: 100, y: 24, wanderRadius: 1,
-        dialog: ['¡Bienvenido aventurero! Rebeldes traidores se han colado en el ala este del castillo.', 'Derrota a los traidores y a 5 monstruos salvajes para proteger al reino.']
+        dialog: ['¡Bienvenido aventurero! Traidores se ocultan en el ala este del castillo.', 'Elimina las amenazas para proteger la corona.']
       });
       npcManager.addNPC({
-        id: 'princess', name: 'Princesa Elena', symbol: '👸', x: 102, y: 24, wanderRadius: 2,
-        dialog: ['¡Gracias por proteger a mi padre y al reino, honorable caballero!']
+        id: 'princess', name: 'Princesa Elena', symbol: '👸', x: 102, y: 24, wanderRadius: 2, affection: 0,
+        dialog: ['¡Siento gran admiración por la valentía de los verdaderos caballeros!']
       });
       npcManager.addNPC({
         id: 'capt', name: 'Capitán Bruno', symbol: '🛡️', x: 100, y: 34, wanderRadius: 2,
-        dialog: ['Mis guardias defienden la entrada principal, pero necesitamos tu magia de choque.']
+        dialog: ['Mis guardias patrullan el reino. Mantén la ley y el orden.']
       });
       npcManager.addNPC({
         id: 'villager1', name: 'Aldeano Mateo', symbol: '🧔', x: 98, y: 108, wanderRadius: 4,
-        dialog: ['¡Cuidado al cruzar el río al oeste! Los ogros merodean por el bosque.']
+        dialog: ['Puedes comprar caballos en la pradera o pescar truchas doradas en el río.']
       });
       npcManager.addNPC({
         id: 'villager2', name: 'Aldeana Isabela', symbol: '👩', type: 'healer', x: 102, y: 108, wanderRadius: 3,
-        dialog: ['Puedo sanar tus heridas y restaurar tu maná si tienes 30 monedas de oro.']
+        dialog: ['Puedo restaurar tu salud y maná si tienes 30 monedas de oro.']
       });
       npcManager.addNPC({
         id: 'blacksmith', name: 'Herrero Thor', symbol: '🔨', x: 94, y: 112, wanderRadius: 1,
         dialog: ['¡Te forjaré una espada de mitril por 60 oro (+15 ATK)!']
       });
 
-      // Spawners in dark forest & castle hidden wing
       spawner.spawners = [];
       spawner.addSpawner(130, 130, 'Goblin', 150);
       spawner.addSpawner(140, 140, 'Ogro', 200);
-      spawner.addSpawner(110, 22, 'Traidor', 160); // Castle Traitor Spawner inside east wing!
+      spawner.addSpawner(110, 22, 'Traidor', 160);
 
-      // Initial Enemies
       enemies = [
         { x: 108, y: 23, type: 'Guardia Traidor', symbol: '🗡️', hp: 70, maxHp: 70, atk: 18, xpReward: 60, goldReward: 35, isLeader: false },
         { x: 109, y: 25, type: 'Capataz Rebelde', symbol: '👿', hp: 120, maxHp: 120, atk: 25, xpReward: 120, goldReward: 80, isLeader: true },
@@ -466,26 +526,25 @@
         { x: 135, y: 120, type: 'Ogro Devastador', symbol: '👹', hp: 140, maxHp: 140, atk: 28, xpReward: 150, goldReward: 90, isLeader: true }
       ];
 
-      fog.update(hero.x, hero.y, 8);
+      fog.update(hero.x, hero.y, 16);
     }
 
     function isTileBlocked(x, y, ignoreNpcId = null) {
       if (x < 0 || x >= MAP_SIZE || y < 0 || y >= MAP_SIZE) return true;
       const t = map[y][x];
-      if (t === TILE_TREE || t === TILE_WATER || t === TILE_CASTLE_WALL || t === TILE_HOUSE) return true;
+      if (t === TILE_TREE || t === TILE_WATER || t === TILE_CASTLE_WALL || t === TILE_HOUSE || t === TILE_PRISON) return true;
       if (npcManager.npcs.some(n => n.x === x && n.y === y && n.id !== ignoreNpcId)) return true;
       return false;
     }
 
     function moveHero(dx, dy) {
-      if (hero.hp <= 0) return;
+      if (hero.hp <= 0 || hero.inPrison) return;
 
       let nx = hero.x + dx;
       let ny = hero.y + dy;
 
       if (isTileBlocked(nx, ny)) return;
 
-      // Check Enemy encounter
       let enemy = enemies.find(e => e.x === nx && e.y === ny);
       if (enemy) {
         fightMonster(enemy);
@@ -493,7 +552,6 @@
         return;
       }
 
-      // Check NPC talk
       let npc = npcManager.getNPCAt(nx, ny);
       if (npc) {
         talkToNPC(npc);
@@ -504,8 +562,149 @@
       hero.y = ny;
       SuperEngine.Audio.playSFX('step');
 
-      fog.update(hero.x, hero.y, 8);
+      fog.update(hero.x, hero.y, 16);
       updateEnemiesTurn();
+      updateUI();
+    }
+
+    // --- 100+ LIVING WORLD RPG ACTIONS ---
+    function actRobar() {
+      const npc = npcManager.npcs.find(n => Math.hypot(n.x - hero.x, n.y - hero.y) <= 1.5);
+      if (!npc) {
+        setDialog('⚠️ Acércate a un aldeano o noble para intentar robar.');
+        return;
+      }
+
+      const res = SuperEngine.RPG.attemptSteal(hero, npc);
+      if (res.success) {
+        SuperEngine.Audio.playSFX('coin');
+        particleEngine.addParticles(hero.x * TILE_SIZE + 16, hero.y * TILE_SIZE + 16, 12, 'gold');
+        setDialog(res.message);
+      } else {
+        SuperEngine.Audio.playSFX('alarm');
+        hero.status = 'Fugitivo';
+        hero.inPrison = true;
+        hero.x = 90; hero.y = 22; // Lock inside Dungeon Prison Cell!
+        setDialog(`🚨 ¡Fuiste atrapado por los guardias! Has sido encarcelado en la Mazmorra del Castillo.`);
+      }
+      updateUI();
+    }
+
+    function actCortejar() {
+      const princess = npcManager.npcs.find(n => n.name === 'Princesa Elena' && Math.hypot(n.x - hero.x, n.y - hero.y) <= 2);
+      if (!princess) {
+        setDialog('⚠️ Debes estar cerca de la Princesa Elena para cortejarla.');
+        return;
+      }
+
+      if (hero.gold < 20) {
+        setDialog('💖 Necesitas al menos 20 de oro para obsequiar joyas reales.');
+        return;
+      }
+
+      hero.gold -= 20;
+      const res = SuperEngine.RPG.courtNpc(hero, princess);
+      particleEngine.addParticles(princess.x * TILE_SIZE + 16, princess.y * TILE_SIZE + 16, 15, 'aurora');
+
+      if (res.maxed) {
+        hero.marriedToPrincess = true;
+        hero.status = 'Príncipe Consorte';
+        SuperEngine.Audio.playSFX('levelup');
+        setDialog(`💍 ¡BODA REAL! Te has casado con la Princesa Elena y ahora eres el Príncipe Consorte del Reino.`);
+      } else {
+        SuperEngine.Audio.playSFX('item');
+        setDialog(res.message);
+      }
+      updateUI();
+    }
+
+    function actAsesinarEnvenenar() {
+      const king = npcManager.npcs.find(n => n.name === 'Rey Eldrin' && Math.hypot(n.x - hero.x, n.y - hero.y) <= 2);
+      if (!king) {
+        setDialog('⚠️ Debes aproximarte al Rey Eldrin para preparar el veneno.');
+        return;
+      }
+
+      if (!hero.kingAlive) {
+        setDialog('👑 El Rey Eldrin ya ha fallecido.');
+        return;
+      }
+
+      hero.kingAlive = false;
+      npcManager.npcs = npcManager.npcs.filter(n => n !== king);
+      SuperEngine.Audio.playSFX('death');
+      particleEngine.addParticles(king.x * TILE_SIZE + 16, king.y * TILE_SIZE + 16, 30, 'blood');
+      setDialog('☠️ ¡ENVENENASTE AL REY ELDRIN! El monarca ha caído. El trono está vacante.');
+      updateUI();
+    }
+
+    function actCoronarse() {
+      if (hero.kingAlive) {
+        setDialog('⚠️ El Rey Eldrin aún vive. No puedes coronarte mientras el Monarca reine.');
+        return;
+      }
+
+      if (Math.hypot(100 - hero.x, 24 - hero.y) <= 3) {
+        hero.status = 'Rey Supremo';
+        SuperEngine.Audio.playSFX('levelup');
+        particleEngine.addParticles(hero.x * TILE_SIZE + 16, hero.y * TILE_SIZE + 16, 40, 'gold');
+        setDialog('👑 ¡TE HAS CORONADO REY SUPREMO DEL REINO! Los guardias y nobles se inclinan ante tu majestad.');
+      } else {
+        setDialog('⚠️ Acércate al Trono Real (x:100, y:24) para celebrar la Coronación.');
+      }
+      updateUI();
+    }
+
+    function actEscaparCarcel() {
+      if (!hero.inPrison) {
+        setDialog('⚠️ No estás encarcelado.');
+        return;
+      }
+
+      const res = SuperEngine.RPG.attemptPrisonEscape(hero, 'lockpick');
+      if (res.success) {
+        hero.inPrison = false;
+        hero.x = 100; hero.y = 36; // Outside gate
+        SuperEngine.Audio.playSFX('levelup');
+        particleEngine.addParticles(hero.x * TILE_SIZE + 16, hero.y * TILE_SIZE + 16, 20, 'choque');
+        setDialog(res.message);
+      } else {
+        SuperEngine.Audio.playSFX('hit');
+        setDialog(res.message);
+      }
+      updateUI();
+    }
+
+    function actPescar() {
+      const nearWater = [ {x:1,y:0},{x:-1,y:0},{x:0,y:1},{x:0,y:-1} ].some(d => map[hero.y+d.y]?.[hero.x+d.x] === TILE_WATER);
+      if (nearWater) {
+        SuperEngine.Audio.playSFX('fish');
+        const res = SuperEngine.RPG.startFishing(hero);
+        particleEngine.addParticles(hero.x * TILE_SIZE + 16, hero.y * TILE_SIZE + 16, 12, 'water');
+        setDialog(res.message);
+      } else {
+        setDialog('⚠️ Acércate a la orilla del río para lanzar la caña de pescar.');
+      }
+      updateUI();
+    }
+
+    function actMontarCaballo() {
+      hero.isMounted = !hero.isMounted;
+      SuperEngine.Audio.playSFX('item');
+      if (hero.isMounted) {
+        setDialog('🐎 ¡Has montado un Corcel Real! Te desplazas al doble de velocidad.');
+      } else {
+        setDialog('🚶 Has desmontado del caballo.');
+      }
+      updateUI();
+    }
+
+    function actProvocarGuerra() {
+      hero.inWar = true;
+      SuperEngine.Audio.playSFX('alarm');
+      camera.triggerShake(15, 20);
+      particleEngine.addParticles(hero.x * TILE_SIZE + 16, hero.y * TILE_SIZE + 16, 30, 'fire');
+      setDialog('⚔️ ¡HAS PROVOCADO UNA GUERRA TOTAL ENTRE CASTILLOS! Las facciones están luchando en el reino.');
       updateUI();
     }
 
@@ -524,13 +723,6 @@
         defeatedCount++;
         setDialog(`⚔️ ¡Derrotaste a ${m.type}! +${m.xpReward} XP, +${m.goldReward} Oro.`);
         enemies = enemies.filter(mon => mon !== m);
-
-        if (defeatedCount >= 3 && hero.questStep === 1) {
-          hero.questStep = 2;
-          document.getElementById('questTitle').textContent = '📜 Reporta la Victoria al Rey Eldrin';
-          document.getElementById('questDesc').textContent = '¡Has eliminado las amenazas! Regresa al salón del trono.';
-        }
-
         checkLevelUp();
       } else {
         let mDmg = Math.max(1, m.atk - Math.floor(hero.def / 2));
@@ -550,23 +742,9 @@
 
     function talkToNPC(npc) {
       if (npc.name === 'Rey Eldrin') {
-        if (hero.questStep === 0) {
-          hero.questStep = 1;
-          setDialog(`👑 Rey Eldrin: "${npc.dialog[0]} ${npc.dialog[1]}"`);
-          document.getElementById('questTitle').textContent = '📜 Purga a los Rebeldes y Monstruos';
-          document.getElementById('questDesc').textContent = 'Elimina a los traidores del castillo y criaturas del bosque.';
-        } else if (hero.questStep === 2) {
-          hero.questStep = 3;
-          hero.gold += 150;
-          hero.xp += 150;
-          SuperEngine.Audio.playSFX('levelup');
-          setDialog(`👑 Rey Eldrin: "¡Salvaste la corona, gran caballero! Toma 150 de oro y mi eterno agradecimiento."`);
-          document.getElementById('questTitle').textContent = '🌟 ¡Misión Cumplida!';
-          document.getElementById('questDesc').textContent = 'El reino de Link ha sido salvado de la rebelión.';
-          checkLevelUp();
-        } else {
-          setDialog(`👑 Rey Eldrin: "Gracias por tu lealtad."`);
-        }
+        setDialog(`👑 Rey Eldrin: "Bienvenido a mi salón del trono, honorable caballero."`);
+      } else if (npc.name === 'Princesa Elena') {
+        setDialog(`👸 Princesa Elena: "¡Saludos noble héroe! Mi corazón admira tu valentía."`);
       } else if (npc.name === 'Aldeana Isabela') {
         if (hero.gold >= 30) {
           hero.gold -= 30;
@@ -594,15 +772,6 @@
       updateUI();
     }
 
-    function interact() {
-      const npc = npcManager.npcs.find(n => Math.hypot(n.x - hero.x, n.y - hero.y) <= 1.5);
-      if (npc) {
-        talkToNPC(npc);
-      } else {
-        setDialog('🔍 No hay nadie cerca para interactuar.');
-      }
-    }
-
     function handleAction(action) {
       if (action === 'skill_pulse') useSkill('pulse');
       else if (action === 'skill_aurora') useSkill('aurora');
@@ -611,7 +780,7 @@
     }
 
     function useSkill(type) {
-      if (hero.hp <= 0) return;
+      if (hero.hp <= 0 || hero.inPrison) return;
 
       if (type === 'pulse') {
         if (hero.mp < 15) { setDialog('⚠️ Maná insuficiente (15 MP).'); return; }
@@ -678,13 +847,9 @@
     }
 
     function updateEnemiesTurn() {
-      // NPC Mini-AI update with collision
       npcManager.update((x, y, id) => isTileBlocked(x, y, id));
-
-      // Spawner update
       spawner.update(enemies, MAP_SIZE, MAP_SIZE, (sx, sy) => !isTileBlocked(sx, sy));
 
-      // Enemies pathing towards hero
       enemies.forEach(e => {
         let dist = Math.hypot(e.x - hero.x, e.y - hero.y);
         if (dist <= 1.5) {
@@ -734,11 +899,23 @@
     }
 
     function updateUI() {
+      document.getElementById('lblHeroName').textContent = hero.name;
+      document.getElementById('lblTitle').textContent = hero.status;
       document.getElementById('lblLvl').textContent = hero.lvl;
       document.getElementById('lblHp').textContent = `${hero.hp}/${hero.maxHp}`;
       document.getElementById('lblMp').textContent = `${hero.mp}/${hero.maxMp}`;
       document.getElementById('lblAtk').textContent = hero.atk;
       document.getElementById('lblGold').textContent = hero.gold;
+
+      const badge = document.getElementById('statusBadge');
+      badge.textContent = hero.status;
+      if (hero.status === 'Rey Supremo' || hero.status === 'Príncipe Consorte') {
+        badge.className = 'status-badge badge-king';
+      } else if (hero.status === 'Fugitivo') {
+        badge.className = 'status-badge badge-fugitive';
+      } else {
+        badge.className = 'status-badge badge-hero';
+      }
     }
 
     function gameLoop() {
@@ -758,7 +935,6 @@
 
       const bounds = camera.getVisibleTileBounds(MAP_SIZE, MAP_SIZE);
 
-      // Render World Map
       for (let r = bounds.minRow; r <= bounds.maxRow; r++) {
         for (let c = bounds.minCol; c <= bounds.maxCol; c++) {
           const sp = camera.tileToScreen(c, r);
@@ -781,9 +957,7 @@
             ctx.fillStyle = isVis ? '#065f46' : '#022c22';
             ctx.fillRect(sp.x, sp.y, TILE_SIZE, TILE_SIZE);
             if (isVis) {
-              ctx.font = '20px sans-serif';
-              ctx.textAlign = 'center';
-              ctx.fillText('🌲', sp.x + TILE_SIZE / 2, sp.y + TILE_SIZE / 2 + 6);
+              SuperEngine.VectorRenderer.draw3DTree(ctx, sp.x, sp.y, TILE_SIZE);
             }
           } else if (tile === TILE_WATER) {
             ctx.fillStyle = isVis ? '#0284c7' : '#075985';
@@ -795,24 +969,22 @@
             ctx.fillStyle = isVis ? '#475569' : '#1e293b';
             ctx.fillRect(sp.x, sp.y, TILE_SIZE, TILE_SIZE);
           } else if (tile === TILE_CASTLE_WALL) {
-            ctx.fillStyle = isVis ? '#64748b' : '#334155';
-            ctx.fillRect(sp.x, sp.y, TILE_SIZE, TILE_SIZE);
-            ctx.strokeStyle = '#0f172a';
-            ctx.strokeRect(sp.x, sp.y, TILE_SIZE, TILE_SIZE);
+            SuperEngine.VectorRenderer.drawCastleStructure(ctx, sp.x, sp.y, TILE_SIZE, 'wall');
           } else if (tile === TILE_HOUSE) {
-            ctx.fillStyle = isVis ? '#b45309' : '#78350f';
+            SuperEngine.VectorRenderer.drawHouseStructure(ctx, sp.x, sp.y, TILE_SIZE);
+          } else if (tile === TILE_PRISON) {
+            ctx.fillStyle = '#3f3f46';
             ctx.fillRect(sp.x, sp.y, TILE_SIZE, TILE_SIZE);
+            ctx.strokeStyle = '#f43f5e';
+            ctx.strokeRect(sp.x, sp.y, TILE_SIZE, TILE_SIZE);
           }
         }
       }
 
-      // Render NPCs
       npcManager.npcs.forEach(n => {
         if (fog.isVisible(n.x, n.y)) {
           const sp = camera.tileToScreen(n.x, n.y);
-          ctx.font = '22px sans-serif';
-          ctx.textAlign = 'center';
-          ctx.fillText(n.symbol, sp.x + TILE_SIZE / 2, sp.y + TILE_SIZE / 2 + 7);
+          SuperEngine.VectorRenderer.drawEntity(ctx, sp.x, sp.y, TILE_SIZE, n.name);
 
           if (n.emote) {
             ctx.font = '14px sans-serif';
@@ -821,13 +993,10 @@
         }
       });
 
-      // Render Enemies
       enemies.forEach(e => {
         if (fog.isVisible(e.x, e.y)) {
           const sp = camera.tileToScreen(e.x, e.y);
-          ctx.font = e.isLeader ? '24px sans-serif' : '20px sans-serif';
-          ctx.textAlign = 'center';
-          ctx.fillText(e.symbol, sp.x + TILE_SIZE / 2, sp.y + TILE_SIZE / 2 + 6);
+          SuperEngine.VectorRenderer.drawEntity(ctx, sp.x, sp.y, TILE_SIZE, e.type, e.isLeader);
 
           ctx.fillStyle = '#000';
           ctx.fillRect(sp.x + 2, sp.y, TILE_SIZE - 4, 3);
@@ -836,27 +1005,32 @@
         }
       });
 
-      // Render Hero
+      // Render 3D Hero / Mount
       const hSp = camera.tileToScreen(hero.x, hero.y);
-      ctx.font = '24px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText('🛡️', hSp.x + TILE_SIZE / 2, hSp.y + TILE_SIZE / 2 + 7);
+      if (hero.isMounted) {
+        SuperEngine.VectorRenderer.drawAnimal(ctx, hSp.x, hSp.y, TILE_SIZE, 'horse');
+      }
+      SuperEngine.VectorRenderer.drawHero(ctx, hSp.x, hSp.y - (hero.isMounted ? 8 : 0), TILE_SIZE, isWalking);
 
-      // Render Particles
       particleEngine.draw(ctx, camera);
     }
 
     function saveGame() {
-      localStorage.setItem('link_rpg_save_v2', JSON.stringify({ hero, defeatedCount }));
-      setDialog('💾 ¡Progreso del Reino guardado!');
+      localStorage.setItem('link_rpg_save_v3', JSON.stringify({ hero, defeatedCount }));
+      setDialog('💾 ¡Progreso del Reino 3D guardado!');
     }
 
     function resetRPG() {
-      hero = { x: 100, y: 110, hp: 150, maxHp: 150, mp: 70, maxMp: 70, atk: 25, def: 8, gold: 100, xp: 0, maxXp: 100, lvl: 1, questStep: 0 };
+      hero = {
+        name: 'Link', x: 100, y: 110, hp: 150, maxHp: 150, mp: 70, maxMp: 70,
+        atk: 25, def: 8, gold: 100, xp: 0, maxXp: 100, lvl: 1, questStep: 0,
+        status: 'Caballero', inPrison: false, isMounted: false, kingAlive: true,
+        marriedToPrincess: false, inWar: false
+      };
       defeatedCount = 0;
       setupWorldEntities();
       document.getElementById('questTitle').textContent = '📜 Audiencia Real con el Rey Eldrin';
-      document.getElementById('questDesc').textContent = 'Dirígete al Gran Castillo Real en el norte del mapa (x:100, y:30) y habla con el Rey Eldrin.';
+      document.getElementById('questDesc').textContent = 'Dirígete al Gran Castillo Real en el norte del mapa (x:100, y:25) y habla con el Rey Eldrin.';
       setDialog('Aventura reiniciada.');
       updateUI();
     }
