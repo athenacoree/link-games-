@@ -1,8 +1,8 @@
 /**
- * SuperEngine - Shared Engine for Link Minigames
- * Provides Web Audio API synthesis, Particle System (pulso, aurora, choque, particles),
- * Viewport Camera with Screen Shake, Continuous Input Controller with Hold-to-Move,
- * Dynamic Field-of-View Fog of War, NPC Mini-AI & Collision Detection, and Spawner Logic.
+ * SuperEngine - Shared Engine for Link Minigames (V3.0 Extended)
+ * Provides Web Audio API synthesis, Particle System, Viewport Camera,
+ * A* Pathfinding (Touch Destination Movement), Vector 3D Canvas Renderer,
+ * FOV Fog of War, NPC Mini-AI, Enemy Spawner, and RPG World System Helpers.
  */
 
 window.SuperEngine = (function() {
@@ -124,6 +124,29 @@ window.SuperEngine = (function() {
             osc.stop(now + 0.5);
             break;
 
+          case 'splash':
+          case 'fish':
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(300, now);
+            osc.frequency.linearRampToValueAtTime(150, now + 0.15);
+            gain.gain.setValueAtTime(0.2, now);
+            gain.gain.linearRampToValueAtTime(0.01, now + 0.2);
+            osc.start(now);
+            osc.stop(now + 0.2);
+            break;
+
+          case 'alarm':
+          case 'guards':
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(600, now);
+            osc.frequency.setValueAtTime(900, now + 0.1);
+            osc.frequency.setValueAtTime(600, now + 0.2);
+            gain.gain.setValueAtTime(0.2, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+            osc.start(now);
+            osc.stop(now + 0.3);
+            break;
+
           default:
             osc.type = 'sine';
             osc.frequency.setValueAtTime(440, now);
@@ -177,6 +200,8 @@ window.SuperEngine = (function() {
         case 'gold': return '#facc15';
         case 'blood': return '#dc2626';
         case 'magic': return '#c084fc';
+        case 'water': return '#38bdf8';
+        case 'smoke': return '#94a3b8';
         default: return '#e2e8f0';
       }
     }
@@ -196,7 +221,6 @@ window.SuperEngine = (function() {
     }
 
     update() {
-      // Update particles
       for (let i = this.particles.length - 1; i >= 0; i--) {
         const p = this.particles[i];
         p.x += p.vx;
@@ -218,7 +242,6 @@ window.SuperEngine = (function() {
         }
       }
 
-      // Update floating text
       for (let i = this.floatingTexts.length - 1; i >= 0; i--) {
         const ft = this.floatingTexts[i];
         ft.y += ft.vy;
@@ -232,7 +255,6 @@ window.SuperEngine = (function() {
     draw(ctx, camera) {
       ctx.save();
 
-      // Render Particles
       for (const p of this.particles) {
         const screenPos = camera ? camera.worldToScreen(p.x, p.y) : { x: p.x, y: p.y };
         ctx.globalAlpha = Math.max(0, p.life);
@@ -259,7 +281,6 @@ window.SuperEngine = (function() {
         }
       }
 
-      // Render Floating Text
       for (const ft of this.floatingTexts) {
         const screenPos = camera ? camera.worldToScreen(ft.x, ft.y) : { x: ft.x, y: ft.y };
         ctx.globalAlpha = Math.max(0, ft.alpha);
@@ -289,14 +310,12 @@ window.SuperEngine = (function() {
     }
 
     centerOn(worldX, worldY, mapWidth, mapHeight) {
-      // Calculate target top-left screen position in world coordinates
       let targetX = worldX * this.tileSize + this.tileSize / 2 - this.viewportWidth / 2;
       let targetY = worldY * this.tileSize + this.tileSize / 2 - this.viewportHeight / 2;
 
       const maxWorldWidth = mapWidth * this.tileSize;
       const maxWorldHeight = mapHeight * this.tileSize;
 
-      // Clamp camera within map bounds
       this.x = Math.max(0, Math.min(targetX, maxWorldWidth - this.viewportWidth));
       this.y = Math.max(0, Math.min(targetY, maxWorldHeight - this.viewportHeight));
     }
@@ -336,6 +355,16 @@ window.SuperEngine = (function() {
       };
     }
 
+    screenToTile(sx, sy) {
+      const offset = this.getOffset();
+      const wx = sx + offset.x;
+      const wy = sy + offset.y;
+      return {
+        x: Math.floor(wx / this.tileSize),
+        y: Math.floor(wy / this.tileSize)
+      };
+    }
+
     getVisibleTileBounds(mapWidth, mapHeight) {
       const offset = this.getOffset();
       const minCol = Math.max(0, Math.floor(offset.x / this.tileSize) - 1);
@@ -347,14 +376,65 @@ window.SuperEngine = (function() {
     }
   }
 
-  // --- Input & Continuous Movement Manager ---
+  // --- A* / BFS Pathfinding for Tap-to-Move ---
+  class Pathfinder {
+    static findPath(start, goal, mapWidth, mapHeight, isBlockedFn) {
+      if (start.x === goal.x && start.y === goal.y) return [];
+      if (goal.x < 0 || goal.x >= mapWidth || goal.y < 0 || goal.y >= mapHeight) return [];
+
+      // Breadth-First Search (BFS) for reliable tile grid navigation
+      const queue = [{ x: start.x, y: start.y, path: [] }];
+      const visited = new Set();
+      visited.add(`${start.x},${start.y}`);
+
+      const dirs = [
+        { x: 0, y: -1 }, { x: 0, y: 1 },
+        { x: -1, y: 0 }, { x: 1, y: 0 },
+        { x: -1, y: -1 }, { x: 1, y: -1 },
+        { x: -1, y: 1 }, { x: 1, y: 1 }
+      ];
+
+      let iterations = 0;
+      const maxIterations = 1200; // Fast cap for realtime frame
+
+      while (queue.length > 0 && iterations < maxIterations) {
+        iterations++;
+        const curr = queue.shift();
+
+        if (curr.x === goal.x && curr.y === goal.y) {
+          return curr.path;
+        }
+
+        for (const d of dirs) {
+          const nx = curr.x + d.x;
+          const ny = curr.y + d.y;
+          const key = `${nx},${ny}`;
+
+          if (nx >= 0 && nx < mapWidth && ny >= 0 && ny < mapHeight && !visited.has(key)) {
+            // Check if goal itself or if tile is free
+            const isGoal = (nx === goal.x && ny === goal.y);
+            if (isGoal || !isBlockedFn(nx, ny)) {
+              visited.add(key);
+              const nextPath = curr.path.concat([{ x: nx, y: ny, dx: d.x, dy: d.y }]);
+              queue.push({ x: nx, y: ny, path: nextPath });
+            }
+          }
+        }
+      }
+
+      return [];
+    }
+  }
+
+  // --- Input & Touch Pathfinding Controller ---
   class InputController {
-    constructor(onMoveCallback, onActionCallback) {
+    constructor(onMoveCallback, onActionCallback, onTileTapCallback) {
       this.onMove = onMoveCallback;
       this.onAction = onActionCallback;
+      this.onTileTap = onTileTapCallback;
       this.heldDirection = null;
       this.moveInterval = null;
-      this.moveSpeedMs = 110; // Continuous step interval
+      this.moveSpeedMs = 110;
       this.keysPressed = {};
 
       this.initListeners();
@@ -388,6 +468,31 @@ window.SuperEngine = (function() {
           this.stopMoving();
         }
       });
+    }
+
+    bindCanvasTouchTap(canvas, camera, mapWidth, mapHeight) {
+      if (!canvas) return;
+
+      const handleTap = (clientX, clientY) => {
+        const rect = canvas.getBoundingClientRect();
+        const scaleX = canvas.width / rect.width;
+        const scaleY = canvas.height / rect.height;
+
+        const sx = (clientX - rect.left) * scaleX;
+        const sy = (clientY - rect.top) * scaleY;
+
+        const tilePos = camera.screenToTile(sx, sy);
+        if (this.onTileTap) {
+          this.onTileTap(tilePos.x, tilePos.y);
+        }
+      };
+
+      canvas.addEventListener('click', (e) => handleTap(e.clientX, e.clientY));
+      canvas.addEventListener('touchstart', (e) => {
+        if (e.touches && e.touches.length > 0) {
+          handleTap(e.touches[0].clientX, e.touches[0].clientY);
+        }
+      }, { passive: true });
     }
 
     startMoving(dx, dy) {
@@ -440,7 +545,7 @@ window.SuperEngine = (function() {
     constructor(width, height) {
       this.width = width;
       this.height = height;
-      this.grid = Array(height).fill(0).map(() => Array(width).fill(0)); // 0: Hidden, 1: Shadowed, 2: Visible
+      this.grid = Array(height).fill(0).map(() => Array(width).fill(0));
     }
 
     reset() {
@@ -448,7 +553,6 @@ window.SuperEngine = (function() {
     }
 
     update(playerX, playerY, radius = 6) {
-      // Step 1: Convert previously visible tiles to shadowed
       for (let r = 0; r < this.height; r++) {
         for (let c = 0; c < this.width; c++) {
           if (this.grid[r][c] === 2) {
@@ -457,13 +561,12 @@ window.SuperEngine = (function() {
         }
       }
 
-      // Step 2: Radius FOV reveal around player
       for (let r = playerY - radius; r <= playerY + radius; r++) {
         for (let c = playerX - radius; c <= playerX + radius; c++) {
           if (r >= 0 && r < this.height && c >= 0 && c < this.width) {
             const dist = Math.hypot(c - playerX, r - playerY);
             if (dist <= radius) {
-              this.grid[r][c] = 2; // Fully visible
+              this.grid[r][c] = 2;
             }
           }
         }
@@ -485,7 +588,7 @@ window.SuperEngine = (function() {
     }
   }
 
-  // --- NPC Mini-AI & Collision System ---
+  // --- NPC Mini-AI System ---
   class NPCManager {
     constructor() {
       this.npcs = [];
@@ -505,19 +608,19 @@ window.SuperEngine = (function() {
         role: npc.role || 'villager',
         emote: null,
         emoteTimer: 0,
-        moveCooldown: Math.floor(Math.random() * 20) + 10
+        moveCooldown: Math.floor(Math.random() * 20) + 10,
+        affection: npc.affection || 0,
+        isGuarded: npc.isGuarded || false
       });
     }
 
     update(collisionCheckFn) {
       for (const npc of this.npcs) {
-        // Emote timer
         if (npc.emoteTimer > 0) {
           npc.emoteTimer--;
           if (npc.emoteTimer <= 0) npc.emote = null;
         }
 
-        // Mini-AI Wandering
         npc.moveCooldown--;
         if (npc.moveCooldown <= 0) {
           npc.moveCooldown = Math.floor(Math.random() * 40) + 20;
@@ -528,7 +631,6 @@ window.SuperEngine = (function() {
             const nx = npc.x + d.dx;
             const ny = npc.y + d.dy;
 
-            // Check home wander radius and collision
             const distFromHome = Math.hypot(nx - npc.homeX, ny - npc.homeY);
             if (distFromHome <= npc.wanderRadius && !collisionCheckFn(nx, ny, npc.id)) {
               npc.x = nx;
@@ -536,7 +638,6 @@ window.SuperEngine = (function() {
             }
           }
 
-          // Random emote
           if (Math.random() < 0.15) {
             const emotes = ['💬', '💭', '🎵', '✨'];
             npc.emote = emotes[Math.floor(Math.random() * emotes.length)];
@@ -576,7 +677,6 @@ window.SuperEngine = (function() {
         if (spawner.cooldown <= 0 && enemiesList.length < this.maxEnemies) {
           spawner.cooldown = spawner.spawnRate;
 
-          // Spawn near spawner
           const dirs = [{dx:1,dy:0}, {dx:-1,dy:0}, {dx:0,dy:1}, {dx:0,dy:-1}, {dx:1,dy:1}, {dx:-1,dy:-1}];
           for (const d of dirs) {
             const sx = spawner.x + d.dx;
@@ -607,13 +707,555 @@ window.SuperEngine = (function() {
     }
   }
 
+  // --- PROCEDURAL 3D VECTOR GRAPHICS ENGINE ---
+  class Vector3DRenderer {
+    // Render 3D Vector Hero Character (Cap, Cloak, Armor, Sword, Shield, Shadow, Walk Wobble)
+    static drawHero(ctx, px, py, size = 32, isWalking = false) {
+      ctx.save();
+      const wobble = isWalking ? Math.sin(Date.now() / 100) * 3 : 0;
+      const x = px + size / 2;
+      const y = py + size / 2 + wobble;
+
+      // Drop Shadow Oval
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+      ctx.beginPath();
+      ctx.ellipse(x, py + size - 2, size * 0.4, size * 0.18, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Flowing 3D Cape / Cloak
+      const capeGrad = ctx.createLinearGradient(x - 12, y - 10, x + 12, y + 10);
+      capeGrad.addColorStop(0, '#dc2626');
+      capeGrad.addColorStop(1, '#7f1d1d');
+      ctx.fillStyle = capeGrad;
+      ctx.beginPath();
+      ctx.moveTo(x - 8, y - 4);
+      ctx.lineTo(x + 8, y - 4);
+      ctx.lineTo(x + 12 + Math.sin(Date.now() / 150) * 2, y + 12);
+      ctx.lineTo(x - 12 - Math.sin(Date.now() / 150) * 2, y + 12);
+      ctx.closePath();
+      ctx.fill();
+
+      // Boots / Legs
+      ctx.fillStyle = '#451a03';
+      ctx.fillRect(x - 6, y + 6, 4, 6);
+      ctx.fillRect(x + 2, y + 6, 4, 6);
+
+      // Body Armor / Tunic
+      const tunicGrad = ctx.createLinearGradient(x - 8, y - 6, x + 8, y + 6);
+      tunicGrad.addColorStop(0, '#2563eb');
+      tunicGrad.addColorStop(1, '#1e3a8a');
+      ctx.fillStyle = tunicGrad;
+      ctx.beginPath();
+      ctx.roundRect(x - 8, y - 6, 16, 12, 3);
+      ctx.fill();
+      ctx.strokeStyle = '#facc15';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      // Gold Belt Buckle
+      ctx.fillStyle = '#facc15';
+      ctx.fillRect(x - 3, y + 2, 6, 3);
+
+      // Head / Skin Tone
+      ctx.fillStyle = '#fbcfe8';
+      ctx.beginPath();
+      ctx.arc(x, y - 10, 6, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Golden Royal Cap / Helmet with Feather Plume
+      ctx.fillStyle = '#eab308';
+      ctx.beginPath();
+      ctx.arc(x, y - 12, 7, Math.PI, 0);
+      ctx.fill();
+      ctx.strokeStyle = '#b45309';
+      ctx.stroke();
+
+      // Feather Plume
+      ctx.strokeStyle = '#ef4444';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(x + 2, y - 15);
+      ctx.quadraticCurveTo(x + 8, y - 20, x + 10, y - 14);
+      ctx.stroke();
+
+      // Right Hand - Gleaming 3D Sword
+      const swordGrad = ctx.createLinearGradient(x + 8, y - 12, x + 12, y + 4);
+      swordGrad.addColorStop(0, '#ffffff');
+      swordGrad.addColorStop(0.5, '#94a3b8');
+      swordGrad.addColorStop(1, '#475569');
+      ctx.strokeStyle = swordGrad;
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(x + 8, y + 2);
+      ctx.lineTo(x + 14, y - 10);
+      ctx.stroke();
+
+      // Hilt
+      ctx.fillStyle = '#facc15';
+      ctx.fillRect(x + 6, y + 1, 5, 2);
+
+      // Left Hand - Shield
+      ctx.fillStyle = '#1e293b';
+      ctx.beginPath();
+      ctx.arc(x - 9, y, 5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#facc15';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      ctx.restore();
+    }
+
+    // Render 3D Vector Monster / NPC (Goblins, Skeletons, Ogres, Demon, Traitor, King, Princess, Guard)
+    static drawEntity(ctx, px, py, size = 32, type = 'Goblin', isLeader = false) {
+      ctx.save();
+      const x = px + size / 2;
+      const y = py + size / 2;
+
+      // Drop Shadow
+      ctx.fillStyle = 'rgba(0,0,0,0.35)';
+      ctx.beginPath();
+      ctx.ellipse(x, py + size - 2, size * 0.35, size * 0.15, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      if (type === 'Rey' || type === 'Rey Eldrin') {
+        // King Eldrin: Crown, Crimson Mantle, Royal Scepter
+        ctx.fillStyle = '#991b1b'; // Mantle
+        ctx.beginPath();
+        ctx.roundRect(x - 9, y - 6, 18, 14, 4);
+        ctx.fill();
+
+        ctx.fillStyle = '#fde047'; // Head
+        ctx.beginPath();
+        ctx.arc(x, y - 8, 6, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Golden Crown
+        ctx.fillStyle = '#facc15';
+        ctx.beginPath();
+        ctx.moveTo(x - 6, y - 12);
+        ctx.lineTo(x - 6, y - 18);
+        ctx.lineTo(x - 2, y - 14);
+        ctx.lineTo(x, y - 19);
+        ctx.lineTo(x + 2, y - 14);
+        ctx.lineTo(x + 6, y - 18);
+        ctx.lineTo(x + 6, y - 12);
+        ctx.closePath();
+        ctx.fill();
+
+        // Scepter
+        ctx.strokeStyle = '#facc15';
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.moveTo(x + 8, y + 4);
+        ctx.lineTo(x + 11, y - 8);
+        ctx.stroke();
+        ctx.fillStyle = '#38bdf8';
+        ctx.beginPath();
+        ctx.arc(x + 11, y - 9, 3, 0, Math.PI * 2);
+        ctx.fill();
+
+      } else if (type === 'Princesa' || type === 'Princesa Elena') {
+        // Princess Elena: Elegant Silk Gown, Tiara, Glowing Flowers
+        ctx.fillStyle = '#ec4899';
+        ctx.beginPath();
+        ctx.moveTo(x - 9, y + 8);
+        ctx.lineTo(x, y - 6);
+        ctx.lineTo(x + 9, y + 8);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.fillStyle = '#fbcfe8';
+        ctx.beginPath();
+        ctx.arc(x, y - 9, 5.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Tiara
+        ctx.strokeStyle = '#fde047';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(x, y - 12, 4, Math.PI, 0);
+        ctx.stroke();
+
+      } else if (type === 'Guardia' || type === 'Capitán Bruno' || type === 'Guardia Traidor') {
+        // Guard / Traitor Knight: Full Steel Armor, Visor Helm, Halberd
+        ctx.fillStyle = (type === 'Guardia Traidor') ? '#450a0a' : '#1e293b';
+        ctx.fillRect(x - 7, y - 5, 14, 11);
+
+        // Steel Helm
+        ctx.fillStyle = '#94a3b8';
+        ctx.beginPath();
+        ctx.arc(x, y - 9, 6, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#0f172a'; // Visor slit
+        ctx.fillRect(x - 4, y - 10, 8, 2);
+
+        // Halberd / Spear
+        ctx.strokeStyle = '#78350f';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(x + 8, y + 8);
+        ctx.lineTo(x + 8, y - 15);
+        ctx.stroke();
+        ctx.fillStyle = '#e2e8f0';
+        ctx.beginPath();
+        ctx.moveTo(x + 8, y - 18);
+        ctx.lineTo(x + 5, y - 13);
+        ctx.lineTo(x + 11, y - 13);
+        ctx.closePath();
+        ctx.fill();
+
+      } else if (type === 'Goblin' || type === 'Goblin Salvaje') {
+        // Goblin: Green skin, pointed ears, dagger
+        ctx.fillStyle = '#15803d';
+        ctx.beginPath();
+        ctx.arc(x, y - 6, 5.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Pointed ears
+        ctx.beginPath();
+        ctx.moveTo(x - 5, y - 8);
+        ctx.lineTo(x - 10, y - 10);
+        ctx.lineTo(x - 5, y - 4);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(x + 5, y - 8);
+        ctx.lineTo(x + 10, y - 10);
+        ctx.lineTo(x + 5, y - 4);
+        ctx.fill();
+
+        // Leather vest
+        ctx.fillStyle = '#78350f';
+        ctx.fillRect(x - 6, y - 1, 12, 8);
+
+        // Red glowing eyes
+        ctx.fillStyle = '#ef4444';
+        ctx.fillRect(x - 3, y - 7, 2, 2);
+        ctx.fillRect(x + 1, y - 7, 2, 2);
+
+      } else if (type === 'Esqueleto') {
+        // Skeleton: Bone ribs, skull, wooden shield
+        ctx.fillStyle = '#e2e8f0';
+        ctx.beginPath();
+        ctx.arc(x, y - 7, 5, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Black eye sockets
+        ctx.fillStyle = '#000000';
+        ctx.fillRect(x - 3, y - 8, 2, 2);
+        ctx.fillRect(x + 1, y - 8, 2, 2);
+
+        // Ribs
+        ctx.strokeStyle = '#e2e8f0';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(x - 5, y - 1); ctx.lineTo(x + 5, y - 1);
+        ctx.moveTo(x - 4, y + 2); ctx.lineTo(x + 4, y + 2);
+        ctx.moveTo(x - 3, y + 5); ctx.lineTo(x + 3, y + 5);
+        ctx.stroke();
+
+      } else if (type === 'Señor Demonio' || type === 'Ogro' || type === 'Ogro Devastador' || type === 'Capataz Rebelde') {
+        // Demon / Ogre: Massive muscular frame, horns, spiked iron club, flame aura
+        ctx.fillStyle = 'rgba(239, 68, 68, 0.2)';
+        ctx.beginPath();
+        ctx.arc(x, y, 16, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = (type === 'Señor Demonio') ? '#881337' : '#9a3412';
+        ctx.beginPath();
+        ctx.roundRect(x - 10, y - 7, 20, 15, 4);
+        ctx.fill();
+
+        // Horned Head
+        ctx.fillStyle = '#7f1d1d';
+        ctx.beginPath();
+        ctx.arc(x, y - 9, 7, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Horns
+        ctx.strokeStyle = '#facc15';
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.moveTo(x - 5, y - 12); ctx.lineTo(x - 11, y - 18);
+        ctx.moveTo(x + 5, y - 12); ctx.lineTo(x + 11, y - 18);
+        ctx.stroke();
+
+        // Spiked Club
+        ctx.fillStyle = '#27272a';
+        ctx.beginPath();
+        ctx.arc(x + 11, y - 2, 5, 0, Math.PI * 2);
+        ctx.fill();
+
+      } else {
+        // Generic Townsfolk / NPC
+        ctx.fillStyle = '#0284c7';
+        ctx.beginPath();
+        ctx.roundRect(x - 6, y - 4, 12, 10, 3);
+        ctx.fill();
+
+        ctx.fillStyle = '#fde047';
+        ctx.beginPath();
+        ctx.arc(x, y - 8, 5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      ctx.restore();
+    }
+
+    // Render 3D Vector Castle Gate & Towers
+    static drawCastleStructure(ctx, px, py, size = 32, type = 'wall') {
+      ctx.save();
+
+      if (type === 'gate') {
+        // Grand 3D Castle Gate with Conical Roof Towers
+        ctx.fillStyle = '#475569';
+        ctx.fillRect(px, py, size, size);
+
+        // Arch Gate Passage
+        ctx.fillStyle = '#0f172a';
+        ctx.beginPath();
+        ctx.arc(px + size / 2, py + size, size * 0.35, Math.PI, 0);
+        ctx.fill();
+
+        // Iron Portcullis Grate
+        ctx.strokeStyle = '#f1f5f9';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        for (let i = -10; i <= 10; i += 4) {
+          ctx.moveTo(px + size / 2 + i, py + size - 10);
+          ctx.lineTo(px + size / 2 + i, py + size);
+        }
+        ctx.stroke();
+
+        // Fluttering Royal Banner
+        ctx.fillStyle = '#facc15';
+        ctx.fillRect(px + size / 2 - 2, py + 2, 4, 8);
+
+      } else if (type === 'tower') {
+        // Round 3D Tower with Conical Roof
+        const wallGrad = ctx.createLinearGradient(px, py, px + size, py);
+        wallGrad.addColorStop(0, '#64748b');
+        wallGrad.addColorStop(0.5, '#94a3b8');
+        wallGrad.addColorStop(1, '#334155');
+        ctx.fillStyle = wallGrad;
+        ctx.fillRect(px, py + 8, size, size - 8);
+
+        // Conical Roof
+        ctx.fillStyle = '#991b1b';
+        ctx.beginPath();
+        ctx.moveTo(px - 2, py + 8);
+        ctx.lineTo(px + size / 2, py - 6);
+        ctx.lineTo(px + size + 2, py + 8);
+        ctx.closePath();
+        ctx.fill();
+
+      } else {
+        // Standard 3D Castle Wall with Battlements
+        const wallGrad = ctx.createLinearGradient(px, py, px, py + size);
+        wallGrad.addColorStop(0, '#64748b');
+        wallGrad.addColorStop(1, '#334155');
+        ctx.fillStyle = wallGrad;
+        ctx.fillRect(px, py, size, size);
+
+        // Battlements
+        ctx.fillStyle = '#1e293b';
+        ctx.fillRect(px + 2, py, 6, 5);
+        ctx.fillRect(px + 13, py, 6, 5);
+        ctx.fillRect(px + 24, py, 6, 5);
+        ctx.strokeStyle = '#0f172a';
+        ctx.strokeRect(px, py, size, size);
+      }
+
+      ctx.restore();
+    }
+
+    // Render 3D Vector House with Shingled Roof & Glowing Window
+    static drawHouseStructure(ctx, px, py, size = 32) {
+      ctx.save();
+
+      // House Body
+      const bodyGrad = ctx.createLinearGradient(px, py, px + size, py + size);
+      bodyGrad.addColorStop(0, '#78350f');
+      bodyGrad.addColorStop(1, '#451a03');
+      ctx.fillStyle = bodyGrad;
+      ctx.fillRect(px + 2, py + 10, size - 4, size - 10);
+
+      // 3D Roof
+      ctx.fillStyle = '#b45309';
+      ctx.beginPath();
+      ctx.moveTo(px, py + 10);
+      ctx.lineTo(px + size / 2, py);
+      ctx.lineTo(px + size, py + 10);
+      ctx.closePath();
+      ctx.fill();
+
+      // Glowing Window
+      ctx.fillStyle = '#fde047';
+      ctx.fillRect(px + 6, py + 14, 6, 6);
+      ctx.strokeStyle = '#451a03';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(px + 6, py + 14, 6, 6);
+
+      // Wooden Door
+      ctx.fillStyle = '#27272a';
+      ctx.fillRect(px + 18, py + 16, 8, 12);
+
+      ctx.restore();
+    }
+
+    // Render 3D Vector Tree with Layered Canopy
+    static draw3DTree(ctx, px, py, size = 32) {
+      ctx.save();
+      const x = px + size / 2;
+      const y = py + size / 2;
+
+      // Trunk
+      ctx.fillStyle = '#451a03';
+      ctx.fillRect(x - 3, y + 2, 6, size / 2 - 2);
+
+      // Layered Canopy
+      const c1 = ctx.createRadialGradient(x, y - 6, 2, x, y - 6, 12);
+      c1.addColorStop(0, '#34d399');
+      c1.addColorStop(1, '#065f46');
+      ctx.fillStyle = c1;
+
+      ctx.beginPath();
+      ctx.arc(x, y - 6, 12, 0, Math.PI * 2);
+      ctx.arc(x - 5, y + 2, 8, 0, Math.PI * 2);
+      ctx.arc(x + 5, y + 2, 8, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.restore();
+    }
+
+    // Render 3D Vector Animals (Horses, Deer, Sheep, Dogs, Fish)
+    static drawAnimal(ctx, px, py, size = 32, type = 'horse') {
+      ctx.save();
+      const x = px + size / 2;
+      const y = py + size / 2;
+
+      if (type === 'horse') {
+        // Brown Horse with Saddle
+        ctx.fillStyle = '#78350f';
+        ctx.beginPath();
+        ctx.ellipse(x, y, 10, 6, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Head & Neck
+        ctx.beginPath();
+        ctx.ellipse(x - 8, y - 5, 5, 3, -0.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Saddle
+        ctx.fillStyle = '#dc2626';
+        ctx.fillRect(x - 3, y - 5, 6, 8);
+
+      } else if (type === 'sheep') {
+        // Wooly White Sheep
+        ctx.fillStyle = '#f8fafc';
+        ctx.beginPath();
+        ctx.arc(x, y, 8, 0, Math.PI * 2);
+        ctx.arc(x - 4, y - 2, 5, 0, Math.PI * 2);
+        ctx.arc(x + 4, y - 2, 5, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#1e293b';
+        ctx.beginPath();
+        ctx.arc(x - 8, y - 2, 3, 0, Math.PI * 2);
+        ctx.fill();
+
+      } else if (type === 'fish') {
+        // Fish in water
+        ctx.fillStyle = '#f97316';
+        ctx.beginPath();
+        ctx.ellipse(x, y, 6, 3, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(x + 6, y);
+        ctx.lineTo(x + 10, y - 3);
+        ctx.lineTo(x + 10, y + 3);
+        ctx.closePath();
+        ctx.fill();
+      }
+
+      ctx.restore();
+    }
+  }
+
+  // --- RPG SYSTEM & LIVING WORLD GAMEPLAY HELPERS ---
+  class RPGSystem {
+    // Stealing / Pickpocketing System
+    static attemptSteal(player, targetNpc) {
+      const chance = 0.5 + (player.lvl || 1) * 0.05;
+      const success = Math.random() < chance;
+
+      if (success) {
+        const goldStolen = 20 + Math.floor(Math.random() * 40);
+        player.gold = (player.gold || 0) + goldStolen;
+        return { success: true, gold: goldStolen, message: `💰 ¡Le robaste ${goldStolen} monedas de oro a ${targetNpc.name}!` };
+      } else {
+        return { success: false, message: `🚨 ¡${targetNpc.name} te descubrió! "¡ALADRÓN! ¡GUARDIAS!"` };
+      }
+    }
+
+    // Poison System
+    static applyPoison(target, damage = 30) {
+      target.hp -= damage;
+      target.isPoisoned = true;
+      if (target.hp <= 0) target.hp = 0;
+      return { killed: target.hp <= 0, damage: damage };
+    }
+
+    // Jailbreak / Prison Mechanics
+    static attemptPrisonEscape(player, method = 'lockpick') {
+      if (method === 'lockpick') {
+        const success = Math.random() < 0.6;
+        return { success: success, message: success ? '🔓 ¡Forzaste la cerradura y escapaste!' : '💥 La ganzúa se rompió...' };
+      } else if (method === 'bribe') {
+        if ((player.gold || 0) >= 50) {
+          player.gold -= 50;
+          return { success: true, message: '💰 Sobornaste al carcelero y te dejó ir en silencio.' };
+        }
+        return { success: false, message: '⚠️ No tienes 50 de oro para el soborno.' };
+      }
+      return { success: false, message: 'Acción fallida.' };
+    }
+
+    // Romance & Courting System
+    static courtNpc(player, targetNpc) {
+      targetNpc.affection = (targetNpc.affection || 0) + 25;
+      if (targetNpc.affection >= 100) {
+        return { maxed: true, message: `💍 ¡${targetNpc.name} se ha enamorado locamente de ti! Puedes proponer matrimonio.` };
+      }
+      return { maxed: false, message: `💖 Le diste un regalo a ${targetNpc.name}. Afecto: ${targetNpc.affection}%` };
+    }
+
+    // Fishing System
+    static startFishing(player) {
+      const roll = Math.random();
+      if (roll < 0.5) {
+        const goldVal = 15 + Math.floor(Math.random() * 25);
+        player.gold = (player.gold || 0) + goldVal;
+        return { type: 'fish', value: goldVal, message: `🐟 ¡Atrapaste una Trucha Dorada (+${goldVal} Oro)!` };
+      } else if (roll < 0.8) {
+        player.hpPots = (player.hpPots || 0) + 1;
+        return { type: 'item', message: '🧪 ¡Pescaste un Cofre Hundido con una Poción de Vida!' };
+      } else {
+        return { type: 'boot', message: '👟 Pescaste una bota vieja del río...' };
+      }
+    }
+  }
+
   return {
     Audio: new AudioSynthesizer(),
     Particles: new ParticleEngine(),
     Camera: Camera,
+    Pathfinder: Pathfinder,
     Input: InputController,
     Fog: FogOfWar,
     NPCs: new NPCManager(),
-    Spawner: SpawnerEngine
+    Spawner: SpawnerEngine,
+    VectorRenderer: Vector3DRenderer,
+    RPG: RPGSystem
   };
 })();

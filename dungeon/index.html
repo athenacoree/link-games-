@@ -37,7 +37,7 @@
       max-width: 100%;
       height: auto;
       touch-action: none;
-      image-rendering: pixelated;
+      cursor: crosshair;
     }
 
     .hud-panel {
@@ -103,7 +103,6 @@
     .log-item { color: #facc15; }
     .log-heal { color: #4ade80; }
 
-    /* Touch Controls & Skill Bar */
     .controls-wrapper {
       width: 100%;
       display: flex;
@@ -115,6 +114,13 @@
     .skills-bar {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
+      gap: 0.5rem;
+      width: 100%;
+    }
+
+    .actions-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
       gap: 0.5rem;
       width: 100%;
     }
@@ -142,34 +148,6 @@
     }
 
     .skill-icon { font-size: 1.3rem; }
-
-    .dpad-container {
-      display: grid;
-      grid-template-columns: repeat(3, 48px);
-      grid-template-rows: repeat(3, 48px);
-      gap: 6px;
-      justify-content: center;
-      margin: 0.5rem auto;
-      user-select: none;
-    }
-
-    .dpad-btn {
-      background: rgba(255, 255, 255, 0.08);
-      border: 1px solid var(--border-color);
-      border-radius: var(--radius-md);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1.25rem;
-      color: white;
-      cursor: pointer;
-      touch-action: none;
-    }
-
-    .dpad-btn:active {
-      background: var(--accent-gradient);
-      box-shadow: var(--shadow-glow);
-    }
   </style>
 </head>
 <body class="aurora-bg">
@@ -178,7 +156,7 @@
     <a href="../" class="btn-back"><span>← Catálogo</span></a>
     <div class="link-logo">
       <div class="link-logo-icon">🗡️</div>
-      <span>El Laberinto Sombrío</span>
+      <span>El Laberinto Sombrío 3D</span>
     </div>
     <button class="btn-guide" id="btnOpenGuide">📖 Guía / Lore</button>
   </header>
@@ -211,7 +189,7 @@
     <div class="game-layout">
       <div class="canvas-container glass-panel">
         <div class="touch-hint-banner">
-          🎮 Mantén presionadas las flechas/WASD o los botones táctiles para moverte libremente | Usa habilidades de combate
+          👆 <b>Navegación Táctil Inteligente:</b> Toca o haz clic directamente en cualquier parte del mapa para que el Héroe camine automáticamente hacia la casilla.
         </div>
 
         <canvas id="dungeonCanvas" width="640" height="480"></canvas>
@@ -236,23 +214,26 @@
             </button>
           </div>
 
-          <div class="dpad-container">
-            <div></div>
-            <div class="dpad-btn" id="btnUp">▲</div>
-            <div></div>
-            <div class="dpad-btn" id="btnLeft">◄</div>
-            <div class="dpad-btn" onclick="interactAction()">💬</div>
-            <div class="dpad-btn" id="btnRight">►</div>
-            <div></div>
-            <div class="dpad-btn" id="btnDown">▼</div>
-            <div></div>
+          <div class="actions-grid">
+            <button class="skill-btn" onclick="stealFromChest()">
+              <span class="skill-icon">🗝️</span>
+              <span>Robar Obelisco</span>
+            </button>
+            <button class="skill-btn" onclick="fishInPool()">
+              <span class="skill-icon">🎣</span>
+              <span>Pescar en Pozo</span>
+            </button>
+            <button class="skill-btn" onclick="interactAction()">
+              <span class="skill-icon">💬</span>
+              <span>Interactuar</span>
+            </button>
           </div>
         </div>
       </div>
 
       <div class="hud-panel glass-panel">
         <div>
-          <h2 style="font-size:1.1rem; margin-bottom:0.75rem;">Atributos del Héroe</h2>
+          <h2 style="font-size:1.1rem; margin-bottom:0.75rem;">Atributos del Héroe 3D</h2>
 
           <div class="stat-bar-container">
             <div class="stat-label"><span>Vida (HP)</span><span id="lblHp">120/120</span></div>
@@ -284,43 +265,38 @@
   <div class="guide-modal-overlay" id="guideModal">
     <div class="guide-modal-content">
       <div class="guide-modal-header">
-        <div class="guide-modal-title">🗡️ El Laberinto Sombrío — Guía Oficial</div>
+        <div class="guide-modal-title">🗡️ El Laberinto Sombrío 3D — Guía Oficial</div>
         <button class="guide-modal-close" id="btnCloseGuide">✕</button>
       </div>
 
       <div class="guide-section">
-        <div class="guide-section-title">📜 El Abismo de 150x150 Casillas</div>
-        <p>Te has adentrado en una de las mazmorras más profundas jamás descubiertas. Explora un mapa masivo de 150x150 casillas lleno de salas secretas, santuarios, obeliscos de invocación automática de enemigos y poderosos jefes demonio.</p>
+        <div class="guide-section-title">📜 Navegación Táctil Directa</div>
+        <p>¡Se ha eliminado el joystick! Ahora puedes tocar o hacer clic directamente en cualquier lugar del mapa para que tu héroe calcule la ruta óptima y se desplace suavemente.</p>
       </div>
 
       <div class="guide-section">
-        <div class="guide-section-title">✨ Poderes Mágicos & Animaciones</div>
-        <p>⚡ <b>Rayo Arcano (Pulso):</b> Onda de energía mística que fulmina enemigos cercanos. <br>🌀 <b>Escudo de Aurora:</b> Restaura salud y despliega una barrera giratoria de luz. <br>💥 <b>Choque Devastador:</b> Impacto físico brutal con temblor de pantalla.</p>
-      </div>
-
-      <div class="guide-section">
-        <div class="guide-section-title">📱 Movimiento Continuo</div>
-        <p>Sostén cualquier dirección en el teclado (WASD/Flechas) o presiona el D-Pad táctil para desplazarte de manera continua por el laberinto sin pausar por casilla.</p>
+        <div class="guide-section-title">✨ Gráficos Vectoriales 3D</div>
+        <p>Héroe con capa ondeante, casco dorado y espada reluciente, además de demonios, obeliscos y pozos de agua renderizados con profundidad vectorial 3D.</p>
       </div>
     </div>
   </div>
 
-  <footer class="link-footer"><p>Dungeon Crawler — Licencia MIT | Link Minigames</p></footer>
+  <footer class="link-footer"><p>Dungeon Crawler 3D — Licencia MIT | Link Minigames</p></footer>
 
-  <!-- Shared Engine Script -->
   <script src="../assets/js/super-engine.js"></script>
 
   <script>
     const canvas = document.getElementById('dungeonCanvas');
     const ctx = canvas.getContext('2d');
 
-    const MAP_SIZE = 150; // Ampliado a 150x150 casillas!
+    const MAP_SIZE = 150;
     const TILE_SIZE = 32;
 
     const TILE_WALL = 1;
     const TILE_FLOOR = 0;
     const TILE_STAIRS = 2;
     const TILE_OBELISK = 3;
+    const TILE_WATER = 4;
 
     let floor = 1;
     let map = [];
@@ -339,6 +315,10 @@
       gold: 0, hpPots: 3, mpPots: 2
     };
 
+    let walkPath = [];
+    let isWalking = false;
+    let walkTimer = null;
+
     let enemies = [];
     let npcs = [];
     let items = [];
@@ -351,14 +331,11 @@
 
       input = new SuperEngine.Input(
         (dx, dy) => movePlayer(dx, dy),
-        (action) => handleAction(action)
+        (action) => handleAction(action),
+        (tx, ty) => handleTileTap(tx, ty)
       );
 
-      // Bind Touch D-Pad
-      input.bindTouchControl(document.getElementById('btnUp'), 0, -1);
-      input.bindTouchControl(document.getElementById('btnDown'), 0, 1);
-      input.bindTouchControl(document.getElementById('btnLeft'), -1, 0);
-      input.bindTouchControl(document.getElementById('btnRight'), 1, 0);
+      input.bindCanvasTouchTap(canvas, camera, MAP_SIZE, MAP_SIZE);
 
       generateDungeon();
       requestAnimationFrame(gameLoop);
@@ -371,6 +348,38 @@
       div.textContent = msg;
       box.appendChild(div);
       box.scrollTop = box.scrollHeight;
+    }
+
+    function handleTileTap(tx, ty) {
+      if (player.hp <= 0) return;
+
+      const path = SuperEngine.Pathfinder.findPath(
+        { x: player.x, y: player.y },
+        { x: tx, y: ty },
+        MAP_SIZE, MAP_SIZE,
+        (x, y) => map[y][x] === TILE_WALL
+      );
+
+      if (path && path.length > 0) {
+        walkPath = path;
+        startAutoWalk();
+      }
+    }
+
+    function startAutoWalk() {
+      if (walkTimer) clearInterval(walkTimer);
+      isWalking = true;
+
+      walkTimer = setInterval(() => {
+        if (walkPath.length === 0 || player.hp <= 0) {
+          clearInterval(walkTimer);
+          isWalking = false;
+          return;
+        }
+
+        const next = walkPath.shift();
+        movePlayer(next.dx, next.dy);
+      }, 110);
     }
 
     function generateDungeon() {
@@ -394,7 +403,6 @@
         rooms.push({ x: Math.floor(x + w / 2), y: Math.floor(y + h / 2), rx: x, ry: y, w, h });
       }
 
-      // Connect rooms with corridors
       for (let i = 0; i < rooms.length - 1; i++) {
         let r1 = rooms[i];
         let r2 = rooms[i + 1];
@@ -417,7 +425,12 @@
       let lastRoom = rooms[rooms.length - 1];
       map[lastRoom.y][lastRoom.x] = TILE_STAIRS;
 
-      // Obelisks (Spawners)
+      // Water pools in rooms
+      for (let i = 2; i < rooms.length; i += 4) {
+        let room = rooms[i];
+        map[room.y + 1][room.x + 1] = TILE_WATER;
+      }
+
       spawner.spawners = [];
       for (let i = 2; i < rooms.length; i += 3) {
         let room = rooms[i];
@@ -426,7 +439,6 @@
         spawner.addSpawner(room.x, room.y, eType, 180);
       }
 
-      // Enemies
       enemies = [];
       for (let i = 1; i < rooms.length; i++) {
         let r = rooms[i];
@@ -446,12 +458,10 @@
         });
       }
 
-      // Sanctuary NPCs
       npcs = [
         { x: rooms[1].x, y: rooms[1].y, name: 'Sacerdotisa Freya', symbol: '🧙‍♀️', type: 'healer' }
       ];
 
-      // Items
       items = [];
       for (let i = 0; i < 20; i++) {
         let rx = 2 + Math.floor(Math.random() * (MAP_SIZE - 4));
@@ -463,7 +473,7 @@
       }
 
       fog.update(player.x, player.y, 7);
-      addLog(`🏰 Piso ${floor} generado. Mapa sombrío de 150x150 explorándose...`, 'info');
+      addLog(`🏰 Piso ${floor} generado. Toca en cualquier parte del mapa para moverte en 3D.`, 'info');
       updateHUD();
     }
 
@@ -524,6 +534,37 @@
 
       fog.update(player.x, player.y, 7);
       updateEnemiesTurn();
+      updateHUD();
+    }
+
+    function stealFromChest() {
+      const isNearObelisk = map[player.y][player.x] === TILE_OBELISK ||
+        [ {x:1,y:0},{x:-1,y:0},{x:0,y:1},{x:0,y:-1} ].some(d => map[player.y+d.y]?.[player.x+d.x] === TILE_OBELISK);
+
+      if (isNearObelisk) {
+        const stolen = 40 + Math.floor(Math.random() * 60);
+        player.gold += stolen;
+        SuperEngine.Audio.playSFX('item');
+        particleEngine.addParticles(player.x * TILE_SIZE + 16, player.y * TILE_SIZE + 16, 15, 'gold');
+        addLog(`🗝️ ¡Extrajiste de forma sigilosa ${stolen} de oro del Obelisco Arcano!`, 'item');
+      } else {
+        addLog('⚠️ Acércate a un Obelisco Arcano para saquear sus reliquias.', 'combat');
+      }
+      updateHUD();
+    }
+
+    function fishInPool() {
+      const isNearWater = map[player.y][player.x] === TILE_WATER ||
+        [ {x:1,y:0},{x:-1,y:0},{x:0,y:1},{x:0,y:-1} ].some(d => map[player.y+d.y]?.[player.x+d.x] === TILE_WATER);
+
+      if (isNearWater) {
+        SuperEngine.Audio.playSFX('fish');
+        const res = SuperEngine.RPG.startFishing(player);
+        particleEngine.addParticles(player.x * TILE_SIZE + 16, player.y * TILE_SIZE + 16, 10, 'water');
+        addLog(res.message, 'heal');
+      } else {
+        addLog('⚠️ No hay pozo de agua cercano para pescar.', 'combat');
+      }
       updateHUD();
     }
 
@@ -637,7 +678,6 @@
     }
 
     function updateEnemiesTurn() {
-      // Dynamic Spawner Tick
       spawner.update(enemies, MAP_SIZE, MAP_SIZE, (sx, sy) => map[sy][sx] === TILE_FLOOR && !enemies.some(e => e.x === sx && e.y === sy));
 
       enemies.forEach(e => {
@@ -736,7 +776,6 @@
 
       const bounds = camera.getVisibleTileBounds(MAP_SIZE, MAP_SIZE);
 
-      // Render Map Tiles
       for (let r = bounds.minRow; r <= bounds.maxRow; r++) {
         for (let c = bounds.minCol; c <= bounds.maxCol; c++) {
           const screenPos = camera.tileToScreen(c, r);
@@ -750,15 +789,15 @@
           const isVisible = fog.isVisible(c, r);
 
           if (map[r][c] === TILE_WALL) {
-            ctx.fillStyle = isVisible ? '#1e293b' : '#0f172a';
-            ctx.fillRect(screenPos.x, screenPos.y, TILE_SIZE, TILE_SIZE);
-            ctx.strokeStyle = isVisible ? '#334155' : '#1e293b';
-            ctx.strokeRect(screenPos.x, screenPos.y, TILE_SIZE, TILE_SIZE);
+            SuperEngine.VectorRenderer.drawCastleStructure(ctx, screenPos.x, screenPos.y, TILE_SIZE, 'wall');
           } else if (map[r][c] === TILE_FLOOR) {
             ctx.fillStyle = isVisible ? '#334155' : '#1e293b';
             ctx.fillRect(screenPos.x, screenPos.y, TILE_SIZE, TILE_SIZE);
             ctx.strokeStyle = isVisible ? '#475569' : '#0f172a';
             ctx.strokeRect(screenPos.x, screenPos.y, TILE_SIZE, TILE_SIZE);
+          } else if (map[r][c] === TILE_WATER) {
+            ctx.fillStyle = isVisible ? '#0284c7' : '#0369a1';
+            ctx.fillRect(screenPos.x, screenPos.y, TILE_SIZE, TILE_SIZE);
           } else if (map[r][c] === TILE_STAIRS) {
             ctx.fillStyle = isVisible ? '#0284c7' : '#0369a1';
             ctx.fillRect(screenPos.x, screenPos.y, TILE_SIZE, TILE_SIZE);
@@ -768,18 +807,11 @@
               ctx.fillText('🪜', screenPos.x + TILE_SIZE / 2, screenPos.y + TILE_SIZE / 2 + 6);
             }
           } else if (map[r][c] === TILE_OBELISK) {
-            ctx.fillStyle = isVisible ? '#7e22ce' : '#581c87';
-            ctx.fillRect(screenPos.x, screenPos.y, TILE_SIZE, TILE_SIZE);
-            if (isVisible) {
-              ctx.font = '20px sans-serif';
-              ctx.textAlign = 'center';
-              ctx.fillText('🔮', screenPos.x + TILE_SIZE / 2, screenPos.y + TILE_SIZE / 2 + 6);
-            }
+            SuperEngine.VectorRenderer.drawCastleStructure(ctx, screenPos.x, screenPos.y, TILE_SIZE, 'tower');
           }
         }
       }
 
-      // Render Items
       items.forEach(i => {
         if (fog.isVisible(i.x, i.y)) {
           const sp = camera.tileToScreen(i.x, i.y);
@@ -789,25 +821,18 @@
         }
       });
 
-      // Render NPCs
       npcs.forEach(n => {
         if (fog.isVisible(n.x, n.y)) {
           const sp = camera.tileToScreen(n.x, n.y);
-          ctx.font = '20px sans-serif';
-          ctx.textAlign = 'center';
-          ctx.fillText(n.symbol, sp.x + TILE_SIZE / 2, sp.y + TILE_SIZE / 2 + 6);
+          SuperEngine.VectorRenderer.drawEntity(ctx, sp.x, sp.y, TILE_SIZE, n.name);
         }
       });
 
-      // Render Enemies
       enemies.forEach(e => {
         if (fog.isVisible(e.x, e.y)) {
           const sp = camera.tileToScreen(e.x, e.y);
-          ctx.font = e.isLeader ? '24px sans-serif' : '20px sans-serif';
-          ctx.textAlign = 'center';
-          ctx.fillText(e.symbol, sp.x + TILE_SIZE / 2, sp.y + TILE_SIZE / 2 + 6);
+          SuperEngine.VectorRenderer.drawEntity(ctx, sp.x, sp.y, TILE_SIZE, e.type, e.isLeader);
 
-          // Enemy HP bar
           ctx.fillStyle = '#000';
           ctx.fillRect(sp.x + 2, sp.y, TILE_SIZE - 4, 3);
           ctx.fillStyle = '#ef4444';
@@ -815,13 +840,10 @@
         }
       });
 
-      // Render Player
+      // Render 3D Hero
       const pSp = camera.tileToScreen(player.x, player.y);
-      ctx.font = '22px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText('🧙‍♂️', pSp.x + TILE_SIZE / 2, pSp.y + TILE_SIZE / 2 + 7);
+      SuperEngine.VectorRenderer.drawHero(ctx, pSp.x, pSp.y, TILE_SIZE, isWalking);
 
-      // Render Particles & Text
       particleEngine.draw(ctx, camera);
     }
 
@@ -836,7 +858,6 @@
       generateDungeon();
     }
 
-    // Modal Guide Handler
     const guideModal = document.getElementById('guideModal');
     document.getElementById('btnOpenGuide').addEventListener('click', () => guideModal.classList.add('active'));
     document.getElementById('btnCloseGuide').addEventListener('click', () => guideModal.classList.remove('active'));
