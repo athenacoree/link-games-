@@ -8,8 +8,8 @@
   <style>
     .game-layout {
       display: grid;
-      grid-template-columns: 1fr 300px;
-      gap: 1.5rem;
+      grid-template-columns: 1fr 320px;
+      gap: 1.25rem;
       align-items: start;
     }
 
@@ -82,6 +82,12 @@
     .tower-name { font-size: 0.85rem; font-weight: bold; }
     .tower-cost { font-size: 0.75rem; color: #facc15; }
 
+    .skills-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.5rem;
+    }
+
     .btn-wave {
       width: 100%;
       background: linear-gradient(135deg, #10b981 0%, #059669 100%);
@@ -104,7 +110,7 @@
   </header>
 
   <main class="container">
-    <!-- Métricas Agrupadas Glassmorphism -->
+    <!-- Métricas del Castillo -->
     <div class="metrics-group">
       <div class="metric-pill">
         <span class="metric-label">Vida Castillo</span>
@@ -112,25 +118,29 @@
       </div>
       <div class="metric-pill">
         <span class="metric-label">Oro Real</span>
-        <span class="metric-value" id="lblGold" style="color:#facc15;">150</span>
+        <span class="metric-value" id="lblGold" style="color:#facc15;">180</span>
+      </div>
+      <div class="metric-pill">
+        <span class="metric-label">Maná</span>
+        <span class="metric-value" id="lblMana" style="color:#38bdf8;">100</span>
       </div>
       <div class="metric-pill">
         <span class="metric-label">Oleada</span>
-        <span class="metric-value" id="lblWave" style="color:#38bdf8;">1</span>
+        <span class="metric-value" id="lblWave" style="color:#c084fc;">1</span>
       </div>
     </div>
 
     <div class="game-layout">
       <div class="canvas-container glass-panel">
         <div class="touch-hint-banner">
-          👆 Toca en cualquier lugar fuera del camino para construir la torre seleccionada
+          👆 Toca fuera del camino para construir torres | Usa Hechizos Reales para apoyar la defensa
         </div>
-        <canvas id="tdCanvas" width="600" height="400"></canvas>
+        <canvas id="tdCanvas" width="640" height="420"></canvas>
       </div>
 
       <div class="td-panel glass-panel">
         <div>
-          <h3 style="font-size:0.95rem; margin-bottom:0.75rem; color:var(--text-secondary);">Torre Activa a Construir</h3>
+          <h3 style="font-size:0.95rem; margin-bottom:0.75rem; color:var(--text-secondary);">Torres Defensivas</h3>
           <div class="tower-selector">
             <div class="tower-card selected" id="card-archer" onclick="selectTowerType('archer')">
               <span class="tower-icon">🏹</span>
@@ -155,13 +165,22 @@
           </div>
         </div>
 
+        <div>
+          <h3 style="font-size:0.95rem; margin-bottom:0.5rem; color:var(--text-secondary);">Hechizos Reales del Reino</h3>
+          <div class="skills-row">
+            <button class="btn btn-secondary" onclick="castSpell('pulse')" style="padding:0.4rem; font-size:0.75rem;">⚡ Rayo (30 MP)</button>
+            <button class="btn btn-secondary" onclick="castSpell('aurora')" style="padding:0.4rem; font-size:0.75rem;">🌀 Escudo (40 MP)</button>
+            <button class="btn btn-secondary" onclick="castSpell('choque')" style="padding:0.4rem; font-size:0.75rem;">💥 Sismo (50 MP)</button>
+          </div>
+        </div>
+
         <button class="btn btn-wave" id="btnWave" onclick="startNextWave()">🌊 Iniciar Próxima Oleada</button>
         <button class="btn btn-secondary" onclick="resetTD()">🔄 Reiniciar Batalla</button>
       </div>
     </div>
   </main>
 
-  <!-- Modal Explicativo -->
+  <!-- Modal Guía -->
   <div class="guide-modal-overlay" id="guideModal">
     <div class="guide-modal-content">
       <div class="guide-modal-header">
@@ -171,55 +190,59 @@
 
       <div class="guide-section">
         <div class="guide-section-title">📜 Lore de la Fortaleza</div>
-        <p>Las hordas orcas y criaturas del inframundo marchan hacia la capital de Link. Tu misión estratégica consiste en apostar torres defensivas a lo largo del sendero para evitar que sobrepasen las murallas del reino.</p>
+        <p>Las hordas orcas y criaturas del inframundo marchan hacia la capital de Link. Emplaza estratégicamente torres de arqueros, cañones, magos e hielo para proteger el castillo.</p>
       </div>
 
       <div class="guide-section">
-        <div class="guide-section-title">🛡️ Tipos de Torres</div>
-        <p>🏹 <b>Arquero:</b> Rápido ataque a distancia. <br>💣 <b>Cañón:</b> Daño explosivo de gran impacto. <br>❄️ <b>Hielo:</b> Ralentiza enemigos en un 50%. <br>🔮 <b>Mago:</b> Ataque místico penetrante.</p>
-      </div>
-
-      <div class="guide-section">
-        <div class="guide-section-title">📱 Controles Móviles</div>
-        <div class="guide-controls-list">
-          <div class="guide-control-item"><span class="guide-control-badge">Toque en Pantalla</span> Emplazar torre</div>
-          <div class="guide-control-item"><span class="guide-control-badge">Toque en Tarjeta</span> Seleccionar tipo de torre</div>
-        </div>
+        <div class="guide-section-title">⚡ Hechizos Divinos del Reino</div>
+        <p>⚡ <b>Rayo Arcano:</b> Inflige daño masivo en área a todos los invasores. <br>🌀 <b>Escudo Aurora:</b> Restaura vida al castillo y genera un escudo protector. <br>💥 <b>Choque Terremoto:</b> Sacude el mapa y ralentiza drásticamente a los enemigos.</p>
       </div>
     </div>
   </div>
 
   <footer class="link-footer"><p>Kingdom Defense — Licencia MIT | Link Minigames</p></footer>
 
+  <!-- Shared Engine Script -->
+  <script src="../assets/js/super-engine.js"></script>
+
   <script>
     const canvas = document.getElementById('tdCanvas');
     const ctx = canvas.getContext('2d');
 
     const WAYPOINTS = [
-      { x: 0, y: 100 },
-      { x: 180, y: 100 },
-      { x: 180, y: 280 },
-      { x: 380, y: 280 },
-      { x: 380, y: 120 },
-      { x: 600, y: 120 }
+      { x: 0, y: 110 },
+      { x: 190, y: 110 },
+      { x: 190, y: 300 },
+      { x: 400, y: 300 },
+      { x: 400, y: 130 },
+      { x: 640, y: 130 }
     ];
 
     const TOWER_TYPES = {
-      archer: { name: 'Arquero', cost: 60, range: 110, rate: 25, dmg: 12, symbol: '🏹', color: '#38bdf8' },
-      cannon: { name: 'Cañón', cost: 100, range: 90, rate: 50, dmg: 35, symbol: '💣', color: '#f97316' },
-      ice: { name: 'Hielo', cost: 80, range: 100, rate: 35, dmg: 8, slow: 0.5, symbol: '❄️', color: '#38bdf8' },
-      magic: { name: 'Mago', cost: 120, range: 130, rate: 30, dmg: 25, symbol: '🔮', color: '#a855f7' }
+      archer: { name: 'Arquero', cost: 60, range: 110, rate: 22, dmg: 14, symbol: '🏹', color: '#38bdf8' },
+      cannon: { name: 'Cañón', cost: 100, range: 90, rate: 45, dmg: 40, symbol: '💣', color: '#f97316' },
+      ice: { name: 'Hielo', cost: 80, range: 100, rate: 30, dmg: 10, slow: 0.5, symbol: '❄️', color: '#38bdf8' },
+      magic: { name: 'Mago', cost: 120, range: 130, rate: 28, dmg: 30, symbol: '🔮', color: '#a855f7' }
     };
 
     let selectedType = 'archer';
-    let gold = 150;
+    let gold = 180;
     let lives = 20;
+    let mana = 100;
+    let maxMana = 100;
     let wave = 1;
     let waveInProgress = false;
 
     let towers = [];
     let enemies = [];
     let projectiles = [];
+    let particleEngine;
+
+    function initTD() {
+      particleEngine = SuperEngine.Particles;
+      updateUI();
+      requestAnimationFrame(gameLoop);
+    }
 
     function selectTowerType(type) {
       selectedType = type;
@@ -230,6 +253,7 @@
     function updateUI() {
       document.getElementById('lblGold').textContent = gold;
       document.getElementById('lblLives').textContent = lives;
+      document.getElementById('lblMana').textContent = `${Math.floor(mana)}/${maxMana}`;
       document.getElementById('lblWave').textContent = wave;
       document.getElementById('btnWave').disabled = waveInProgress;
     }
@@ -239,7 +263,7 @@
       waveInProgress = true;
       updateUI();
 
-      let count = 6 + wave * 3;
+      let count = 8 + wave * 3;
       let spawned = 0;
 
       let spawnInterval = setInterval(() => {
@@ -249,7 +273,7 @@
         }
 
         let isBoss = (spawned === count - 1 && wave % 3 === 0);
-        let hp = isBoss ? 300 + wave * 100 : 40 + wave * 20;
+        let hp = isBoss ? 350 + wave * 120 : 50 + wave * 22;
         let speed = isBoss ? 0.7 : (Math.random() < 0.3 ? 1.8 : 1.2);
 
         enemies.push({
@@ -260,13 +284,13 @@
           maxHp: hp,
           speed: speed,
           origSpeed: speed,
-          reward: isBoss ? 50 : 12,
+          reward: isBoss ? 60 : 15,
           isBoss: isBoss,
           symbol: isBoss ? '👹' : (speed > 1.5 ? '🐕' : '👾')
         });
 
         spawned++;
-      }, 900);
+      }, 800);
     }
 
     canvas.addEventListener('touchstart', handleCanvasTouch, { passive: false });
@@ -275,21 +299,21 @@
     function handleCanvasTouch(e) {
       e.preventDefault();
       const rect = canvas.getBoundingClientRect();
-      const x = e.touches[0].clientX - rect.left;
-      const y = e.touches[0].clientY - rect.top;
+      const x = (e.touches[0].clientX - rect.left) * (canvas.width / rect.width);
+      const y = (e.touches[0].clientY - rect.top) * (canvas.height / rect.height);
       placeTower(x, y);
     }
 
     function handleCanvasClick(e) {
       const rect = canvas.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const y = e.clientY - rect.top;
+      const x = (e.clientX - rect.left) * (canvas.width / rect.width);
+      const y = (e.clientY - rect.top) * (canvas.height / rect.height);
       placeTower(x, y);
     }
 
     function placeTower(x, y) {
-      if (isNearPath(x, y, 30)) return;
-      if (towers.some(t => Math.hypot(t.x - x, t.y - y) < 30)) return;
+      if (isNearPath(x, y, 35)) return;
+      if (towers.some(t => Math.hypot(t.x - x, t.y - y) < 32)) return;
 
       const tSpec = TOWER_TYPES[selectedType];
       if (gold >= tSpec.cost) {
@@ -300,8 +324,44 @@
           spec: tSpec,
           cooldown: 0
         });
+        SuperEngine.Audio.playSFX('item');
+        particleEngine.addParticles(x, y, 12, 'gold');
         updateUI();
       }
+    }
+
+    function castSpell(type) {
+      if (type === 'pulse') {
+        if (mana < 30) return;
+        mana -= 30;
+        SuperEngine.Audio.playSFX('spell_pulse');
+        particleEngine.addParticles(canvas.width / 2, canvas.height / 2, 1, 'pulso', { maxRadius: 250 });
+
+        enemies.forEach(e => {
+          e.hp -= 60;
+          particleEngine.addFloatingText(e.x, e.y, `⚡-60`, '#38bdf8');
+        });
+      } else if (type === 'aurora') {
+        if (mana < 40) return;
+        mana -= 40;
+        lives += 3;
+        SuperEngine.Audio.playSFX('spell_aurora');
+        particleEngine.addParticles(canvas.width / 2, canvas.height / 2, 30, 'aurora');
+      } else if (type === 'choque') {
+        if (mana < 50) return;
+        mana -= 50;
+        SuperEngine.Audio.playSFX('spell_choque');
+        particleEngine.addParticles(canvas.width / 2, canvas.height / 2, 40, 'choque');
+
+        enemies.forEach(e => {
+          e.hp -= 80;
+          e.speed = e.origSpeed * 0.3;
+          particleEngine.addFloatingText(e.x, e.y, `💥-80`, '#f97316');
+        });
+      }
+
+      enemies = enemies.filter(e => e.hp > 0);
+      updateUI();
     }
 
     function isNearPath(x, y, threshold) {
@@ -329,6 +389,14 @@
     }
 
     function update() {
+      particleEngine.update();
+
+      // Mana regen
+      if (mana < maxMana) {
+        mana = Math.min(maxMana, mana + 0.05);
+        updateUI();
+      }
+
       for (let i = enemies.length - 1; i >= 0; i--) {
         let e = enemies[i];
         let target = WAYPOINTS[e.targetIdx];
@@ -342,9 +410,11 @@
           e.targetIdx++;
           if (e.targetIdx >= WAYPOINTS.length) {
             lives--;
+            SuperEngine.Audio.playSFX('hit');
             enemies.splice(i, 1);
             updateUI();
             if (lives <= 0) {
+              SuperEngine.Audio.playSFX('death');
               alert('💥 ¡El Reino ha caído! Fin de la batalla.');
               resetTD();
             }
@@ -358,8 +428,9 @@
 
       if (waveInProgress && enemies.length === 0) {
         waveInProgress = false;
-        gold += 40 + wave * 10;
+        gold += 50 + wave * 15;
         wave++;
+        SuperEngine.Audio.playSFX('levelup');
         updateUI();
       }
 
@@ -373,29 +444,39 @@
         if (target) {
           projectiles.push({
             x: t.x, y: t.y,
-            tx: target.x, ty: target.y,
             target: target,
             dmg: t.spec.dmg,
             type: t.type,
-            speed: 6
+            speed: 7
           });
           t.cooldown = t.spec.rate;
+          SuperEngine.Audio.playSFX('step');
         }
       });
 
       for (let i = projectiles.length - 1; i >= 0; i--) {
         let p = projectiles[i];
+        if (!enemies.includes(p.target)) {
+          projectiles.splice(i, 1);
+          continue;
+        }
+
         let dx = p.target.x - p.x;
         let dy = p.target.y - p.y;
         let dist = Math.hypot(dx, dy);
 
-        if (dist < p.speed || !enemies.includes(p.target)) {
+        if (dist < p.speed) {
           p.target.hp -= p.dmg;
+          particleEngine.addParticles(p.target.x, p.target.y, 6, p.type === 'cannon' ? 'choque' : 'spark');
+          particleEngine.addFloatingText(p.target.x, p.target.y, `-${p.dmg}`, '#f87171');
+
           if (p.type === 'ice') {
             p.target.speed = p.target.origSpeed * 0.5;
           }
+
           if (p.target.hp <= 0) {
             gold += p.target.reward;
+            SuperEngine.Audio.playSFX('coin');
             enemies = enemies.filter(e => e !== p.target);
             updateUI();
           }
@@ -412,7 +493,7 @@
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
       ctx.strokeStyle = '#334155';
-      ctx.lineWidth = 36;
+      ctx.lineWidth = 38;
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
       ctx.beginPath();
@@ -457,11 +538,14 @@
         ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
         ctx.fill();
       });
+
+      particleEngine.draw(ctx, null);
     }
 
     function resetTD() {
-      gold = 150;
+      gold = 180;
       lives = 20;
+      mana = 100;
       wave = 1;
       waveInProgress = false;
       towers = [];
@@ -474,8 +558,7 @@
     document.getElementById('btnOpenGuide').addEventListener('click', () => guideModal.classList.add('active'));
     document.getElementById('btnCloseGuide').addEventListener('click', () => guideModal.classList.remove('active'));
 
-    updateUI();
-    requestAnimationFrame(gameLoop);
+    initTD();
   </script>
 </body>
 </html>
