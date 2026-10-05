@@ -31,6 +31,8 @@
     isWalking: false,
     facing: 'S', // 'N', 'S', 'E', 'W'
     path: [],
+    insideBuilding: null, // null if outside, or building object if inside
+    interiorFloor: 1,     // Floor active in interior (e.g. 1..10)
     currentHotelId: null,
     currentFloor: 1,
     inventory: []
@@ -123,6 +125,13 @@
       player.isWalking = false;
     }
 
+    // Track Player's Active World Sector/Quadrant
+    const currentSector = window.CiudadLinkMap.getSectorForPos(player.x, player.y);
+    window.CiudadLinkMap.setActiveSector(currentSector);
+
+    // Update Tile Occupancy Grid (ON / OFF states)
+    window.CiudadLinkMap.updateOccupancyState(window.CiudadLinkNPCs.npcs, window.CiudadLinkVehicles.vehicles, player);
+
     // Update NPC AI Simulation & Traffic Vehicles
     window.CiudadLinkNPCs.updateNPCSimulation(deltaSec, player.isWalking);
     window.CiudadLinkVehicles.updateVehicles(deltaSec, player.x, player.y);
@@ -141,12 +150,26 @@
     document.getElementById('lblPlayerEnergy').textContent = `${player.energy}/100`;
     if (document.getElementById('lblPlayerHunger')) document.getElementById('lblPlayerHunger').textContent = `${Math.round(player.hunger)}/100`;
     if (document.getElementById('lblPlayerMood')) document.getElementById('lblPlayerMood').textContent = `${Math.round(player.mood)}/100`;
+
+    if (document.getElementById('lblPlayerSector')) {
+      document.getElementById('lblPlayerSector').textContent = window.CiudadLinkMap.activeSector;
+    }
+    if (document.getElementById('lblPlayerWanted')) {
+      const wantedStars = window.CiudadLinkVehicles.wantedLevel;
+      document.getElementById('lblPlayerWanted').textContent = wantedStars > 0 ? '⭐'.repeat(wantedStars) : 'Limpio';
+    }
   }
 
   // MAIN PSEUDO-3D CITY RENDERER
   function render() {
     ctx.fillStyle = '#0f172a';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // IF PLAYER IS INSIDE A BUILDING INTERIOR -> RENDER INTERIOR MODE (ROOF REMOVED, FLOORS LOADED ON DEMAND)
+    if (player.insideBuilding) {
+      renderBuildingInteriorMode();
+      return;
+    }
 
     const tileSize = window.CiudadLinkMap.TILE_SIZE;
     const grid = window.CiudadLinkMap.grid;
@@ -308,6 +331,88 @@
       ctx.fillStyle = `rgba(15, 23, 42, ${nightTint})`;
       ctx.fillRect(0, 0, canvas.width, canvas.height);
     }
+  }
+
+  // BUILDING INTERIOR RENDERER (ROOF REMOVED, FLOORS LOADED ON DEMAND)
+  function renderBuildingInteriorMode() {
+    const b = player.insideBuilding;
+    const floor = player.interiorFloor || 1;
+
+    // Background Room Floor
+    ctx.fillStyle = '#1e293b';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    const marginX = 80;
+    const marginY = 60;
+    const roomW = canvas.width - (marginX * 2);
+    const roomH = canvas.height - (marginY * 2);
+
+    // Walls
+    ctx.strokeStyle = '#38bdf8';
+    ctx.lineWidth = 6;
+    ctx.strokeRect(marginX, marginY, roomW, roomH);
+
+    // Interior Tile Floor Patterns
+    ctx.fillStyle = '#0f172a';
+    ctx.fillRect(marginX + 4, marginY + 4, roomW - 8, roomH - 8);
+
+    // Rooms partitioning & furniture layout
+    ctx.fillStyle = '#334155';
+    // Room Dividers
+    ctx.fillRect(marginX + roomW * 0.5 - 2, marginY + 4, 4, roomH - 8);
+    ctx.fillRect(marginX + 4, marginY + roomH * 0.5 - 2, roomW - 8, 4);
+
+    // Doorway cutouts
+    ctx.fillStyle = '#0f172a';
+    ctx.fillRect(marginX + roomW * 0.5 - 15, marginY + roomH * 0.25, 30, 20);
+    ctx.fillRect(marginX + roomW * 0.25, marginY + roomH * 0.5 - 15, 20, 30);
+
+    // Furniture / Items
+    ctx.fillStyle = '#b45309'; // Wooden Table / Desk
+    ctx.fillRect(marginX + 30, marginY + 30, 60, 40);
+
+    ctx.fillStyle = '#0284c7'; // Beds / Sofas
+    ctx.fillRect(marginX + roomW - 90, marginY + 30, 60, 80);
+    ctx.fillRect(marginX + 30, marginY + roomH - 70, 70, 40);
+
+    // Floor Indicator Overlay
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 16px sans-serif';
+    ctx.fillText(`🏢 ${b.name} — Floor ${floor} (Interior Cargado)`, marginX + 10, marginY - 15);
+
+    // Render Player inside Interior Center
+    const px = canvas.width / 2;
+    const py = canvas.height / 2 + 20;
+
+    ctx.fillStyle = 'rgba(0,0,0,0.4)';
+    ctx.beginPath();
+    ctx.ellipse(px, py + 8, 12, 6, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = player.shirtColor || '#22c55e';
+    ctx.fillRect(px - 10, py - 14, 20, 14);
+
+    ctx.fillStyle = player.skinTone || '#fde047';
+    ctx.beginPath();
+    ctx.arc(px, py - 20, 10, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 12px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(`${player.badge} ${player.name} (Piso ${floor})`, px, py - 35);
+
+    // Exit & Floor UI Banner
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+    ctx.fillRect(10, 10, 300, 40);
+    ctx.strokeStyle = '#38bdf8';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(10, 10, 300, 40);
+
+    ctx.fillStyle = '#38bdf8';
+    ctx.font = 'bold 12px sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText(`🚪 Toca la pantalla o usa el botón para salir.`, 20, 34);
   }
 
   // 2.5D PSEUDO-3D BUILDING RENDERER
@@ -545,6 +650,13 @@
     });
 
     canvas.addEventListener('click', (e) => {
+      // If player is inside an interior, tapping canvas exits to city street
+      if (player.insideBuilding) {
+        alert(`🚪 Saliste de ${player.insideBuilding.name}. Volviendo al mapa exterior.`);
+        player.insideBuilding = null;
+        return;
+      }
+
       const rect = canvas.getBoundingClientRect();
       const clickX = e.clientX - rect.left + camera.x;
       const clickY = e.clientY - rect.top + camera.y;
@@ -564,6 +676,13 @@
       const hotel = window.CiudadLinkMap.hotels.find(h => h.elevatorX === targetX && h.elevatorY === targetY);
       if (hotel) {
         openElevatorModal(hotel);
+        return;
+      }
+
+      // Check if clicked on a building to enter interior
+      const bldg = window.CiudadLinkMap.buildings.find(b => targetX >= b.x && targetX < b.x + b.w && targetY >= b.y && targetY < b.y + b.h);
+      if (bldg && bldg.tileType !== window.CiudadLinkMap.TILE.PARK) {
+        openBuildingInteriorEntryModal(bldg);
         return;
       }
 
@@ -595,6 +714,10 @@
     });
 
     // Nav Menu Buttons
+    document.getElementById('btnOpenWorldMap')?.addEventListener('click', openWorldMapModal);
+    document.getElementById('btnHijackVehicle')?.addEventListener('click', () => {
+      window.CiudadLinkVehicles.hijackNearbyVehicle(player.x, player.y);
+    });
     document.getElementById('btnChooseAvatar')?.addEventListener('click', openAvatarSelectorModal);
     document.getElementById('btnOpenPhone')?.addEventListener('click', openSmartphoneModal);
     document.getElementById('btnOpenLaws')?.addEventListener('click', openLawsModal);
@@ -611,6 +734,68 @@
     pointerWorldPos.x = (e.clientX - rect.left) * scaleX + camera.x;
     pointerWorldPos.y = (e.clientY - rect.top) * scaleY + camera.y;
   }
+
+  // WORLD MAP & SECTOR NAVIGATION MODAL
+  function openWorldMapModal() {
+    const sectors = window.CiudadLinkMap.SECTORS;
+    const currentSectorKey = window.CiudadLinkMap.activeSector;
+
+    let sectorsGridHTML = '';
+    const sectorKeys = ['NW', 'NE', 'SW', 'SE'];
+
+    sectorKeys.forEach(key => {
+      const sec = sectors[key];
+      const isCurrent = key === currentSectorKey;
+      sectorsGridHTML += `
+        <div style="background:${isCurrent ? 'rgba(56, 189, 248, 0.2)' : 'rgba(255, 255, 255, 0.05)'}; border:2px solid ${isCurrent ? '#38bdf8' : '#334155'}; border-radius:12px; padding:0.85rem; display:flex; flex-direction:column; justify-content:space-between; gap:0.5rem; text-align:center;">
+          <div>
+            <div style="font-size:1.1rem; font-weight:bold; color:${isCurrent ? '#38bdf8' : '#f8fafc'};">
+              ${isCurrent ? '📍 ' : ''}${sec.name}
+            </div>
+            <div style="font-size:0.75rem; color:#94a3b8; margin-top:0.25rem;">
+              Cuadrante (${sec.xMin}-${sec.xMax}, ${sec.yMin}-${sec.yMax})
+            </div>
+          </div>
+          <button class="btn ${isCurrent ? 'btn-secondary' : 'btn-primary'}" style="font-size:0.78rem; padding:0.4rem;" onclick="teleportToSector('${key}')">
+            ${isCurrent ? '✅ Sector Actual' : '🌀 Viajar Portal / Teletransportar'}
+          </button>
+        </div>
+      `;
+    });
+
+    const body = `
+      <div style="text-align:center; margin-bottom:1rem;">
+        <p style="font-size:0.85rem; color:#cbd5e1; margin:0 0 0.5rem;">
+          🗺️ <b>Simulación Optimizada por Cuadrantes:</b> Tu ubicación actual es <b>(${player.x}, ${player.y})</b> en el <b>${sectors[currentSectorKey].name}</b>.
+        </p>
+        <span style="font-size:0.78rem; background:rgba(34, 197, 94, 0.15); border:1px solid rgba(34, 197, 94, 0.4); color:#4ade80; padding:0.3rem 0.6rem; border-radius:6px;">
+          ⚡ Rendimiento Activo: Solo el sector o edificio donde estás ejecuta simulación pesada.
+        </span>
+      </div>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem; margin-bottom:1rem;">
+        ${sectorsGridHTML}
+      </div>
+    `;
+
+    openModalCard('🗺️ Mapa del Mundo & Cuadrantes de Ciudad Link', body);
+  }
+
+  window.teleportToSector = function(sectorKey) {
+    const sec = window.CiudadLinkMap.SECTORS[sectorKey];
+    if (!sec) return;
+
+    window.CiudadLinkMap.setActiveSector(sectorKey);
+    player.x = sec.spawnX;
+    player.y = sec.spawnY;
+    player.path = [];
+
+    // Synchronize time-based NPC routines when changing sectors
+    window.CiudadLinkNPCs.synchronizeNPCRoutinesWithGameTime();
+
+    alert(`🌀 ¡Te has desplazado al ${sec.name}! Ubicación: (${player.x}, ${player.y}). NPCs sincronizados.`);
+    closeModalCard();
+  };
 
   // MODALS & AVATAR SELECTION LOGIC
   function openAvatarSelectorModal() {
@@ -832,6 +1017,51 @@
     closeModalCard();
   };
 
+  // BUILDING INTERIOR ENTRY & FLOOR LOADING SYSTEM
+  function openBuildingInteriorEntryModal(bldg) {
+    const totalFloors = bldg.hotelObj ? bldg.hotelObj.floorsCount : 3;
+
+    let floorButtonsHTML = '';
+    for (let f = 1; f <= totalFloors; f++) {
+      floorButtonsHTML += `
+        <button class="btn btn-secondary" style="font-size:0.82rem; padding:0.5rem;" onclick="enterBuildingInteriorFloorById('${bldg.id}', ${f})">
+          🏢 Entrar al Piso ${f}
+        </button>
+      `;
+    }
+
+    const body = `
+      <div style="text-align:center; margin-bottom:1rem;">
+        <h4 style="color:#38bdf8; margin:0 0 0.3rem;">${bldg.name}</h4>
+        <p style="font-size:0.82rem; color:#cbd5e1; margin:0;">${bldg.desc}</p>
+        <div style="font-size:0.75rem; color:#facc15; margin-top:0.5rem; background:rgba(250,204,21,0.1); padding:0.4rem; border-radius:6px;">
+          💡 <b>Carga por Planta:</b> Al entrar se eliminará el techo y solo cargará el piso seleccionado para evitar que la app se trabe.
+        </div>
+      </div>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.5rem; max-height:280px; overflow-y:auto;">
+        ${floorButtonsHTML}
+      </div>
+    `;
+
+    openModalCard(`🏢 Entrar a ${bldg.name}`, body);
+  }
+
+  function enterBuildingInteriorFloor(bldg, floorNum) {
+    player.insideBuilding = bldg;
+    player.interiorFloor = floorNum;
+    player.path = [];
+    closeModalCard();
+    alert(`🏢 Entraste a ${bldg.name} (Piso ${floorNum}). Techo eliminado. Solo este piso está cargado en ejecución.`);
+  }
+
+  window.enterBuildingInteriorFloorById = function(bldgId, floorNum) {
+    const bldg = window.CiudadLinkMap.buildings.find(b => b.id === bldgId);
+    if (bldg) {
+      enterBuildingInteriorFloor(bldg, floorNum);
+    }
+  };
+
   function openElevatorModal(hotel) {
     let floorsHTML = '';
     for (let f = hotel.floorsCount; f >= 1; f--) {
@@ -844,7 +1074,7 @@
           <div>
             <strong>Piso ${f}</strong> — 5 Habitaciones (${occCount}/15 residentes)
           </div>
-          <button class="btn btn-primary" style="padding:0.25rem 0.75rem; font-size:0.8rem;" onclick="selectElevatorFloor('${hotel.id}', ${f})">🛗 Ir al Piso ${f}</button>
+          <button class="btn btn-primary" style="padding:0.25rem 0.75rem; font-size:0.8rem;" onclick="selectElevatorFloor('${hotel.id}', ${f})">🛗 Entrar al Piso ${f}</button>
         </div>
       `;
     }
@@ -862,10 +1092,16 @@
   }
 
   window.selectElevatorFloor = function (hotelId, floorNum) {
+    const bldg = window.CiudadLinkMap.buildings.find(b => b.id === hotelId);
     player.currentHotelId = hotelId;
     player.currentFloor = floorNum;
-    alert(`🛗 Has tomado el elevador hasta el Piso ${floorNum} del ${hotelId.toUpperCase()}.`);
-    closeModalCard();
+
+    if (bldg) {
+      enterBuildingInteriorFloor(bldg, floorNum);
+    } else {
+      alert(`🛗 Has tomado el elevador hasta el Piso ${floorNum} del ${hotelId.toUpperCase()}.`);
+      closeModalCard();
+    }
   };
 
   function openLawsModal() {

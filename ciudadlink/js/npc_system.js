@@ -177,6 +177,20 @@ window.CiudadLinkNPCs = (function () {
     };
   }
 
+  // Synchronize NPC positions across map sectors based on game time routines
+  function synchronizeNPCRoutinesWithGameTime() {
+    npcs.forEach(npc => {
+      const rule = window.CiudadLinkData.SCHEDULE_RULES.getRuleForNPC(npc, timeOfDay, currentDay - 1);
+      const targetCoords = getTargetCoordsForAction(rule.target, npc);
+
+      if (targetCoords) {
+        npc.x = targetCoords.x;
+        npc.y = targetCoords.y;
+        npc.path = [];
+      }
+    });
+  }
+
   // UPDATE TIME & NPC AI BEHAVIOR
   function updateNPCSimulation(deltaSec, playerIsWalking) {
     timeOfDay += (deltaSec * 0.0333);
@@ -269,6 +283,7 @@ window.CiudadLinkNPCs = (function () {
   return {
     spawnPopulation,
     updateNPCSimulation,
+    synchronizeNPCRoutinesWithGameTime,
     getTimeFormatted,
     getLightingOverlay,
     get npcs() { return npcs; },
