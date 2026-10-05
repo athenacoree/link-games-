@@ -221,7 +221,7 @@ window.CiudadLinkNPCs = (function () {
       const scheduleRule = window.CiudadLinkData.SCHEDULE_RULES.getRuleForNPC(npc, timeOfDay, currentDay - 1);
 
       if (!npc.path || npc.path.length === 0) {
-        if (Math.random() < 0.1) {
+        if (Math.random() < 0.02) {
           let targetCoords = getTargetCoordsForAction(scheduleRule.target, npc);
           if (targetCoords) {
             let path = window.CiudadLinkMap.findPath({ x: npc.x, y: npc.y }, targetCoords, occupiedSet);

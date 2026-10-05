@@ -62,32 +62,44 @@ window.CiudadLinkMap = (function () {
 
   // DYNAMIC OCCUPANCY TILE STATE (ON = Free/Passable, OFF = Occupied/Impassable)
   let tileOccupancyGrid = Array(MAP_HEIGHT).fill(0).map(() => Array(MAP_WIDTH).fill('ON'));
+  let baseOccupancyGrid = null;
 
-  function updateOccupancyState(npcs = [], vehicles = [], player = null) {
-    // Reset all walkable tiles to ON
+  function initBaseOccupancyGrid() {
+    baseOccupancyGrid = Array(MAP_HEIGHT).fill(0).map(() => Array(MAP_WIDTH).fill('ON'));
     for (let r = 0; r < MAP_HEIGHT; r++) {
       for (let c = 0; c < MAP_WIDTH; c++) {
-        tileOccupancyGrid[r][c] = isTileWalkable(c, r) ? 'ON' : 'OFF';
+        baseOccupancyGrid[r][c] = isTileWalkable(c, r) ? 'ON' : 'OFF';
+      }
+    }
+  }
+
+  function updateOccupancyState(npcs = [], vehicles = [], player = null) {
+    if (!baseOccupancyGrid) initBaseOccupancyGrid();
+
+    // Fast copy of static base map occupancy
+    for (let r = 0; r < MAP_HEIGHT; r++) {
+      for (let c = 0; c < MAP_WIDTH; c++) {
+        tileOccupancyGrid[r][c] = baseOccupancyGrid[r][c];
       }
     }
 
-    // Set tiles occupied by NPCs to OFF
-    npcs.forEach(n => {
+    // Mark active dynamic entities
+    for (let i = 0; i < npcs.length; i++) {
+      const n = npcs[i];
       if (n.x >= 0 && n.x < MAP_WIDTH && n.y >= 0 && n.y < MAP_HEIGHT) {
         tileOccupancyGrid[n.y][n.x] = 'OFF';
       }
-    });
+    }
 
-    // Set tiles occupied by vehicles to OFF
-    vehicles.forEach(v => {
+    for (let i = 0; i < vehicles.length; i++) {
+      const v = vehicles[i];
       const vx = Math.floor(v.x);
       const vy = Math.floor(v.y);
       if (vx >= 0 && vx < MAP_WIDTH && vy >= 0 && vy < MAP_HEIGHT) {
         tileOccupancyGrid[vy][vx] = 'OFF';
       }
-    });
+    }
 
-    // Player position
     if (player && player.x >= 0 && player.x < MAP_WIDTH && player.y >= 0 && player.y < MAP_HEIGHT) {
       tileOccupancyGrid[player.y][player.x] = 'OFF';
     }

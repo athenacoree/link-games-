@@ -513,20 +513,24 @@
     ctx.fillStyle = b.roofColor || '#334155';
     ctx.fillRect(bx, by - height, bw, 10);
 
-    // 4. Windows Grid with Glowing Frame at Night
-    const cols = Math.floor(bw / 20);
-    const rows = Math.floor((bh - 16) / 20);
+    // 4. Clean Architectural Windows Grid
+    const numCols = Math.min(8, Math.max(2, Math.floor(bw / 48)));
+    const numRows = Math.min(8, Math.max(2, Math.floor((bh - 20) / 36)));
+    const winW = Math.floor((bw - 16) / numCols) - 8;
+    const winH = Math.floor((bh - 20) / numRows) - 8;
 
-    for (let r = 0; r < rows; r++) {
-      for (let c = 0; c < cols; c++) {
-        const wx = bx + 8 + c * 18;
-        const wy = by - height + 16 + r * 18;
+    if (winW > 4 && winH > 4) {
+      for (let r = 0; r < numRows; r++) {
+        for (let c = 0; c < numCols; c++) {
+          const wx = bx + 10 + c * (winW + 8);
+          const wy = by - height + 16 + r * (winH + 8);
 
-        ctx.fillStyle = isNight && Math.sin(wx + wy) > -0.2 ? '#fef08a' : '#38bdf8';
-        ctx.fillRect(wx, wy, 10, 10);
-        ctx.strokeStyle = '#0f172a';
-        ctx.lineWidth = 1;
-        ctx.strokeRect(wx, wy, 10, 10);
+          ctx.fillStyle = isNight && Math.sin(wx * 0.1 + wy * 0.2) > -0.1 ? '#fef08a' : '#38bdf8';
+          ctx.fillRect(wx, wy, winW, winH);
+          ctx.strokeStyle = 'rgba(15, 23, 42, 0.7)';
+          ctx.lineWidth = 1.5;
+          ctx.strokeRect(wx, wy, winW, winH);
+        }
       }
     }
 
@@ -1617,8 +1621,8 @@
   window.closeModalCard = closeModalCard;
 
   function updateUI() {
-    canvas.width = Math.min(800, window.innerWidth - 32);
-    canvas.height = 520;
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
   }
 
   window.addEventListener('resize', updateUI);
