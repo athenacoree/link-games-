@@ -6,70 +6,152 @@
   <title>Ciudad Link — Simulador Urbano 3D Principal</title>
   <link rel="stylesheet" href="../assets/css/link-theme.css">
   <style>
-    .game-layout {
-      display: grid;
-      grid-template-columns: 1fr 300px;
-      gap: 1rem;
-      align-items: start;
-    }
-
-    @media (max-width: 950px) {
-      .game-layout {
-        grid-template-columns: 1fr;
-      }
-    }
-
-    .canvas-container {
-      background: var(--bg-card);
-      border: 1px solid var(--border-color);
-      border-radius: var(--radius-lg);
-      padding: 0.75rem;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      position: relative;
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100vw;
+      height: 100vh;
       overflow: hidden;
+      background: #0f172a;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
       touch-action: none;
     }
 
-    canvas {
-      background: #020617;
-      border-radius: var(--radius-md);
-      box-shadow: 0 0 25px rgba(0,0,0,0.8);
-      width: 100%;
-      max-width: 100%;
-      height: auto;
+    #cityCanvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: 1;
       touch-action: none;
-      cursor: pointer;
+      display: block;
     }
 
-    .city-panel {
-      background: rgba(26, 33, 51, 0.85);
-      backdrop-filter: blur(12px);
-      border: 1px solid var(--border-color);
-      border-radius: var(--radius-lg);
-      padding: 1.25rem;
+    /* Floating UI HUD Overlay */
+    .floating-hud-top {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      right: 10px;
+      z-index: 10;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      pointer-events: none;
+    }
+
+    .floating-pill {
+      pointer-events: auto;
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      color: #f8fafc;
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+    }
+
+    .floating-controls-bottom {
+      position: absolute;
+      bottom: 12px;
+      right: 12px;
+      z-index: 10;
       display: flex;
       flex-direction: column;
-      gap: 0.85rem;
+      align-items: flex-end;
+      gap: 8px;
     }
 
-    .action-grid {
+    .floating-btn {
+      background: linear-gradient(135deg, #0284c7, #0d9488);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: white;
+      padding: 10px 16px;
+      border-radius: 24px;
+      font-weight: bold;
+      font-size: 0.85rem;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .floating-btn.active {
+      background: linear-gradient(135deg, #eab308, #ca8a04);
+    }
+
+    .floating-btn-options {
+      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    }
+
+    .floating-banner-bottom {
+      position: absolute;
+      bottom: 12px;
+      left: 12px;
+      z-index: 10;
+      background: rgba(15, 23, 42, 0.85);
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      color: #cbd5e1;
+      padding: 8px 14px;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      backdrop-filter: blur(8px);
+      pointer-events: none;
+    }
+
+    /* Options Drawer / Modal */
+    .options-drawer {
+      position: absolute;
+      inset: 0;
+      z-index: 100;
+      background: rgba(2, 6, 23, 0.85);
+      backdrop-filter: blur(12px);
+      display: none;
+      flex-direction: column;
+      justify-content: flex-end;
+    }
+
+    .options-drawer.active {
+      display: flex;
+    }
+
+    .options-content {
+      background: #0f172a;
+      border-top: 2px solid #38bdf8;
+      border-radius: 24px 24px 0 0;
+      padding: 1.25rem;
+      max-height: 80vh;
+      overflow-y: auto;
+    }
+
+    .options-grid {
       display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 0.5rem;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 0.75rem;
+      margin-top: 1rem;
     }
 
-    .touch-hint-banner {
-      width: 100%;
-      text-align: center;
-      background: rgba(14, 165, 233, 0.12);
-      border: 1px solid rgba(14, 165, 233, 0.3);
-      color: #38bdf8;
-      padding: 0.5rem;
-      border-radius: var(--radius-md);
-      font-size: 0.82rem;
-      margin-bottom: 0.75rem;
+    /* Live Radio Overlay Inside Interiors */
+    .radio-overlay {
+      position: absolute;
+      top: 60px;
+      right: 12px;
+      z-index: 20;
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid #22c55e;
+      border-radius: 16px;
+      padding: 10px 14px;
+      display: none;
+      align-items: center;
+      gap: 10px;
+      box-shadow: 0 4px 15px rgba(34, 197, 94, 0.3);
     }
 
     .avatar-card {
@@ -77,120 +159,87 @@
       align-items: center;
       gap: 0.75rem;
       background: rgba(255, 255, 255, 0.05);
-      border: 1px solid var(--border-color);
+      border: 1px solid var(--border-color, #334155);
       padding: 0.6rem 0.85rem;
-      border-radius: var(--radius-md);
+      border-radius: 12px;
       cursor: pointer;
-      transition: all 0.2s ease;
-    }
-
-    .avatar-card:hover, .avatar-card.active {
-      border-color: #38bdf8;
-      background: rgba(56, 189, 248, 0.15);
     }
 
     .game-modal-card {
       background: #0f172a;
-      border: 1px solid var(--border-color);
-      border-radius: var(--radius-lg);
+      border: 1px solid #38bdf8;
+      border-radius: 16px;
       width: 92%;
-      max-width: 620px;
+      max-width: 580px;
       padding: 1.25rem;
       position: relative;
-      box-shadow: var(--shadow-glow);
     }
   </style>
 </head>
-<body class="aurora-bg">
+<body>
 
-  <header class="link-header">
-    <a href="../" class="btn-back"><span>← Catálogo</span></a>
-    <div class="link-logo">
-      <div class="link-logo-icon">🏙️</div>
-      <span>Ciudad Link — Simulador Urbano 3D</span>
+  <!-- Fullscreen Canvas Map & Avatar View -->
+  <canvas id="cityCanvas"></canvas>
+
+  <!-- Floating HUD Top Bar -->
+  <div class="floating-hud-top">
+    <a href="../" class="floating-pill" style="text-decoration:none; color:#f8fafc;">← Catálogo</a>
+    <div class="floating-pill"><span id="hudTime">🕒 Lunes 08:00</span></div>
+    <div class="floating-pill"><span id="hudSubSector">📍 Sector NW1</span></div>
+    <div class="floating-pill"><span id="hudAvatar">🧝 Link</span></div>
+    <div class="floating-pill"><span id="hudState">🧘 Descansando</span></div>
+    <div class="floating-pill"><span id="hudMoney">💰 $600</span></div>
+    <div class="floating-pill"><span id="hudHealth">❤️ 100 HP</span></div>
+    <div class="floating-pill"><span id="hudEnergy">⚡ 100/100</span></div>
+    <div class="floating-pill"><span id="hudWanted">⭐ Limpio</span></div>
+  </div>
+
+  <!-- Radio/TV Player Floating Panel Inside Interiors -->
+  <div class="radio-overlay" id="radioOverlay">
+    <div>
+      <div style="font-size:0.75rem; font-weight:bold; color:#22c55e;">📻 RADIO Y TV EN VIVO</div>
+      <div style="font-size:0.7rem; color:#cbd5e1;" id="mediaTitle">Radio Lofi Chill Beat</div>
+      <div style="font-size:0.65rem; color:#94a3b8;" id="mediaSub">Estación en Vivo para el Hogar</div>
     </div>
-    <button class="btn-guide" onclick="document.getElementById('guideModal').classList.add('active')">📖 Guía de la Ciudad</button>
-  </header>
+    <button class="floating-btn" id="btnToggleRadio" style="padding:4px 10px; font-size:0.75rem;">▶️ Reproducir</button>
+    <button class="floating-btn" id="btnNextRadioStation" style="padding:4px 10px; font-size:0.75rem; background:#334155;">⏭️ Estación</button>
+    <audio id="radioAudioPlayer" preload="none"></audio>
+  </div>
 
-  <main class="container">
-    <!-- Metrics Bar -->
-    <div class="metrics-group">
-      <div class="metric-pill">
-        <span class="metric-label">Tiempo</span>
-        <span class="metric-value" style="color:#fde047;" id="lblTimeOfDay">Lunes 08:00</span>
-      </div>
-      <div class="metric-pill">
-        <span class="metric-label">Cuadrante</span>
-        <span class="metric-value" style="color:#4ade80;" id="lblPlayerSector">NW (Cívico)</span>
-      </div>
-      <div class="metric-pill">
-        <span class="metric-label">Avatar</span>
-        <span class="metric-value" style="color:#38bdf8;" id="lblPlayerAvatar">🧝 Link</span>
-      </div>
-      <div class="metric-pill">
-        <span class="metric-label">Búsqueda</span>
-        <span class="metric-value" style="color:#f87171;" id="lblPlayerWanted">⭐⭐⭐⭐⭐</span>
-      </div>
-      <div class="metric-pill">
-        <span class="metric-label">Dinero</span>
-        <span class="metric-value" style="color:#facc15;" id="lblPlayerMoney">$600</span>
-      </div>
-      <div class="metric-pill">
-        <span class="metric-label">Salud</span>
-        <span class="metric-value" style="color:#f87171;" id="lblPlayerHealth">100/100</span>
-      </div>
-      <div class="metric-pill">
-        <span class="metric-label">Energía</span>
-        <span class="metric-value" style="color:#38bdf8;" id="lblPlayerEnergy">100/100</span>
-      </div>
-      <div class="metric-pill">
-        <span class="metric-label">Hambre</span>
-        <span class="metric-value" style="color:#fbbf24;" id="lblPlayerHunger">90/100</span>
-      </div>
-      <div class="metric-pill">
-        <span class="metric-label">Ánimo</span>
-        <span class="metric-value" style="color:#a78bfa;" id="lblPlayerMood">85/100</span>
-      </div>
-    </div>
+  <!-- Bottom Touch Controls Floating Buttons -->
+  <div class="floating-controls-bottom">
+    <button class="floating-btn" id="btnToggleSprint">🏃 Modo: Caminar</button>
+    <button class="floating-btn" id="btnOpenPhone">📱 Teléfono Smart</button>
+    <button class="floating-btn" id="btnOpenLog" style="background:linear-gradient(135deg, #0d9488, #059669);">📜 Historial</button>
+    <button class="floating-btn floating-btn-options" id="btnOpenMainMenu">⚙️ Menú de Opciones</button>
+  </div>
 
-    <div class="game-layout">
-      <div class="canvas-container glass-panel">
-        <div class="touch-hint-banner">
-          📱 <b>Controles Táctiles Libres:</b> Toca o mantén presionado en cualquier parte de la pantalla para caminar hacia allí. Sin joysticks molestos.
-        </div>
+  <div class="floating-banner-bottom">
+    📲 Toca o arrastra en la pantalla para moverte libremente por el mapa a pantalla completa
+  </div>
 
-        <canvas id="cityCanvas" width="800" height="520"></canvas>
+  <!-- Options Drawer Slide-up Menu -->
+  <div class="options-drawer" id="optionsModal">
+    <div class="options-content">
+      <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #334155; padding-bottom:0.75rem;">
+        <h3 style="margin:0; color:#38bdf8; font-size:1.1rem;">⚙️ Menú de Opciones de Ciudad Link</h3>
+        <button class="floating-btn" style="padding:4px 12px;" onclick="closeOptionsMenu()">✕ Cerrar</button>
       </div>
 
-      <div class="city-panel glass-panel">
-        <h3 style="font-size:1.05rem; margin:0; color:#38bdf8;">🏙️ Panel Municipal & Personaje</h3>
-        <p style="font-size:0.82rem; color:var(--text-secondary); line-height:1.4; margin:0;">
-          Metrópoli 3D con vehículos, distritos, hoteles de 10 pisos, juzgados y censo.
-        </p>
-
-        <div class="action-grid">
-          <button class="btn btn-primary" id="btnOpenWorldMap" style="font-size:0.82rem; grid-column: span 2; background:linear-gradient(135deg, #059669, #0d9488);">🗺️ Mapa del Mundo (Sectores)</button>
-          <button class="btn btn-primary" id="btnHijackVehicle" style="font-size:0.82rem; grid-column: span 2; background:linear-gradient(135deg, #dc2626, #991b1b);">🚘 Robar / Bajar de Auto</button>
-          <button class="btn btn-primary" id="btnChooseAvatar" style="font-size:0.8rem; grid-column: span 2;">👥 Cambiar Personaje</button>
-          <button class="btn btn-primary" id="btnOpenPhone" style="font-size:0.8rem; grid-column: span 2; background:linear-gradient(135deg, #0284c7, #0d9488);">📱 Teléfono Smart Sims</button>
-          <button class="btn btn-secondary" id="btnOpenLaws" style="font-size:0.8rem;">📜 Código de Leyes</button>
-          <button class="btn btn-secondary" id="btnOpenPresidencia" style="font-size:0.8rem;">👑 Presidencia Link</button>
-          <button class="btn btn-secondary" id="btnOpenCatalog" style="font-size:0.8rem;">📦 Catálogo (>1,000)</button>
-          <button class="btn btn-secondary" id="btnOpenCitizens" style="font-size:0.8rem;">👥 Censo Ciudadano</button>
-        </div>
-
-        <div style="background:rgba(255,255,255,0.03); border:1px solid var(--border-color); border-radius:var(--radius-md); padding:0.85rem; font-size:0.8rem; color:var(--text-secondary);">
-          <strong style="color:#eab308;">💡 Mini Mundo en Vivo:</strong>
-          <ul style="margin:0.25rem 0 0; padding-left:1.2rem; line-height:1.4;">
-            <li><b>Tráfico Vehicular:</b> Sedanes, Taxis, Patrullas y Autobuses</li>
-            <li><b>Edificios 3D:</b> Altura, profundidad, fachadas y ventanas</li>
-            <li><b>Parque & Lago:</b> Fuente animada y zona de recreación</li>
-            <li><b>Visión Completa:</b> Mapa despejado y sin visión oscura</li>
-          </ul>
-        </div>
+      <div class="options-grid">
+        <button class="floating-btn" id="btnOpenWorldMap" style="background:linear-gradient(135deg, #059669, #0d9488); grid-column: span 2;" onclick="closeOptionsMenu()">🗺️ Mapa del Mundo (16 SubSectores)</button>
+        <button class="floating-btn" id="btnOpenWife" style="background:linear-gradient(135deg, #ec4899, #be185d); grid-column: span 2;" onclick="closeOptionsMenu()">👰 Esposa (Rastreo & Citas)</button>
+        <button class="floating-btn" id="btnOpenJobs" style="background:linear-gradient(135deg, #eab308, #ca8a04); grid-column: span 2;" onclick="closeOptionsMenu()">💼 Empleos & Trabajos (Ganar Dinero)</button>
+        <button class="floating-btn" id="btnOpenHospitalMenu" style="background:linear-gradient(135deg, #10b981, #047857); grid-column: span 2;" onclick="closeOptionsMenu()">🏥 Hospital (Tratamiento & Túneles)</button>
+        <button class="floating-btn" id="btnHijackVehicle" style="background:linear-gradient(135deg, #dc2626, #991b1b); grid-column: span 2;" onclick="closeOptionsMenu()">🚘 Manejar / Bajar / Helicóptero</button>
+        <button class="floating-btn" id="btnChooseAvatar" onclick="closeOptionsMenu()">👥 Cambiar Personaje</button>
+        <button class="floating-btn" id="btnOpenLaws" onclick="closeOptionsMenu()">📜 Leyes & Juzgados</button>
+        <button class="floating-btn" id="btnOpenPresidencia" onclick="closeOptionsMenu()">👑 Presidencia Link</button>
+        <button class="floating-btn" id="btnOpenCatalog" onclick="closeOptionsMenu()">📦 Catálogo (>1,000)</button>
+        <button class="floating-btn" id="btnOpenCitizens" style="grid-column: span 2;" onclick="closeOptionsMenu()">👥 Censo Ciudadano</button>
       </div>
     </div>
-  </main>
+  </div>
 
   <!-- GAME INTERACTION MODAL -->
   <div class="platform-modal-overlay" id="gameModal">
