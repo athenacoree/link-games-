@@ -3,19 +3,22 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Link Minigames - Catálogo Oficial</title>
+  <title>Link Minigames - Catálogo Oficial & Hub En Vivo</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <meta name="theme-color" content="#6366f1">
   <link rel="stylesheet" href="./assets/css/link-theme.css">
+  <script src="./assets/js/super-engine.js"></script>
   <style>
     .hero {
       text-align: center;
-      padding: 3rem 1rem 2rem;
+      padding: 2.5rem 1rem 1.75rem;
       background: radial-gradient(circle at top, rgba(99, 102, 241, 0.25) 0%, transparent 70%);
       border-bottom: 1px solid var(--border-color);
       margin-bottom: 2rem;
     }
 
     .hero-title {
-      font-size: 2.75rem;
+      font-size: 2.5rem;
       font-weight: 800;
       letter-spacing: -0.03em;
       margin-bottom: 0.75rem;
@@ -23,16 +26,16 @@
 
     .hero-subtitle {
       color: var(--text-secondary);
-      font-size: 1.125rem;
-      max-width: 620px;
+      font-size: 1.05rem;
+      max-width: 640px;
       margin: 0 auto 1rem;
     }
 
     .hero-actions {
       display: flex;
-      gap: 1rem;
+      gap: 0.75rem;
       justify-content: center;
-      margin-top: 1.5rem;
+      margin-top: 1.25rem;
       flex-wrap: wrap;
     }
 
@@ -197,6 +200,42 @@
       color: var(--text-muted);
       grid-column: 1 / -1;
     }
+
+    /* PROFILE AVATAR GRID & BADGES */
+    .avatar-picker-grid {
+      display: flex;
+      gap: 0.75rem;
+      margin: 1rem 0;
+      flex-wrap: wrap;
+    }
+
+    .avatar-item {
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.08);
+      border: 2px solid transparent;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.6rem;
+      cursor: pointer;
+      transition: var(--transition);
+    }
+
+    .avatar-item.selected, .avatar-item:hover {
+      border-color: var(--accent-secondary);
+      background: rgba(168, 85, 247, 0.2);
+      transform: scale(1.1);
+    }
+
+    .profile-stat-box {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 1rem;
+      text-align: center;
+    }
   </style>
 </head>
 <body class="aurora-bg">
@@ -206,15 +245,19 @@
       <div class="link-logo-icon">🎮</div>
       <span>Link Minigames</span>
     </a>
-    <div style="display: flex; gap: 0.5rem; align-items: center;">
-      <span class="badge badge-purple" id="totalGamesBadge">30 Juegos</span>
-      <span class="badge badge-green">100% Estático</span>
+
+    <div class="nav-btn-group">
+      <button class="nav-pill-btn" id="btnOpenProfile">👤 <span id="headerUsername">Jugador #1024</span></button>
+      <button class="nav-pill-btn" id="btnOpenStreams">📺 Canales</button>
+      <button class="nav-pill-btn" id="btnOpenChat">💬 Chat <span class="badge badge-purple" style="font-size:0.65rem;">EN VIVO</span></button>
+      <button class="nav-pill-btn" id="btnOpenSettings">⚙️ Ajustes</button>
+      <button class="nav-pill-btn" id="btnPwaInstall" style="display:none;">📲 Instalar</button>
     </div>
   </header>
 
   <div class="hero">
     <h1 class="hero-title">Biblioteca Oficial de Minijuegos</h1>
-    <p class="hero-subtitle">Juegos HTML5 de alta respuesta táctil, mejorados visualmente, con mapas expansivos y hojas de guía en cada título.</p>
+    <p class="hero-subtitle">Plataforma fluida HTML5 con minijuegos estáticos, chat interactivo con tarjetas instantáneas y canales en vivo.</p>
 
     <div class="hero-actions">
       <button class="btn btn-primary anim-pulse" id="btnRandomGame">🎲 ¡Juego Aleatorio!</button>
@@ -252,13 +295,247 @@
   </main>
 
   <footer class="link-footer">
-    <p>© Link Platform — Biblioteca de Minijuegos Open Source</p>
+    <p>© Link Platform — Biblioteca de Minijuegos Open Source (v2.1.0)</p>
   </footer>
+
+  <!-- USER PROFILE MODAL (SIN GRÁFICO 3D INTERACTIVO) -->
+  <div class="platform-modal-overlay" id="modalProfile">
+    <div class="platform-modal-card">
+      <div class="platform-modal-header">
+        <div class="platform-modal-title">👤 Perfil del Usuario</div>
+        <button class="guide-modal-close" onclick="closeModal('modalProfile')">✕</button>
+      </div>
+      <div class="platform-modal-body">
+        <div style="display:flex; align-items:center; gap:1rem; margin-bottom:1.5rem; flex-wrap:wrap;">
+          <div id="profileAvatarDisplay" style="width:72px; height:72px; border-radius:50%; background:var(--accent-gradient); display:flex; align-items:center; justify-content:center; font-size:2.5rem; box-shadow:var(--shadow-glow);">
+            🕹️
+          </div>
+          <div style="flex:1; min-width:180px;">
+            <label style="font-size:0.75rem; color:var(--text-muted); text-transform:uppercase; font-weight:700;">Nombre de Usuario</label>
+            <input type="text" id="inputUsername" class="chat-input-field" value="Jugador #1024" style="margin-top:0.25rem; font-weight:700; width:100%;">
+          </div>
+        </div>
+
+        <label style="font-size:0.8rem; font-weight:700; color:var(--text-secondary);">Elige tu Avatar de la Plataforma:</label>
+        <div class="avatar-picker-grid" id="avatarPicker">
+          <div class="avatar-item selected" data-avatar="🕹️">🕹️</div>
+          <div class="avatar-item" data-avatar="👾">👾</div>
+          <div class="avatar-item" data-avatar="⚔️">⚔️</div>
+          <div class="avatar-item" data-avatar="🛡️">🛡️</div>
+          <div class="avatar-item" data-avatar="🚀">🚀</div>
+          <div class="avatar-item" data-avatar="👑">👑</div>
+          <div class="avatar-item" data-avatar="🐱">🐱</div>
+          <div class="avatar-item" data-avatar="🔥">🔥</div>
+        </div>
+
+        <div style="margin-top:1.5rem;">
+          <div style="display:flex; justify-content:space-between; margin-bottom:0.4rem; font-size:0.85rem;">
+            <span>Nivel de Jugador: <strong style="color:#c084fc;">Nivel 12</strong></span>
+            <span>2,450 / 3,000 XP</span>
+          </div>
+          <div style="width:100%; height:10px; background:rgba(255,255,255,0.1); border-radius:10px; overflow:hidden;">
+            <div style="width:78%; height:100%; background:var(--accent-gradient); border-radius:10px;"></div>
+          </div>
+        </div>
+
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap:1rem; margin-top:1.5rem;">
+          <div class="profile-stat-box">
+            <div style="font-size:1.5rem; font-weight:800; color:#38bdf8;" id="profStatPlayed">48</div>
+            <div style="font-size:0.75rem; color:var(--text-muted); font-weight:700;">JUEGOS INICIADOS</div>
+          </div>
+          <div class="profile-stat-box">
+            <div style="font-size:1.5rem; font-weight:800; color:#34d399;" id="profStatWins">32</div>
+            <div style="font-size:0.75rem; color:var(--text-muted); font-weight:700;">VICTORIAS</div>
+          </div>
+          <div class="profile-stat-box">
+            <div style="font-size:1.5rem; font-weight:800; color:#fbbf24;" id="profStatBadges">7</div>
+            <div style="font-size:0.75rem; color:var(--text-muted); font-weight:700;">LOGROS DESBLOQUEADOS</div>
+          </div>
+        </div>
+
+        <div style="margin-top:1.5rem; text-align:right;">
+          <button class="btn btn-primary" onclick="saveProfileData()">Guardar Cambios</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- LIVE STREAMS & CHANNELS MODAL (SIN EL CARTEL DE arriba "LINK VIDEO LIVE HUB") -->
+  <div class="platform-modal-overlay" id="modalStreams">
+    <div class="platform-modal-card">
+      <div class="platform-modal-header">
+        <div class="platform-modal-title">📺 Canales y Transmisiones en Vivo</div>
+        <button class="guide-modal-close" onclick="closeModal('modalStreams')">✕</button>
+      </div>
+      <div class="platform-modal-body">
+        <p style="font-size:0.875rem; color:var(--text-secondary); margin-bottom:1.25rem;">
+          Canales activos de la comunidad retransmitiendo partidas en directo:
+        </p>
+
+        <div class="channels-grid" id="channelsGrid">
+          <div class="channel-card">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <span class="channel-badge-live">● EN VIVO</span>
+              <span style="font-size:0.8rem; color:var(--text-muted);">👥 342 espectadores</span>
+            </div>
+            <h3 class="channel-title">🎮 Canal RPG Quest — Eldrin Live</h3>
+            <p class="channel-desc">Torneo de velocidad en la mazmorra de Leyenda Heroica.</p>
+            <div style="display:flex; gap:0.5rem; align-items:center;">
+              <span class="badge badge-purple">RPG Quest</span>
+              <button class="btn-shape-glass" style="margin-left:auto; font-size:0.8rem;" onclick="joinStreamChat('Canal RPG Quest')">Unirse a Chat</button>
+            </div>
+          </div>
+
+          <div class="channel-card">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <span class="channel-badge-live">● EN VIVO</span>
+              <span style="font-size:0.8rem; color:var(--text-muted);">👥 189 espectadores</span>
+            </div>
+            <h3 class="channel-title">🧱 Master Brick Breaker Pro</h3>
+            <p class="channel-desc">Superando el récord histórico en Brick Breaker sin perder vidas.</p>
+            <div style="display:flex; gap:0.5rem; align-items:center;">
+              <span class="badge badge-blue">Arcade</span>
+              <button class="btn-shape-glass" style="margin-left:auto; font-size:0.8rem;" onclick="joinStreamChat('Master Brick')">Unirse a Chat</button>
+            </div>
+          </div>
+
+          <div class="channel-card">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <span class="channel-badge-live">● EN VIVO</span>
+              <span style="font-size:0.8rem; color:var(--text-muted);">👥 512 espectadores</span>
+            </div>
+            <h3 class="channel-title">🧠 Liga de Trivia y Retos Instantáneos</h3>
+            <p class="channel-desc">Competencia en directo abierta a cualquier retador en vivo.</p>
+            <div style="display:flex; gap:0.5rem; align-items:center;">
+              <span class="badge badge-green">Trivia</span>
+              <button class="btn-shape-glass" style="margin-left:auto; font-size:0.8rem;" onclick="joinStreamChat('Liga Trivia')">Unirse a Chat</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PLATFORM SETTINGS MODAL (CON BORDES FIJOS QUE NO SE DESBORDAN) -->
+  <div class="platform-modal-overlay" id="modalSettings">
+    <div class="platform-modal-card">
+      <div class="platform-modal-header">
+        <div class="platform-modal-title">⚙️ Configuraciones de la Plataforma</div>
+        <button class="guide-modal-close" onclick="closeModal('modalSettings')">✕</button>
+      </div>
+      <div class="platform-modal-body">
+        <div class="settings-list">
+          <div class="setting-card">
+            <div class="setting-info">
+              <strong class="setting-title">🔊 Efectos de Sonido SFX</strong>
+              <span class="setting-desc">Sonidos al enviar/recibir mensajes, tocar tarjetas e interacciones.</span>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="setSfxToggle" checked>
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+
+          <div class="setting-card">
+            <div class="setting-info">
+              <strong class="setting-title">📳 Vibración Táctil (Háptica)</strong>
+              <span class="setting-desc">Vibración en móviles al mover tarjetas o presionar gatillos.</span>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="setVibrateToggle" checked>
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+
+          <div class="setting-card">
+            <div class="setting-info">
+              <strong class="setting-title">🚀 Modo Ultra Fluido (Anti-Lag)</strong>
+              <span class="setting-desc">Optimiza renderizado y animaciones de fondo para máxima velocidad.</span>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="setSmoothToggle" checked>
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+
+          <div class="setting-card">
+            <div class="setting-info">
+              <strong class="setting-title">🧹 Limpiar Caché y Datos Locales</strong>
+              <span class="setting-desc">Restablece la configuración del usuario y borra el almacenamiento temporal.</span>
+            </div>
+            <button class="btn-shape-bevel" style="font-size:0.8rem;" onclick="resetPlatformData()">Limpiar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MULTI-CHAT & LIVE TRIGGER CARDS MODAL -->
+  <div class="platform-modal-overlay" id="modalChat">
+    <div class="platform-modal-card" style="max-width:720px;">
+      <div class="platform-modal-header">
+        <div class="platform-modal-title">💬 Chat en Vivo de la Comunidad</div>
+        <button class="guide-modal-close" onclick="closeModal('modalChat')">✕</button>
+      </div>
+      <div class="platform-modal-body" style="padding:1rem;">
+        <div class="chat-window-container">
+          <div class="chat-messages-pane" id="chatMessagesPane">
+            <div class="chat-msg-row">
+              <div class="chat-msg-header"><span>🤖 Sistema Link</span> • <span>Ahora</span></div>
+              <div class="chat-msg-bubble">
+                ¡Bienvenido al chat global! Si comienzas una oración con palabras clave como <strong>"hola"</strong>, <strong>"jugar"</strong> o <strong>"desafío"</strong>, el mensaje se transformará en una <strong>tarjeta cuadrada interactiva</strong> para invitar a otras personas en vivo.
+              </div>
+            </div>
+          </div>
+
+          <div class="chat-input-bar">
+            <input type="text" id="chatInputField" class="chat-input-field" placeholder="Escribe un mensaje... (Ej: 'hola amigo', 'jugar', 'desafío')...">
+            <button class="btn-shape-pill" id="btnSendChat">Enviar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- LIVE INTERACTION & MINIGAME PICKER POPUP (CUANDO SE TOCA UNA TARJETA "HOLA") -->
+  <div class="platform-modal-overlay" id="modalLiveInteraction">
+    <div class="platform-modal-card" style="max-width:520px;">
+      <div class="platform-modal-header">
+        <div class="platform-modal-title">✨ Interacción en Vivo & Desafío</div>
+        <button class="guide-modal-close" onclick="closeModal('modalLiveInteraction')">✕</button>
+      </div>
+      <div class="platform-modal-body">
+        <p style="font-size:0.9rem; color:var(--text-secondary); margin-bottom:1rem;" id="liveInteractionTargetText">
+          ¡Has tocado la tarjeta de saludo! ¿Qué deseas hacer con esta persona en vivo?
+        </p>
+
+        <div style="display:flex; flex-direction:column; gap:0.75rem;">
+          <div style="font-weight:700; font-size:0.85rem; color:#c084fc;">🎮 Escoge un Minijuego para Jugar Juntos:</div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.5rem;">
+            <button class="btn-shape-glass" onclick="launchLiveGame('tictactoe')">❌ Tres en Raya</button>
+            <button class="btn-shape-glass" onclick="launchLiveGame('connect4')">🟡 4 en Raya</button>
+            <button class="btn-shape-glass" onclick="launchLiveGame('pong')">🏓 Pong 2D</button>
+            <button class="btn-shape-glass" onclick="launchLiveGame('checkers')">⚪ Damas Clásicas</button>
+          </div>
+
+          <div style="font-weight:700; font-size:0.85rem; color:#38bdf8; margin-top:0.75rem;">⚡ Acciones Instantáneas en Vivo:</div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.5rem;">
+            <button class="btn-shape-bevel" onclick="triggerLiveAction('chocar_cinco')">✋ Chocar los Cinco</button>
+            <button class="btn-shape-bevel" onclick="triggerLiveAction('enviar_regalo')">🎁 Enviar Regalo</button>
+            <button class="btn-shape-bevel" onclick="triggerLiveAction('invitar_stream')">📺 Invitar a Stream</button>
+            <button class="btn-shape-bevel" onclick="triggerLiveAction('duelo_instantaneo')">⚔️ Duelo Veloz</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <script>
     let allGames = [];
     let activeCategory = 'all';
     let favorites = JSON.parse(localStorage.getItem('link_favs') || '[]');
+    let userAvatar = localStorage.getItem('link_avatar') || '🕹️';
+    let username = localStorage.getItem('link_username') || 'Jugador #1024';
 
     const icons = {
       tictactoe: '❌', connect4: '🟡', pong: '🏓', trivia: '🧠', memory: '🃏',
@@ -270,6 +547,37 @@
       wordsearch: '🔠', dungeon: '🗡️', towerdefense: '🏰', rpgquest: '🛡️'
     };
 
+    // AUDIO & HAPTIC FEEDBACK HELPERS
+    function triggerAudio(type) {
+      const sfxEnabled = document.getElementById('setSfxToggle') ? document.getElementById('setSfxToggle').checked : true;
+      if (sfxEnabled && window.SuperEngine && window.SuperEngine.Audio) {
+        window.SuperEngine.Audio.playSFX(type);
+      }
+    }
+
+    function triggerVibration(pattern = [30]) {
+      const vibEnabled = document.getElementById('setVibrateToggle') ? document.getElementById('setVibrateToggle').checked : true;
+      if (vibEnabled && navigator.vibrate) {
+        try { navigator.vibrate(pattern); } catch(e){}
+      }
+    }
+
+    // MODAL HANDLERS
+    function openModal(id) {
+      triggerAudio('aurora');
+      triggerVibration([25]);
+      document.querySelectorAll('.platform-modal-overlay').forEach(m => m.classList.remove('active'));
+      const target = document.getElementById(id);
+      if (target) target.classList.add('active');
+    }
+
+    function closeModal(id) {
+      triggerAudio('step');
+      const target = document.getElementById(id);
+      if (target) target.classList.remove('active');
+    }
+
+    // LOAD CATALOG
     async function loadGames() {
       try {
         const response = await fetch('./games.json');
@@ -291,16 +599,20 @@
     }
 
     function toggleFavorite(id) {
+      triggerVibration([30]);
       if (favorites.includes(id)) {
         favorites = favorites.filter(f => f !== id);
       } else {
         favorites.push(id);
+        triggerAudio('coin');
       }
       localStorage.setItem('link_favs', JSON.stringify(favorites));
       renderGames();
     }
 
     function playRandomGame() {
+      triggerAudio('levelup');
+      triggerVibration([40, 20, 40]);
       if (allGames.length === 0) return;
       const randomGame = allGames[Math.floor(Math.random() * allGames.length)];
       window.location.href = randomGame.url;
@@ -356,13 +668,188 @@
               <div class="players-info">
                 👥 ${game.players} ${game.players === 1 ? 'jugador' : 'jugadores'}
               </div>
-              <a href="${game.url}" class="btn btn-primary" style="padding: 0.4rem 1rem; font-size: 0.85rem;">Jugar</a>
+              <a href="${game.url}" class="btn btn-primary" style="padding: 0.4rem 1rem; font-size: 0.85rem;" onclick="triggerAudio('item')">Jugar</a>
             </div>
           </div>
         `;
       }).join('');
     }
 
+    // PROFILE MANAGEMENT
+    function initProfileUI() {
+      document.getElementById('headerUsername').textContent = username;
+      document.getElementById('inputUsername').value = username;
+      document.getElementById('profileAvatarDisplay').textContent = userAvatar;
+
+      document.querySelectorAll('#avatarPicker .avatar-item').forEach(item => {
+        if (item.dataset.avatar === userAvatar) item.classList.add('selected');
+        else item.classList.remove('selected');
+
+        item.addEventListener('click', () => {
+          triggerAudio('step');
+          triggerVibration([20]);
+          document.querySelectorAll('#avatarPicker .avatar-item').forEach(i => i.classList.remove('selected'));
+          item.classList.add('selected');
+          userAvatar = item.dataset.avatar;
+          document.getElementById('profileAvatarDisplay').textContent = userAvatar;
+        });
+      });
+    }
+
+    function saveProfileData() {
+      username = document.getElementById('inputUsername').value.trim() || 'Jugador #1024';
+      localStorage.setItem('link_username', username);
+      localStorage.setItem('link_avatar', userAvatar);
+      document.getElementById('headerUsername').textContent = username;
+      triggerAudio('levelup');
+      triggerVibration([40, 30, 40]);
+      closeModal('modalProfile');
+    }
+
+    // CHAT PARSER & INTERACTIVE TRIGGER CARDS
+    function sendChatMessage() {
+      const input = document.getElementById('chatInputField');
+      const text = input.value.trim();
+      if (!text) return;
+
+      triggerAudio('item');
+      triggerVibration([30]);
+
+      const pane = document.getElementById('chatMessagesPane');
+      const lower = text.toLowerCase();
+
+      // Check if sentence starts with trigger words
+      const triggers = [
+        { key: 'hola', icon: '👋', title: 'HOLA', subtitle: '¡Saludar en Vivo!' },
+        { key: 'jugar', icon: '🎮', title: 'JUGAR', subtitle: '¡Desafío de Juego!' },
+        { key: 'desafío', icon: '⚔️', title: 'DESAFÍO', subtitle: '¡Duelo Instantáneo!' },
+        { key: 'desafio', icon: '⚔️', title: 'DESAFÍO', subtitle: '¡Duelo Instantáneo!' },
+        { key: 'regalo', icon: '🎁', title: 'REGALO', subtitle: '¡Regalo Virtual!' }
+      ];
+
+      let matchedTrigger = null;
+      let remainingText = text;
+
+      for (const tr of triggers) {
+        if (lower.startsWith(tr.key)) {
+          matchedTrigger = tr;
+          // Extract/remove trigger word from the phrase
+          remainingText = text.substring(tr.key.length).trim();
+          // Remove leading punctuation if any
+          if (remainingText.startsWith(',') || remainingText.startsWith('.')) {
+            remainingText = remainingText.substring(1).trim();
+          }
+          break;
+        }
+      }
+
+      const msgRow = document.createElement('div');
+      msgRow.className = 'chat-msg-row own';
+
+      let contentHTML = `<div class="chat-msg-header"><span>${userAvatar} ${username}</span> • <span>Ahora</span></div>`;
+
+      if (matchedTrigger) {
+        // Render Square Interactive Card
+        contentHTML += `
+          <div class="chat-trigger-card" onclick="openLiveInteraction('${matchedTrigger.title}', '${username}')">
+            <div class="chat-trigger-card-inner">
+              <div class="chat-trigger-icon">${matchedTrigger.icon}</div>
+              <div class="chat-trigger-title">${matchedTrigger.title}</div>
+              <div class="chat-trigger-subtitle">${matchedTrigger.subtitle}</div>
+            </div>
+          </div>
+        `;
+        if (remainingText) {
+          contentHTML += `<div class="chat-msg-bubble" style="margin-top:0.35rem;">${remainingText}</div>`;
+        }
+      } else {
+        contentHTML += `<div class="chat-msg-bubble">${text}</div>`;
+      }
+
+      msgRow.innerHTML = contentHTML;
+      pane.appendChild(msgRow);
+      pane.scrollTop = pane.scrollHeight;
+      input.value = '';
+
+      // Simulated Community Reply after 2 seconds
+      if (matchedTrigger) {
+        setTimeout(() => {
+          triggerAudio('coin');
+          const replyRow = document.createElement('div');
+          replyRow.className = 'chat-msg-row';
+          replyRow.innerHTML = `
+            <div class="chat-msg-header"><span>👑 Alex_Pro</span> • <span>Ahora</span></div>
+            <div class="chat-trigger-card" onclick="openLiveInteraction('DESAFÍO', 'Alex_Pro')">
+              <div class="chat-trigger-card-inner">
+                <div class="chat-trigger-icon">⚔️</div>
+                <div class="chat-trigger-title">ACEPTAR</div>
+                <div class="chat-trigger-subtitle">¡Reto en Vivo!</div>
+              </div>
+            </div>
+            <div class="chat-msg-bubble" style="margin-top:0.35rem;">¡Acepto el reto de ${matchedTrigger.title}! Hagámoslo ahora.</div>
+          `;
+          pane.appendChild(replyRow);
+          pane.scrollTop = pane.scrollHeight;
+        }, 2200);
+      }
+    }
+
+    function openLiveInteraction(title, user) {
+      triggerAudio('pulse');
+      triggerVibration([40, 20, 40]);
+      document.getElementById('liveInteractionTargetText').textContent =
+        `Has seleccionado la tarjeta '${title}' enviada por ${user}. ¿Qué te gustaría hacer en vivo?`;
+      openModal('modalLiveInteraction');
+    }
+
+    function launchLiveGame(gameId) {
+      triggerAudio('levelup');
+      triggerVibration([50]);
+      window.location.href = `./${gameId}/`;
+    }
+
+    function triggerLiveAction(action) {
+      triggerAudio('coin');
+      triggerVibration([30, 30]);
+      alert(`✨ Acción en Vivo (${action.toUpperCase()}) enviada con éxito.`);
+      closeModal('modalLiveInteraction');
+    }
+
+    function joinStreamChat(channelName) {
+      triggerAudio('aurora');
+      closeModal('modalStreams');
+      openModal('modalChat');
+    }
+
+    function resetPlatformData() {
+      if (confirm('¿Deseas restablecer las configuraciones de la plataforma?')) {
+        localStorage.clear();
+        location.reload();
+      }
+    }
+
+    // PWA INSTALL PROMPT
+    let deferredPrompt;
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      const btn = document.getElementById('btnPwaInstall');
+      if (btn) btn.style.display = 'inline-flex';
+    });
+
+    document.getElementById('btnPwaInstall').addEventListener('click', () => {
+      if (deferredPrompt) {
+        deferredPrompt.prompt();
+        deferredPrompt.userChoice.then((choice) => {
+          if (choice.outcome === 'accepted') {
+            document.getElementById('btnPwaInstall').style.display = 'none';
+          }
+          deferredPrompt = null;
+        });
+      }
+    });
+
+    // EVENT LISTENERS
     document.getElementById('searchInput').addEventListener('input', renderGames);
     document.getElementById('btnRandomGame').addEventListener('click', playRandomGame);
     document.getElementById('btnShowFavs').addEventListener('click', () => {
@@ -382,6 +869,53 @@
       }
     });
 
+    document.getElementById('btnOpenProfile').addEventListener('click', () => openModal('modalProfile'));
+    document.getElementById('btnOpenStreams').addEventListener('click', () => openModal('modalStreams'));
+    document.getElementById('btnOpenChat').addEventListener('click', () => openModal('modalChat'));
+    document.getElementById('btnOpenSettings').addEventListener('click', () => openModal('modalSettings'));
+
+    document.getElementById('btnSendChat').addEventListener('click', sendChatMessage);
+    document.getElementById('chatInputField').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') sendChatMessage();
+    });
+
+    // REGISTER SERVICE WORKER (PWA V2.1.0)
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('./sw.js').then(() => {
+        console.log('Service Worker V2.1.0 registrado.');
+      }).catch(err => console.warn('SW Error:', err));
+    }
+
+    // CARD TILT & VIBRATION ON MOVEMENT
+    function initCardTiltAndVibration() {
+      document.addEventListener('mousemove', (e) => {
+        const card = e.target.closest('.game-card, .channel-card, .chat-trigger-card, .setting-card');
+        if (!card) return;
+        const rect = card.getBoundingClientRect();
+        const x = e.clientX - rect.left - rect.width / 2;
+        const y = e.clientY - rect.top - rect.height / 2;
+        const rotateX = (-y / rect.height) * 10;
+        const rotateY = (x / rect.width) * 10;
+        card.style.transform = `perspective(600px) rotateX(${rotateX.toFixed(1)}deg) rotateY(${rotateY.toFixed(1)}deg) translateY(-4px)`;
+      });
+
+      document.addEventListener('mouseout', (e) => {
+        const card = e.target.closest('.game-card, .channel-card, .chat-trigger-card, .setting-card');
+        if (card) {
+          card.style.transform = '';
+        }
+      });
+
+      document.addEventListener('touchstart', (e) => {
+        const card = e.target.closest('.game-card, .channel-card, .chat-trigger-card, .btn');
+        if (card) {
+          triggerVibration([20]);
+        }
+      }, { passive: true });
+    }
+
+    initProfileUI();
+    initCardTiltAndVibration();
     loadGames();
   </script>
 </body>
