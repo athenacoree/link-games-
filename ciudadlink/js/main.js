@@ -1,36 +1,51 @@
 /**
- * CIUDAD LINK - MAIN GAME LOOP, CANVAS RENDERING, INPUT & MODALS
- * Handles rendering of the vast city, dynamic field of vision (FOV) smooth expansion,
- * day/night cycle, multi-floor hotels with elevators, inspection of citizens & legal trials.
+ * CIUDAD LINK - MAIN GAME LOOP, PSEUDO-3D RENDERING, CONTINUOUS TOUCH CONTROLS & AVATAR SELECTION
+ * Handles 3D depth rendering of the city, clear unblinded map vision, vehicle traffic,
+ * touch-anywhere controls for phone screens, multi-floor hotel elevators, and citizen profiles.
  */
 
 (function () {
   'use strict';
 
   let canvas, ctx;
+
+  // Active Player Character State
   let player = {
+    avatarId: 'hero_link',
     name: 'Link',
-    title: 'Ciudadano Ejemplar',
-    x: 50, y: 12, // Starting near Presidencia Link
-    money: 500,
+    title: 'Héroe Urbano',
+    badge: '🧝',
+    color: '#22c55e',
+    hatColor: '#16a34a',
+    shirtColor: '#22c55e',
+    pantsColor: '#15803d',
+    skinTone: '#fde047',
+    x: 50, y: 12, // Starting position near Presidencia Link
+    money: 600,
     health: 100, maxHealth: 100,
     energy: 100, maxEnergy: 100,
     isWalking: false,
+    facing: 'S', // 'N', 'S', 'E', 'W'
     path: [],
     currentHotelId: null,
     currentFloor: 1,
     inventory: []
   };
 
-  let lastTime = performance.now();
   let camera = { x: 0, y: 0 };
+  let lastTime = performance.now();
+
+  // Continuous Pointer/Touch Interaction
+  let isPointerDown = false;
+  let pointerWorldPos = { x: 50, y: 12 };
 
   function initGame() {
     canvas = document.getElementById('cityCanvas');
     ctx = canvas.getContext('2d');
 
-    // Initialize Map & NPCs
+    // Initialize City Map, Traffic Vehicles & NPCs
     window.CiudadLinkMap.initCityMap();
+    window.CiudadLinkVehicles.initTraffic(window.CiudadLinkMap.MAP_WIDTH, window.CiudadLinkMap.MAP_HEIGHT, window.CiudadLinkMap.TILE_SIZE);
     window.CiudadLinkNPCs.spawnPopulation(window.CiudadLinkMap.hotels);
 
     // Initial player inventory from catalog
@@ -57,38 +72,73 @@
   }
 
   function update(deltaSec) {
-    // Handle Player Path Walking
-    if (player.path && player.path.length > 0) {
+    const tileSize = window.CiudadLinkMap.TILE_SIZE;
+
+    // Handle Continuous Pointer Drag/Hold Walking towards touch target
+    if (isPointerDown) {
+      const targetTileX = Math.floor(pointerWorldPos.x / tileSize);
+      const targetTileY = Math.floor(pointerWorldPos.y / tileSize);
+
+      if (targetTileX !== player.x || targetTileY !== player.y) {
+        const dx = Math.sign(targetTileX - player.x);
+        const dy = Math.sign(targetTileY - player.y);
+
+        // Move step by step towards target
+        let nextX = player.x;
+        let nextY = player.y;
+
+        if (Math.abs(targetTileX - player.x) >= Math.abs(targetTileY - player.y)) {
+          nextX = player.x + dx;
+        } else {
+          nextY = player.y + dy;
+        }
+
+        if (window.CiudadLinkMap.isTileWalkable(nextX, nextY)) {
+          player.x = nextX;
+          player.y = nextY;
+          player.isWalking = true;
+          player.facing = dx > 0 ? 'E' : (dx < 0 ? 'W' : (dy > 0 ? 'S' : 'N'));
+
+          if (window.SuperEngine && window.SuperEngine.Audio && Math.random() < 0.2) {
+            window.SuperEngine.Audio.playSFX('step');
+          }
+        }
+      }
+    } else if (player.path && player.path.length > 0) {
+      // Pathwalking A*
       player.isWalking = true;
       let nextTile = player.path.shift();
+      player.facing = nextTile.x > player.x ? 'E' : (nextTile.x < player.x ? 'W' : (nextTile.y > player.y ? 'S' : 'N'));
       player.x = nextTile.x;
       player.y = nextTile.y;
 
-      // SFX step
-      if (window.SuperEngine && window.SuperEngine.Audio) {
+      if (window.SuperEngine && window.SuperEngine.Audio && Math.random() < 0.25) {
         window.SuperEngine.Audio.playSFX('step');
       }
     } else {
       player.isWalking = false;
     }
 
-    // Update NPC AI Simulation, Dynamic FOV radius & Time
+    // Update NPC AI Simulation & Traffic Vehicles
     window.CiudadLinkNPCs.updateNPCSimulation(deltaSec, player.isWalking);
+    window.CiudadLinkVehicles.updateVehicles(deltaSec, player.x, player.y);
 
-    // Update Camera Center on Player
-    const tileSize = window.CiudadLinkMap.TILE_SIZE;
-    camera.x = player.x * tileSize - canvas.width / 2 + tileSize / 2;
-    camera.y = player.y * tileSize - canvas.height / 2 + tileSize / 2;
+    // Update Camera smoothly centered on Player
+    const targetCamX = player.x * tileSize - canvas.width / 2 + tileSize / 2;
+    const targetCamY = player.y * tileSize - canvas.height / 2 + tileSize / 2;
+    camera.x += (targetCamX - camera.x) * 0.15;
+    camera.y += (targetCamY - camera.y) * 0.15;
 
     // Update HUD Metrics
     document.getElementById('lblTimeOfDay').textContent = window.CiudadLinkNPCs.getTimeFormatted();
+    document.getElementById('lblPlayerAvatar').textContent = `${player.badge} ${player.name}`;
     document.getElementById('lblPlayerMoney').textContent = `$${player.money}`;
     document.getElementById('lblPlayerHealth').textContent = `${player.health}/100`;
     document.getElementById('lblPlayerEnergy').textContent = `${player.energy}/100`;
   }
 
+  // MAIN PSEUDO-3D CITY RENDERER
   function render() {
-    // Clear Canvas
     ctx.fillStyle = '#0f172a';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
@@ -96,142 +146,382 @@
     const grid = window.CiudadLinkMap.grid;
     const mapW = window.CiudadLinkMap.MAP_WIDTH;
     const mapH = window.CiudadLinkMap.MAP_HEIGHT;
+    const timeOfDay = window.CiudadLinkNPCs.timeOfDay;
+    const isNight = (timeOfDay < 6.0 || timeOfDay >= 19.0);
 
     ctx.save();
     ctx.translate(-camera.x, -camera.y);
 
-    // 1. Draw Map Tiles
-    for (let r = 0; r < mapH; r++) {
-      for (let c = 0; c < mapW; c++) {
+    // 1. Draw Ground Tiles Grid (Streets, Sidewalks, Grass, Lake)
+    const minCol = Math.max(0, Math.floor((camera.x - 64) / tileSize));
+    const maxCol = Math.min(mapW - 1, Math.ceil((camera.x + canvas.width + 64) / tileSize));
+    const minRow = Math.max(0, Math.floor((camera.y - 64) / tileSize));
+    const maxRow = Math.min(mapH - 1, Math.ceil((camera.y + canvas.height + 64) / tileSize));
+
+    for (let r = minRow; r <= maxRow; r++) {
+      for (let c = minCol; c <= maxCol; c++) {
         const sx = c * tileSize;
         const sy = r * tileSize;
-
-        // Skip off-screen tiles
-        if (sx + tileSize < camera.x || sx > camera.x + canvas.width ||
-            sy + tileSize < camera.y || sy > camera.y + canvas.height) {
-          continue;
-        }
-
         const tileType = grid[r][c];
 
         if (tileType === window.CiudadLinkMap.TILE.ROAD) {
           ctx.fillStyle = '#334155';
           ctx.fillRect(sx, sy, tileSize, tileSize);
           ctx.strokeStyle = '#475569';
+          ctx.lineWidth = 1;
           ctx.strokeRect(sx, sy, tileSize, tileSize);
+        } else if (tileType === window.CiudadLinkMap.TILE.CROSSWALK) {
+          ctx.fillStyle = '#334155';
+          ctx.fillRect(sx, sy, tileSize, tileSize);
+          ctx.fillStyle = '#f8fafc'; // White zebra lines
+          ctx.fillRect(sx + 4, sy + 2, tileSize - 8, 5);
+          ctx.fillRect(sx + 4, sy + 12, tileSize - 8, 5);
+          ctx.fillRect(sx + 4, sy + 22, tileSize - 8, 5);
         } else if (tileType === window.CiudadLinkMap.TILE.STREET) {
-          ctx.fillStyle = '#64748b';
+          ctx.fillStyle = '#64748b'; // Sidewalk pavement
           ctx.fillRect(sx, sy, tileSize, tileSize);
+          // 3D Curb lines
+          ctx.fillStyle = '#94a3b8';
+          ctx.fillRect(sx, sy, tileSize, 2);
         } else if (tileType === window.CiudadLinkMap.TILE.PARK) {
-          ctx.fillStyle = '#15803d';
+          ctx.fillStyle = '#15803d'; // Park grass
           ctx.fillRect(sx, sy, tileSize, tileSize);
-        } else if (tileType === window.CiudadLinkMap.TILE.PRESIDENCIA) {
-          ctx.fillStyle = '#b45309';
+          ctx.fillStyle = '#166534';
+          ctx.fillRect(sx + 2, sy + 2, 4, 4);
+        } else if (tileType === window.CiudadLinkMap.TILE.LAKE) {
+          ctx.fillStyle = '#0284c7'; // Water lake
           ctx.fillRect(sx, sy, tileSize, tileSize);
-          ctx.strokeStyle = '#f59e0b';
-          ctx.strokeRect(sx, sy, tileSize, tileSize);
-        } else if (tileType === window.CiudadLinkMap.TILE.POLICE) {
-          ctx.fillStyle = '#1e40af';
+          // Water ripples animation
+          const ripple = Math.sin((performance.now() * 0.003) + (c + r)) * 3;
+          ctx.fillStyle = '#38bdf8';
+          ctx.fillRect(sx + 6 + ripple, sy + 12, 10, 2);
+        } else if (tileType === window.CiudadLinkMap.TILE.FOUNTAIN) {
+          ctx.fillStyle = '#0284c7';
           ctx.fillRect(sx, sy, tileSize, tileSize);
-        } else if (tileType === window.CiudadLinkMap.TILE.COURT) {
-          ctx.fillStyle = '#6b21a8';
-          ctx.fillRect(sx, sy, tileSize, tileSize);
-        } else if (tileType === window.CiudadLinkMap.TILE.HOSPITAL) {
-          ctx.fillStyle = '#047857';
-          ctx.fillRect(sx, sy, tileSize, tileSize);
-        } else if (tileType === window.CiudadLinkMap.TILE.CEMETERY) {
-          ctx.fillStyle = '#374151';
-          ctx.fillRect(sx, sy, tileSize, tileSize);
-        } else if (tileType === window.CiudadLinkMap.TILE.SCHOOL) {
-          ctx.fillStyle = '#be185d';
-          ctx.fillRect(sx, sy, tileSize, tileSize);
-        } else if (tileType === window.CiudadLinkMap.TILE.STORE) {
-          ctx.fillStyle = '#0d9488';
-          ctx.fillRect(sx, sy, tileSize, tileSize);
-        } else if (tileType === window.CiudadLinkMap.TILE.HOTEL) {
+          ctx.fillStyle = '#cbd5e1';
+          ctx.beginPath();
+          ctx.arc(sx + tileSize / 2, sy + tileSize / 2, 12, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = '#38bdf8';
+          ctx.beginPath();
+          ctx.arc(sx + tileSize / 2, sy + tileSize / 2, 6, 0, Math.PI * 2);
+          ctx.fill();
+        } else {
+          // Building base ground
           ctx.fillStyle = '#1e293b';
-          ctx.fillRect(sx, sy, tileSize, tileSize);
-          ctx.strokeStyle = '#eab308';
-          ctx.strokeRect(sx, sy, tileSize, tileSize);
-        } else if (tileType === window.CiudadLinkMap.TILE.ELEVATOR) {
-          ctx.fillStyle = '#f59e0b';
           ctx.fillRect(sx, sy, tileSize, tileSize);
         }
       }
     }
 
-    // 2. Draw Buildings Labels & Icons
+    // 2. Y-SORTING ENTITIES (Buildings, Environmental Objects, Cars, NPCs, Player)
+    const renderList = [];
+
+    // Add Buildings with 3D Depth
     window.CiudadLinkMap.buildings.forEach(b => {
-      const bx = b.x * tileSize;
-      const by = b.y * tileSize;
-      ctx.fillStyle = '#ffffff';
-      ctx.font = 'bold 12px sans-serif';
-      ctx.fillText(b.name, bx + 4, by + 16);
+      renderList.push({
+        type: 'BUILDING',
+        yOrder: (b.y + b.h) * tileSize,
+        data: b
+      });
     });
 
-    // 3. Draw NPCs
-    const npcs = window.CiudadLinkNPCs.npcs;
-    npcs.forEach(npc => {
-      const nx = npc.x * tileSize;
-      const ny = npc.y * tileSize;
+    // Add Environmental Objects (Trees, Streetlights, Benches)
+    window.CiudadLinkMap.environmentalObjects.forEach(obj => {
+      renderList.push({
+        type: 'ENV_OBJ',
+        yOrder: (obj.y + 1) * tileSize,
+        data: obj
+      });
+    });
 
-      if (nx + tileSize >= camera.x && nx <= camera.x + canvas.width &&
-          ny + tileSize >= camera.y && ny <= camera.y + canvas.height) {
-        ctx.fillStyle = npc.gender === 'Masculino' ? '#38bdf8' : '#f472b6';
-        ctx.beginPath();
-        ctx.arc(nx + tileSize / 2, ny + tileSize / 2, 10, 0, Math.PI * 2);
-        ctx.fill();
+    // Add Cars & Vehicles
+    window.CiudadLinkVehicles.vehicles.forEach(v => {
+      renderList.push({
+        type: 'VEHICLE',
+        yOrder: (v.y + 0.5) * tileSize,
+        data: v
+      });
+    });
 
-        ctx.fillStyle = '#ffffff';
-        ctx.font = '10px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText(npc.profession === 'president' ? '👑' : npc.profession.startsWith('police') ? '👮' : '👤', nx + tileSize / 2, ny + tileSize / 2 + 3);
-        ctx.textAlign = 'left';
+    // Add NPCs
+    window.CiudadLinkNPCs.npcs.forEach(npc => {
+      renderList.push({
+        type: 'NPC',
+        yOrder: (npc.y + 0.5) * tileSize,
+        data: npc
+      });
+    });
+
+    // Add Player Character
+    renderList.push({
+      type: 'PLAYER',
+      yOrder: (player.y + 0.5) * tileSize,
+      data: player
+    });
+
+    // Sort by Y-coordinate for correct depth overlap
+    renderList.sort((a, b) => a.yOrder - b.yOrder);
+
+    // 3. Render all Depth-Sorted Entities
+    renderList.forEach(item => {
+      if (item.type === 'BUILDING') {
+        renderBuilding3D(ctx, item.data, tileSize, isNight);
+      } else if (item.type === 'ENV_OBJ') {
+        renderEnvironmentalObject3D(ctx, item.data, tileSize, isNight);
+      } else if (item.type === 'VEHICLE') {
+        window.CiudadLinkVehicles.renderVehicle(ctx, item.data, tileSize, isNight);
+      } else if (item.type === 'NPC') {
+        renderNPC3D(ctx, item.data, tileSize, isNight);
+      } else if (item.type === 'PLAYER') {
+        renderPlayer3D(ctx, player, tileSize, isNight);
       }
     });
 
-    // 4. Draw Player
-    const px = player.x * tileSize;
-    const py = player.y * tileSize;
-    ctx.fillStyle = '#22c55e'; // Green Hero Link
-    ctx.beginPath();
-    ctx.arc(px + tileSize / 2, py + tileSize / 2, 12, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = '#ffffff';
-    ctx.lineWidth = 2;
-    ctx.stroke();
-
-    ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 11px sans-serif';
-    ctx.fillText('🧝 Link', px - 4, py - 4);
-
     ctx.restore();
 
-    // 5. Dynamic Field of Vision (FOV Spotlight Mask)
-    // The player's view expands while walking and contracts smoothly when stopped.
-    const playerScreenX = canvas.width / 2;
-    const playerScreenY = canvas.height / 2;
-    const fovRadiusPx = window.CiudadLinkNPCs.currentFOVRadius * tileSize;
-
-    ctx.save();
-    ctx.fillStyle = 'rgba(2, 6, 23, 0.94)';
-    ctx.beginPath();
-    ctx.rect(0, 0, canvas.width, canvas.height);
-    ctx.arc(playerScreenX, playerScreenY, fovRadiusPx, 0, Math.PI * 2, true);
-    ctx.fill();
-    ctx.restore();
-
-    // 6. Day/Night Light Tint
-    const darkness = window.CiudadLinkNPCs.getLightingOverlay();
-    if (darkness > 0) {
-      ctx.fillStyle = `rgba(15, 23, 42, ${darkness})`;
+    // 4. Subtle Day/Night Lighting Blend (Map remains 100% visible and unblinded)
+    const nightTint = window.CiudadLinkNPCs.getLightingOverlay();
+    if (nightTint > 0) {
+      ctx.fillStyle = `rgba(15, 23, 42, ${nightTint})`;
       ctx.fillRect(0, 0, canvas.width, canvas.height);
     }
   }
 
-  // CONTROLS & INTERACTION
+  // 2.5D PSEUDO-3D BUILDING RENDERER
+  function renderBuilding3D(ctx, b, tileSize, isNight) {
+    const bx = b.x * tileSize;
+    const by = b.y * tileSize;
+    const bw = b.w * tileSize;
+    const bh = b.h * tileSize;
+    const height = b.height || 28; // 3D Elevation
+
+    ctx.save();
+
+    // Drop Shadow on ground
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
+    ctx.fillRect(bx + height * 0.4, by + bh, bw, height * 0.3);
+
+    // 1. Front Wall Facade
+    ctx.fillStyle = b.wallColor || '#1e293b';
+    ctx.fillRect(bx, by - height, bw, bh);
+
+    // 2. 3D Side Shadow Wall (Depth)
+    ctx.fillStyle = '#0f172a';
+    ctx.beginPath();
+    ctx.moveTo(bx + bw, by - height);
+    ctx.lineTo(bx + bw + height * 0.3, by - height - height * 0.2);
+    ctx.lineTo(bx + bw + height * 0.3, by + bh - height * 0.2);
+    ctx.lineTo(bx + bw, by + bh);
+    ctx.closePath();
+    ctx.fill();
+
+    // 3. Roof Top Plate
+    ctx.fillStyle = b.roofColor || '#334155';
+    ctx.fillRect(bx, by - height, bw, 10);
+
+    // 4. Windows Grid with Glowing Frame at Night
+    const cols = Math.floor(bw / 20);
+    const rows = Math.floor((bh - 16) / 20);
+
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        const wx = bx + 8 + c * 18;
+        const wy = by - height + 16 + r * 18;
+
+        ctx.fillStyle = isNight && Math.sin(wx + wy) > -0.2 ? '#fef08a' : '#38bdf8';
+        ctx.fillRect(wx, wy, 10, 10);
+        ctx.strokeStyle = '#0f172a';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(wx, wy, 10, 10);
+      }
+    }
+
+    // 5. Entrance Door & Building Sign Title
+    ctx.fillStyle = b.accentColor || '#38bdf8';
+    ctx.fillRect(bx + bw / 2 - 10, by + bh - 16 - height, 20, 16);
+
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 11px sans-serif';
+    ctx.fillText(b.name, bx + 6, by - height + 12);
+
+    ctx.restore();
+  }
+
+  // 3D ENVIRONMENTAL OBJECTS RENDERER
+  function renderEnvironmentalObject3D(ctx, obj, tileSize, isNight) {
+    const ox = obj.x * tileSize + tileSize / 2;
+    const oy = obj.y * tileSize + tileSize / 2;
+
+    ctx.save();
+
+    if (obj.type === 'TREE') {
+      // Tree Shadow
+      ctx.fillStyle = 'rgba(0,0,0,0.3)';
+      ctx.beginPath();
+      ctx.ellipse(ox + 4, oy + 4, 12, 6, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Tree Trunk
+      ctx.fillStyle = '#78350f';
+      ctx.fillRect(ox - 3, oy - 14, 6, 14);
+
+      // Layered Canopy
+      ctx.fillStyle = '#15803d';
+      ctx.beginPath();
+      ctx.arc(ox, oy - 22, 14, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#22c55e';
+      ctx.beginPath();
+      ctx.arc(ox - 2, oy - 25, 10, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (obj.type === 'LIGHT') {
+      // Streetlamp pole
+      ctx.fillStyle = '#475569';
+      ctx.fillRect(ox - 2, oy - 22, 4, 22);
+
+      // Light bulb
+      ctx.fillStyle = '#fef08a';
+      ctx.beginPath();
+      ctx.arc(ox, oy - 22, 5, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Night light cone projected on ground
+      if (isNight) {
+        const lightGrad = ctx.createRadialGradient(ox, oy, 2, ox, oy, 35);
+        lightGrad.addColorStop(0, 'rgba(254, 240, 138, 0.45)');
+        lightGrad.addColorStop(1, 'rgba(254, 240, 138, 0)');
+        ctx.fillStyle = lightGrad;
+        ctx.beginPath();
+        ctx.arc(ox, oy, 35, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    } else if (obj.type === 'BENCH') {
+      ctx.fillStyle = '#b45309';
+      ctx.fillRect(ox - 10, oy - 4, 20, 8);
+      ctx.fillStyle = '#1e293b';
+      ctx.fillRect(ox - 9, oy - 4, 2, 8);
+      ctx.fillRect(ox + 7, oy - 4, 2, 8);
+    }
+
+    ctx.restore();
+  }
+
+  // 3D CHARACTER / NPC RENDERER
+  function renderNPC3D(ctx, npc, tileSize, isNight) {
+    const nx = npc.x * tileSize + tileSize / 2;
+    const ny = npc.y * tileSize + tileSize / 2;
+
+    ctx.save();
+
+    // Drop Shadow
+    ctx.fillStyle = 'rgba(0,0,0,0.35)';
+    ctx.beginPath();
+    ctx.ellipse(nx, ny + 8, 8, 4, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Legs / Pants
+    ctx.fillStyle = npc.pantsColor || '#1e293b';
+    ctx.fillRect(nx - 5, ny, 4, 8);
+    ctx.fillRect(nx + 1, ny, 4, 8);
+
+    // Torso / Shirt
+    ctx.fillStyle = npc.shirtColor || '#38bdf8';
+    ctx.fillRect(nx - 7, ny - 10, 14, 10);
+
+    // Head / Skin
+    ctx.fillStyle = npc.skinTone || '#fde047';
+    ctx.beginPath();
+    ctx.arc(nx, ny - 14, 7, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Hair
+    ctx.fillStyle = npc.hairColor || '#1e293b';
+    ctx.beginPath();
+    ctx.arc(nx, ny - 17, 7, Math.PI, Math.PI * 2);
+    ctx.fill();
+
+    // Profession Badge Icon
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '10px sans-serif';
+    ctx.textAlign = 'center';
+    const badge = npc.profession === 'president' ? '👑' : (npc.profession.startsWith('police') ? '👮' : (npc.profession === 'doctor' ? '🩺' : '👤'));
+    ctx.fillText(badge, nx, ny - 20);
+
+    ctx.restore();
+  }
+
+  // 3D PLAYER RENDERER
+  function renderPlayer3D(ctx, p, tileSize, isNight) {
+    const px = p.x * tileSize + tileSize / 2;
+    const py = p.y * tileSize + tileSize / 2;
+
+    ctx.save();
+
+    // Drop Shadow
+    ctx.fillStyle = 'rgba(0,0,0,0.4)';
+    ctx.beginPath();
+    ctx.ellipse(px, py + 8, 10, 5, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Legs / Pants
+    ctx.fillStyle = p.pantsColor || '#15803d';
+    ctx.fillRect(px - 6, py, 5, 9);
+    ctx.fillRect(px + 1, py, 5, 9);
+
+    // Body / Shirt
+    ctx.fillStyle = p.shirtColor || '#22c55e';
+    ctx.fillRect(px - 8, py - 11, 16, 11);
+
+    // Head / Skin
+    ctx.fillStyle = p.skinTone || '#fde047';
+    ctx.beginPath();
+    ctx.arc(px, py - 15, 8, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Hat / Hair Accent
+    ctx.fillStyle = p.hatColor || '#16a34a';
+    ctx.beginPath();
+    ctx.arc(px, py - 18, 8, Math.PI, Math.PI * 2);
+    ctx.fill();
+
+    // Selection Ring around Hero
+    ctx.strokeStyle = '#38bdf8';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.ellipse(px, py + 8, 12, 6, 0, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // Player Name Label
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 11px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(`${p.badge} ${p.name}`, px, py - 24);
+
+    ctx.restore();
+  }
+
+  // CONTROLS & CONTINUOUS TOUCH LISTENERS
   function setupEventListeners() {
-    // Canvas Touch / Mouse Tap to Walk using A* Pathfinding
+    // Canvas Touch & Pointer Event Handlers for Touch-Anywhere Movement
+    canvas.addEventListener('pointerdown', (e) => {
+      isPointerDown = true;
+      updatePointerPos(e);
+      e.preventDefault();
+    });
+
+    canvas.addEventListener('pointermove', (e) => {
+      if (isPointerDown) {
+        updatePointerPos(e);
+      }
+      e.preventDefault();
+    });
+
+    window.addEventListener('pointerup', () => {
+      isPointerDown = false;
+    });
+
     canvas.addEventListener('click', (e) => {
       const rect = canvas.getBoundingClientRect();
       const clickX = e.clientX - rect.left + camera.x;
@@ -255,14 +545,14 @@
         return;
       }
 
-      // Find path
+      // A* Pathfinding to tapped position
       const path = window.CiudadLinkMap.findPath({ x: player.x, y: player.y }, { x: targetX, y: targetY });
       if (path && path.length > 0) {
         player.path = path;
       }
     });
 
-    // Keyboard Controls WASD / Arrows
+    // Keyboard WASD Controls for PC Desktop
     window.addEventListener('keydown', (e) => {
       let dx = 0, dy = 0;
       if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') dy = -1;
@@ -277,34 +567,73 @@
           player.x = nx;
           player.y = ny;
           player.isWalking = true;
+          player.facing = dx > 0 ? 'E' : (dx < 0 ? 'W' : (dy > 0 ? 'S' : 'N'));
         }
       }
     });
 
-    // D-Pad Touch Buttons
-    document.getElementById('btnUp')?.addEventListener('click', () => movePlayerBy(0, -1));
-    document.getElementById('btnDown')?.addEventListener('click', () => movePlayerBy(0, 1));
-    document.getElementById('btnLeft')?.addEventListener('click', () => movePlayerBy(-1, 0));
-    document.getElementById('btnRight')?.addEventListener('click', () => movePlayerBy(1, 0));
-
     // Nav Menu Buttons
+    document.getElementById('btnChooseAvatar')?.addEventListener('click', openAvatarSelectorModal);
     document.getElementById('btnOpenLaws')?.addEventListener('click', openLawsModal);
     document.getElementById('btnOpenPresidencia')?.addEventListener('click', openPresidenciaModal);
     document.getElementById('btnOpenCatalog')?.addEventListener('click', openCatalogModal);
     document.getElementById('btnOpenCitizens')?.addEventListener('click', openCitizensListModal);
   }
 
-  function movePlayerBy(dx, dy) {
-    let nx = player.x + dx;
-    let ny = player.y + dy;
-    if (window.CiudadLinkMap.isTileWalkable(nx, ny)) {
-      player.x = nx;
-      player.y = ny;
-      player.isWalking = true;
-    }
+  function updatePointerPos(e) {
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+
+    pointerWorldPos.x = (e.clientX - rect.left) * scaleX + camera.x;
+    pointerWorldPos.y = (e.clientY - rect.top) * scaleY + camera.y;
   }
 
-  // MODALS LOGIC
+  // MODALS & AVATAR SELECTION LOGIC
+  function openAvatarSelectorModal() {
+    const avatars = window.CiudadLinkData.AVATARS;
+    const avatarsHTML = avatars.map(av => `
+      <div class="avatar-card ${player.avatarId === av.id ? 'active' : ''}" onclick="selectPlayerAvatar('${av.id}')">
+        <div style="font-size:2.2rem;">${av.badge}</div>
+        <div style="flex:1;">
+          <h4 style="margin:0; color:#38bdf8;">${av.name} — ${av.title}</h4>
+          <p style="margin:0.2rem 0 0; font-size:0.78rem; color:#cbd5e1;">${av.perk}</p>
+          <span style="font-size:0.75rem; color:#facc15;">Fondos Iniciales: $${av.startingMoney}</span>
+        </div>
+      </div>
+    `).join('');
+
+    const body = `
+      <p style="font-size:0.85rem; color:#94a3b8; margin-bottom:1rem;">
+        👥 Selecciona tu personaje para explorar Ciudad Link con habilidades y apariencia únicas:
+      </p>
+      <div style="display:flex; flex-direction:column; gap:0.6rem; max-height:340px; overflow-y:auto;">
+        ${avatarsHTML}
+      </div>
+    `;
+
+    openModalCard('👥 Selección de Personaje Link', body);
+  }
+
+  window.selectPlayerAvatar = function (avatarId) {
+    const av = window.CiudadLinkData.AVATARS.find(a => a.id === avatarId);
+    if (!av) return;
+
+    player.avatarId = av.id;
+    player.name = av.name;
+    player.title = av.title;
+    player.badge = av.badge;
+    player.color = av.color;
+    player.hatColor = av.hatColor;
+    player.shirtColor = av.shirtColor;
+    player.pantsColor = av.pantsColor;
+    player.skinTone = av.skinTone;
+    player.money = av.startingMoney;
+
+    alert(`✨ ¡Has seleccionado a ${av.badge} ${av.name} (${av.title})!`);
+    closeModalCard();
+  };
+
   function inspectNPC(npc) {
     const kinship = window.CiudadLinkData.buildKinshipInfo(npc, window.CiudadLinkNPCs.npcs);
     const schedule = window.CiudadLinkData.SCHEDULE_RULES.getRuleForNPC(npc, window.CiudadLinkNPCs.timeOfDay, window.CiudadLinkNPCs.currentDay - 1);
@@ -494,9 +823,8 @@
   window.closeModalCard = closeModalCard;
 
   function updateUI() {
-    // Canvas responsiveness
     canvas.width = Math.min(800, window.innerWidth - 32);
-    canvas.height = 500;
+    canvas.height = 520;
   }
 
   window.addEventListener('resize', updateUI);
