@@ -33,7 +33,12 @@ window.CiudadLinkMap = (function () {
     FIRE_STATION: 17,
     GAS_STATION: 18,
     LAKE: 19,
-    FOUNTAIN: 20
+    FOUNTAIN: 20,
+    PALADAR: 21,
+    DISCOTECA: 22,
+    CLUB_VIP: 23,
+    HOUSE: 24,
+    BARRIO_BAJERO: 25
   };
 
   let grid = [];
@@ -135,6 +140,30 @@ window.CiudadLinkMap = (function () {
     createHotelTower('hotel_alpha', 'Hotel Rascacielos Sol', 25, 24, 10);
     createHotelTower('hotel_beta', 'Hotel Rascacielos Luna', 62, 24, 10);
     createHotelTower('hotel_gamma', 'Hotel Rascacielos Estella', 42, 44, 10);
+
+    // 7b. District 6: Paladares, Restaurants, Discotecas & VIP Nightclubs (South District)
+    createBuildingZone(22, 82, 12, 12, TILE.PALADAR, 'Paladar & Restaurante Don Link', '🍽️ Gastronomía, Jefe de Cocina, Meseros y Bar', {
+      height: 24, wallColor: '#854d0e', roofColor: '#a16207', accentColor: '#facc15', style: 'RESTAURANT'
+    });
+
+    createBuildingZone(42, 82, 12, 12, TILE.DISCOTECA, 'Discoteca & Club Neon', '💃 Pista de baile, Luces Neón, DJ y Fiestas Sims', {
+      height: 32, wallColor: '#581c87', roofColor: '#3b0764', accentColor: '#f472b6', style: 'DISCO'
+    });
+
+    createBuildingZone(62, 82, 12, 12, TILE.CLUB_VIP, 'Club VIP Puticlub Velvet', '🍸 Zona Exclusiva VIP, Fiestas Nocturnas y Espectáculos', {
+      height: 28, wallColor: '#831843', roofColor: '#500724', accentColor: '#ec4899', style: 'VIP_CLUB'
+    });
+
+    createBuildingZone(82, 82, 12, 12, TILE.BARRIO_BAJERO, 'Barrio Bajero Gangster', '🥷 Zonas peligrosas, Pandilleros, Ladrones y Mercado Negro', {
+      height: 18, wallColor: '#1c1917', roofColor: '#0c0a09', accentColor: '#ef4444', style: 'GANG'
+    });
+
+    // Residential Houses
+    for (let i = 0; i < 4; i++) {
+      createBuildingZone(25 + (i * 12), 62, 8, 8, TILE.HOUSE, `Casa Familiar Sims N° ${i + 1}`, '🏡 Residencia Privada con Jardín', {
+        height: 16, wallColor: '#334155', roofColor: '#475569', accentColor: '#38bdf8', style: 'HOUSE'
+      });
+    }
 
     // 8. Populate Street Furniture & Mini-Details (Trees, Streetlights, Benches)
     populateEnvironmentalDetails();
@@ -371,8 +400,8 @@ window.CiudadLinkMap = (function () {
     initCityMap,
     isTileWalkable,
     findPath,
-    hotels,
-    buildings,
+    get hotels() { return hotels; },
+    get buildings() { return buildings; },
     get grid() { return grid; },
     get environmentalObjects() { return environmentalObjects; },
     moveElevatorToFloor,

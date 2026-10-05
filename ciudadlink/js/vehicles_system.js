@@ -8,6 +8,9 @@ window.CiudadLinkVehicles = (function () {
   'use strict';
 
   let vehicles = [];
+  let helicopters = [];
+  let dogs = [];
+  let gangsters = [];
   let trafficLights = [];
   let trafficLightTimer = 0;
   let trafficLightState = 'GREEN'; // 'GREEN', 'YELLOW', 'RED'
@@ -72,6 +75,25 @@ window.CiudadLinkVehicles = (function () {
       });
     }
 
+    // Spawn Overhead Helicopters flying high with Z-altitude
+    helicopters = [
+      { id: 'HELI_1', name: 'Helicóptero Policial Link 1', x: 20, y: 30, z: 120, speed: 3.5, dir: 0.8, color: '#1d4ed8' },
+      { id: 'HELI_2', name: 'Helicóptero Médico Urgencias', x: 70, y: 60, z: 140, speed: 4.0, dir: -0.5, color: '#059669' }
+    ];
+
+    // Spawn Stray Dogs roaming around
+    dogs = [
+      { id: 'DOG_1', name: 'Firulais', x: 45, y: 68, speed: 1.2 },
+      { id: 'DOG_2', name: 'Rex', x: 49, y: 72, speed: 1.0 },
+      { id: 'DOG_3', name: 'Toby', x: 26, y: 84, speed: 1.1 }
+    ];
+
+    // Spawn Gangsters / Pandilleros in dark alley
+    gangsters = [
+      { id: 'GANG_1', name: 'Pandillero Dante', x: 84, y: 84, danger: 80 },
+      { id: 'GANG_2', name: 'Ladrón Ciro', x: 88, y: 86, danger: 90 }
+    ];
+
     // Define Traffic Light Intersections
     trafficLights = [];
     for (let r = 0; r < mapHeight; r += 20) {
@@ -85,7 +107,7 @@ window.CiudadLinkVehicles = (function () {
     }
   }
 
-  // Update Vehicle Simulation
+  // Update Vehicle Simulation, Helicopters, Dogs & Gangsters
   function updateVehicles(deltaSec, playerX, playerY) {
     // Traffic Light timer loop (10s green, 3s yellow, 8s red)
     trafficLightTimer += deltaSec;
@@ -140,6 +162,102 @@ window.CiudadLinkVehicles = (function () {
         if (v.y <= v.lane.endY) v.y = v.lane.startY;
       }
     });
+
+    // Update Helicopters in continuous flight overhead
+    helicopters.forEach(h => {
+      h.x += Math.cos(h.dir) * h.speed * deltaSec * 2;
+      h.y += Math.sin(h.dir) * h.speed * deltaSec * 2;
+      if (h.x > 95 || h.x < 5) h.dir = Math.PI - h.dir;
+      if (h.y > 95 || h.y < 5) h.dir = -h.dir;
+    });
+
+    // Update Dogs roaming
+    dogs.forEach(d => {
+      if (Math.random() < 0.05) {
+        d.x += (Math.random() - 0.5) * 0.5;
+        d.y += (Math.random() - 0.5) * 0.5;
+      }
+    });
+  }
+
+  // Draw Helicopter flying above city with Z Altitude
+  function renderHelicopterOverhead(ctx, h, tileSize, isNight) {
+    const px = h.x * tileSize;
+    const py = h.y * tileSize;
+    const shadowOffset = h.z * 0.4; // Ground shadow offset showing height
+
+    ctx.save();
+
+    // Ground Shadow projected below
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+    ctx.beginPath();
+    ctx.ellipse(px + shadowOffset, py + shadowOffset, 24, 12, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Searchlight beam on ground at night
+    if (isNight) {
+      const grad = ctx.createRadialGradient(px + shadowOffset, py + shadowOffset, 5, px + shadowOffset, py + shadowOffset, 45);
+      grad.addColorStop(0, 'rgba(254, 240, 138, 0.5)');
+      grad.addColorStop(1, 'rgba(254, 240, 138, 0)');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(px + shadowOffset, py + shadowOffset, 45, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Elevated Helicopter Fuselage (drawn at Z height)
+    ctx.translate(px, py - h.z);
+
+    // Body
+    ctx.fillStyle = h.color || '#1d4ed8';
+    ctx.beginPath();
+    ctx.roundRect(-20, -10, 40, 20, 10);
+    ctx.fill();
+
+    // Tail boom
+    ctx.fillRect(-38, -3, 20, 6);
+
+    // Glass cockpit
+    ctx.fillStyle = '#38bdf8';
+    ctx.fillRect(8, -7, 10, 14);
+
+    // Spinning Main Rotor Blades
+    const rotorAngle = performance.now() * 0.03;
+    ctx.strokeStyle = '#cbd5e1';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(-Math.cos(rotorAngle) * 35, -Math.sin(rotorAngle) * 35);
+    ctx.lineTo(Math.cos(rotorAngle) * 35, Math.sin(rotorAngle) * 35);
+    ctx.stroke();
+
+    ctx.restore();
+  }
+
+  // Draw Stray Dogs
+  function renderDog(ctx, d, tileSize) {
+    const dx = d.x * tileSize;
+    const dy = d.y * tileSize;
+
+    ctx.save();
+    ctx.fillStyle = '#d97706'; // Golden brown dog
+    ctx.beginPath();
+    ctx.ellipse(dx, dy, 7, 4, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Head
+    ctx.beginPath();
+    ctx.arc(dx + 6, dy - 2, 4, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Tail
+    ctx.strokeStyle = '#b45309';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(dx - 7, dy);
+    ctx.lineTo(dx - 10, dy - 4);
+    ctx.stroke();
+
+    ctx.restore();
   }
 
   // Draw Vehicle on Canvas with 2.5D details, headlights & lights
@@ -254,7 +372,12 @@ window.CiudadLinkVehicles = (function () {
     initTraffic,
     updateVehicles,
     renderVehicle,
+    renderHelicopterOverhead,
+    renderDog,
     get vehicles() { return vehicles; },
+    get helicopters() { return helicopters; },
+    get dogs() { return dogs; },
+    get gangsters() { return gangsters; },
     get trafficLightState() { return trafficLightState; }
   };
 })();

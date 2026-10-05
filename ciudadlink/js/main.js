@@ -24,6 +24,10 @@
     money: 600,
     health: 100, maxHealth: 100,
     energy: 100, maxEnergy: 100,
+    hunger: 90, maxHunger: 100,
+    sleep: 90, maxSleep: 100,
+    mood: 85, maxMood: 100, // Ánimo / Depresión (100 = Animado, <30 = Deprimido)
+    spouse: null, // Married NPC
     isWalking: false,
     facing: 'S', // 'N', 'S', 'E', 'W'
     path: [],
@@ -135,6 +139,8 @@
     document.getElementById('lblPlayerMoney').textContent = `$${player.money}`;
     document.getElementById('lblPlayerHealth').textContent = `${player.health}/100`;
     document.getElementById('lblPlayerEnergy').textContent = `${player.energy}/100`;
+    if (document.getElementById('lblPlayerHunger')) document.getElementById('lblPlayerHunger').textContent = `${Math.round(player.hunger)}/100`;
+    if (document.getElementById('lblPlayerMood')) document.getElementById('lblPlayerMood').textContent = `${Math.round(player.mood)}/100`;
   }
 
   // MAIN PSEUDO-3D CITY RENDERER
@@ -253,6 +259,15 @@
       });
     });
 
+    // Add Dogs
+    window.CiudadLinkVehicles.dogs.forEach(d => {
+      renderList.push({
+        type: 'DOG',
+        yOrder: (d.y + 0.5) * tileSize,
+        data: d
+      });
+    });
+
     // Add Player Character
     renderList.push({
       type: 'PLAYER',
@@ -271,11 +286,18 @@
         renderEnvironmentalObject3D(ctx, item.data, tileSize, isNight);
       } else if (item.type === 'VEHICLE') {
         window.CiudadLinkVehicles.renderVehicle(ctx, item.data, tileSize, isNight);
+      } else if (item.type === 'DOG') {
+        window.CiudadLinkVehicles.renderDog(ctx, item.data, tileSize);
       } else if (item.type === 'NPC') {
         renderNPC3D(ctx, item.data, tileSize, isNight);
       } else if (item.type === 'PLAYER') {
         renderPlayer3D(ctx, player, tileSize, isNight);
       }
+    });
+
+    // Render Overhead Helicopters on Top Z-Layer
+    window.CiudadLinkVehicles.helicopters.forEach(h => {
+      window.CiudadLinkVehicles.renderHelicopterOverhead(ctx, h, tileSize, isNight);
     });
 
     ctx.restore();
@@ -574,6 +596,7 @@
 
     // Nav Menu Buttons
     document.getElementById('btnChooseAvatar')?.addEventListener('click', openAvatarSelectorModal);
+    document.getElementById('btnOpenPhone')?.addEventListener('click', openSmartphoneModal);
     document.getElementById('btnOpenLaws')?.addEventListener('click', openLawsModal);
     document.getElementById('btnOpenPresidencia')?.addEventListener('click', openPresidenciaModal);
     document.getElementById('btnOpenCatalog')?.addEventListener('click', openCatalogModal);
@@ -634,42 +657,172 @@
     closeModalCard();
   };
 
+  // SMARTPHONE UI (TELÉFONO LINK / LARA TELÉFONO)
+  function openSmartphoneModal() {
+    const body = `
+      <div style="background:#020617; border:3px solid #38bdf8; border-radius:24px; padding:1rem; max-width:380px; margin:0 auto; box-shadow:0 0 20px rgba(56,189,248,0.4);">
+        <div style="text-align:center; padding-bottom:0.5rem; border-bottom:1px solid #1e293b; color:#38bdf8; font-weight:bold;">
+          📱 Teléfono Link Smart Pro
+        </div>
+
+        <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:0.75rem; padding:1.25rem 0; text-align:center;">
+          <div style="cursor:pointer; background:rgba(255,255,255,0.05); padding:0.75rem; border-radius:12px;" onclick="openPhoneApp('contacts')">
+            <div style="font-size:2rem;">📞</div>
+            <span style="font-size:0.75rem; color:#cbd5e1;">Contactos</span>
+          </div>
+
+          <div style="cursor:pointer; background:rgba(255,255,255,0.05); padding:0.75rem; border-radius:12px;" onclick="openPhoneApp('delivery')">
+            <div style="font-size:2rem;">🍕</div>
+            <span style="font-size:0.75rem; color:#cbd5e1;">Delivery Food</span>
+          </div>
+
+          <div style="cursor:pointer; background:rgba(255,255,255,0.05); padding:0.75rem; border-radius:12px;" onclick="openPhoneApp('dating')">
+            <div style="font-size:2rem;">💘</div>
+            <span style="font-size:0.75rem; color:#cbd5e1;">Citas Sims</span>
+          </div>
+
+          <div style="cursor:pointer; background:rgba(255,255,255,0.05); padding:0.75rem; border-radius:12px;" onclick="openPhoneApp('taxi')">
+            <div style="font-size:2rem;">🚖</div>
+            <span style="font-size:0.75rem; color:#cbd5e1;">Taxi Express</span>
+          </div>
+
+          <div style="cursor:pointer; background:rgba(255,255,255,0.05); padding:0.75rem; border-radius:12px;" onclick="openPhoneApp('bank')">
+            <div style="font-size:2rem;">🏦</div>
+            <span style="font-size:0.75rem; color:#cbd5e1;">Banco Link</span>
+          </div>
+
+          <div style="cursor:pointer; background:rgba(255,255,255,0.05); padding:0.75rem; border-radius:12px;" onclick="openPhoneApp('jobs')">
+            <div style="font-size:2rem;">💼</div>
+            <span style="font-size:0.75rem; color:#cbd5e1;">Empleos</span>
+          </div>
+        </div>
+
+        <div style="text-align:center; font-size:0.75rem; color:#64748b; border-top:1px solid #1e293b; pt:0.5rem;">
+          Batería 100% • Red 5G Ciudad Link
+        </div>
+      </div>
+    `;
+    openModalCard('📱 Teléfono Inteligente', body);
+  }
+
+  window.openPhoneApp = function(app) {
+    if (app === 'delivery') {
+      if (player.money >= 25) {
+        player.money -= 25;
+        player.hunger = Math.min(100, player.hunger + 45);
+        alert('🍕 ¡Delivery express entregado! Tu Hambre ha sido satisfecha (+45 Hambre). -$25.');
+      } else {
+        alert('❌ No tienes suficiente dinero para pedir comida ($25).');
+      }
+    } else if (app === 'taxi') {
+      if (player.money >= 15) {
+        player.money -= 15;
+        player.x = 50; player.y = 50; // Central Park dropoff
+        alert('🚖 ¡Taxi te ha trasladado al Gran Parque Central! -$15.');
+      } else {
+        alert('❌ Dinero insuficiente para el taxi ($15).');
+      }
+    } else if (app === 'contacts') {
+      const contactsHTML = window.CiudadLinkNPCs.npcs.slice(0, 10).map(n => `
+        <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.05); padding:0.5rem; border-radius:6px; margin-bottom:0.3rem;">
+          <span>📞 ${n.name} (${n.phone})</span>
+          <button class="btn btn-secondary" style="font-size:0.75rem;" onclick="callNpc('${n.id}')">Llamar</button>
+        </div>
+      `).join('');
+      openModalCard('📞 Agenda de Contactos', `<div style="max-height:300px; overflow-y:auto;">${contactsHTML}</div>`);
+    } else if (app === 'dating') {
+      alert('💘 App Citas Sims: Has emparejado con pobladores solteros de la ciudad. ¡Visítalos en las Discotecas o Paladares para coquetear!');
+    } else if (app === 'bank') {
+      alert(`🏦 Banco Link App: Tu saldo actual disponible es $${player.money}. Sin deudas pendientes.`);
+    } else if (app === 'jobs') {
+      alert('💼 Portal de Empleos: Hay vacantes disponibles en los Paladares (Mesero/Cocinero) y Discotecas.');
+    }
+  };
+
+  window.callNpc = function(npcId) {
+    const npc = window.CiudadLinkNPCs.npcs.find(n => n.id === npcId);
+    if (!npc) return;
+    alert(`📞 En llamada con ${npc.name}: "¡Hola Link! Nos vemos pronto en la ciudad."`);
+  };
+
   function inspectNPC(npc) {
     const kinship = window.CiudadLinkData.buildKinshipInfo(npc, window.CiudadLinkNPCs.npcs);
     const schedule = window.CiudadLinkData.SCHEDULE_RULES.getRuleForNPC(npc, window.CiudadLinkNPCs.timeOfDay, window.CiudadLinkNPCs.currentDay - 1);
 
+    const moodStatus = npc.mood >= 75 ? '😄 Animado/a' : (npc.mood >= 40 ? '😐 Normal' : '😭 Deprimido/a');
+
     const body = `
       <div style="display:flex; align-items:center; gap:1rem; margin-bottom:1rem;">
-        <div style="font-size:2.5rem;">${npc.gender === 'Masculino' ? '👨' : '👩'}</div>
+        <div style="font-size:2.8rem;">${npc.gender === 'Masculino' ? '👨' : '👩'}</div>
         <div>
           <h3 style="margin:0; color:#38bdf8;">${npc.name}</h3>
-          <p style="margin:0; font-size:0.85rem; color:#94a3b8;">${npc.profession} • ${npc.age} años • Género: ${npc.gender}</p>
+          <p style="margin:0; font-size:0.85rem; color:#94a3b8;">${npc.profession} • ${npc.age} años • Tel: 📞 ${npc.phone}</p>
+          <p style="margin:0.2rem 0 0; font-size:0.8rem; color:#facc15;">Estado: <strong>${npc.relationshipState}</strong> | Vínculo: ${npc.relationshipLevel}%</p>
         </div>
       </div>
-      <div style="background:rgba(255,255,255,0.05); padding:0.85rem; border-radius:8px; margin-bottom:1rem;">
-        <strong style="color:#fbbf24;">📍 Actividad Actual (Regla General):</strong>
-        <p style="margin:0.25rem 0; font-size:0.85rem;">${schedule.desc}</p>
-        <span class="badge badge-purple">Lugar: ${schedule.target.toUpperCase()}</span>
+
+      <!-- Sims Needs Meters for NPC -->
+      <div style="background:rgba(255,255,255,0.05); padding:0.75rem; border-radius:8px; margin-bottom:1rem; display:grid; grid-template-columns:1fr 1fr; gap:0.5rem; font-size:0.8rem;">
+        <div>🍗 Hambre: <strong>${Math.round(npc.hunger)}/100</strong></div>
+        <div>😴 Sueño: <strong>${Math.round(npc.sleep)}/100</strong></div>
+        <div>🎭 Ánimo: <strong>${moodStatus}</strong></div>
+        <div>💬 Social: <strong>${Math.round(npc.social)}/100</strong></div>
       </div>
-      <div style="margin-bottom:1rem;">
-        <strong style="color:#c084fc;">👨‍👩‍👧‍👦 Lazos Familiares:</strong>
-        <ul style="margin:0.25rem 0; padding-left:1.25rem; font-size:0.85rem; color:#e2e8f0;">
-          ${kinship.length > 0 ? kinship.map(k => `<li>${k.role}: <strong>${k.name}</strong></li>`).join('') : '<li>Sin lazos directos registrados en la municipalidad.</li>'}
-        </ul>
+
+      <div style="background:rgba(255,255,255,0.03); padding:0.75rem; border-radius:8px; margin-bottom:1rem;">
+        <strong style="color:#fbbf24;">📍 Actividad Actual:</strong>
+        <p style="margin:0.25rem 0; font-size:0.82rem;">${schedule.desc}</p>
       </div>
-      <div>
-        <strong style="color:#34d399;">🏢 Habitación de Hotel/Residencia:</strong>
-        <p style="margin:0.25rem 0; font-size:0.85rem; color:#e2e8f0;">
-          ${npc.assignedHotelId ? `Hotel: ${npc.assignedHotelId.toUpperCase()} • Piso ${npc.assignedFloor} • Habitación ${npc.assignedRoom} (3 pers/hab)` : 'Sin habitación asignada actualmente.'}
-        </p>
+
+      <strong style="color:#38bdf8; display:block; margin-bottom:0.5rem;">💬 Interacciones Tipo Sims:</strong>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.5rem; margin-bottom:1rem;">
+        <button class="btn btn-secondary" style="font-size:0.8rem;" onclick="interactNpcAction('${npc.id}', 'TALK')">🗣️ Hablar y Chismear</button>
+        <button class="btn btn-secondary" style="font-size:0.8rem;" onclick="interactNpcAction('${npc.id}', 'FLIRT')">💖 Coquetear / Enamorar</button>
+        <button class="btn btn-secondary" style="font-size:0.8rem;" onclick="interactNpcAction('${npc.id}', 'PARTY')">🎉 Invitar a Fiesta / Discoteca</button>
+        <button class="btn btn-primary" style="font-size:0.8rem;" onclick="interactNpcAction('${npc.id}', 'MARRY')">💍 Proponer Matrimonio</button>
       </div>
-      <div style="margin-top:1rem; text-align:right;">
-        <button class="btn btn-secondary" onclick="triggerPoliceArrest('${npc.id}')">🚔 Arrestar por Infracción</button>
+
+      <div style="text-align:right;">
+        <button class="btn btn-secondary" style="font-size:0.8rem; color:#f87171;" onclick="triggerPoliceArrest('${npc.id}')">🚔 Arrestar Policialmente</button>
       </div>
     `;
 
-    openModalCard('👤 Ficha Oficial del Ciudadano', body);
+    openModalCard('👤 Ficha & Interacción Sims', body);
   }
+
+  window.interactNpcAction = function(npcId, action) {
+    const npc = window.CiudadLinkNPCs.npcs.find(n => n.id === npcId);
+    if (!npc) return;
+
+    if (action === 'TALK') {
+      npc.relationshipLevel = Math.min(100, npc.relationshipLevel + 12);
+      npc.social = Math.min(100, npc.social + 20);
+      player.mood = Math.min(100, player.mood + 10);
+      alert(`🗣️ Has charlado con ${npc.name}. ¡Le ha encantado la conversación! Relación +12%.`);
+    } else if (action === 'FLIRT') {
+      if (npc.relationshipLevel < 25) {
+        alert(`😅 ${npc.name} dice: "Aún no nos conocemos lo suficiente..." (Requiere relación 25%)`);
+      } else {
+        npc.relationshipLevel = Math.min(100, npc.relationshipLevel + 20);
+        npc.relationshipState = 'Pareja';
+        alert(`💖 ¡Coqueteo exitoso! ${npc.name} ahora es tu Pareja Amorosa.`);
+      }
+    } else if (action === 'PARTY') {
+      player.mood = Math.min(100, player.mood + 25);
+      npc.mood = Math.min(100, npc.mood + 30);
+      alert(`🎉 ¡Fiesta total en la Discoteca con ${npc.name}! Ambos están de excelente ánimo.`);
+    } else if (action === 'MARRY') {
+      if (npc.relationshipLevel < 80) {
+        alert(`💍 ${npc.name} sonríe pero reponde: "¡Es muy pronto! Necesitamos más amor (80%+)."`);
+      } else {
+        npc.relationshipState = 'Esposa';
+        npc.spouseId = player.avatarId;
+        player.spouse = npc.name;
+        alert(`👩‍❤️‍👨 ¡FELICITACIONES! Te has casado con ${npc.name}. ¡Ahora es tu Esposa en Ciudad Link!`);
+      }
+    }
+    inspectNPC(npc);
+  };
 
   window.triggerPoliceArrest = function (npcId) {
     const npc = window.CiudadLinkNPCs.npcs.find(n => n.id === npcId);

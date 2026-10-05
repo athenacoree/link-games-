@@ -105,7 +105,13 @@ window.CiudadLinkData = (function () {
     { id: 'shopkeeper', title: 'Comerciante', workplace: 'tienda', salary: 350, icon: '🛒', color: '#10b981' },
     { id: 'architect', title: 'Arquitecto Urbano', workplace: 'presidencia', salary: 480, icon: '📐', color: '#f97316' },
     { id: 'unemployed', title: 'Ciudadano en Búsqueda', workplace: 'hotel', salary: 50, icon: '👤', color: '#9ca3af' },
-    { id: 'child', title: 'Niño/a (Menor de Edad)', workplace: 'escuela', salary: 0, icon: '👶', color: '#f472b6' }
+    { id: 'child', title: 'Niño/a (Menor de Edad)', workplace: 'escuela', salary: 0, icon: '👶', color: '#f472b6' },
+    { id: 'paladar_boss', title: 'Jefe de Paladar', workplace: 'paladar', salary: 650, icon: '👨‍🍳', color: '#f59e0b' },
+    { id: 'paladar_waiter', title: 'Mesero de Paladar', workplace: 'paladar', salary: 280, icon: '🍽️', color: '#10b981' },
+    { id: 'paladar_cook', title: 'Cocinero de Paladar', workplace: 'paladar', salary: 350, icon: '🍳', color: '#ef4444' },
+    { id: 'club_owner', title: 'Dueño de Discoteca/Club', workplace: 'discoteca', salary: 800, icon: '🍸', color: '#ec4899' },
+    { id: 'club_dancer', title: 'Bailarín/a de Club', workplace: 'club_vip', salary: 450, icon: '💃', color: '#a855f7' },
+    { id: 'gangster', title: 'Pandillero / Ladron', workplace: 'barrio_bajero', salary: 200, icon: '🥷', color: '#475569' }
   ];
 
   // 3. UNIVERSAL LAWS CATALOG (>50 Laws)
