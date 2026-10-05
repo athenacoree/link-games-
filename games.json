@@ -1,5 +1,17 @@
 [
   {
+    "id": "ciudadlink",
+    "name": "Ciudad Link: Simulador Urbano Flagship",
+    "description": "Simulación urbana con Presidencia Link, Policía, Juzgados, Hospital, Cementerio, Hoteles de 10 pisos con elevadores, catálogo de 1000+ cosas, lazos familiares y reglas universales.",
+    "category": "rpg",
+    "players": 1,
+    "mode": ["solo"],
+    "mobile": true,
+    "requiresServer": false,
+    "license": "MIT",
+    "url": "./ciudadlink/"
+  },
+  {
     "id": "tictactoe",
     "name": "Tres en Raya",
     "description": "Clásico juego de Tres en Raya con modo 1 vs AI o 2 jugadores local.",

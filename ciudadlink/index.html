@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ciudad Link — Simulador Urbano Principal</title>
+  <link rel="stylesheet" href="../assets/css/link-theme.css">
+  <style>
+    .game-layout {
+      display: grid;
+      grid-template-columns: 1fr 320px;
+      gap: 1.25rem;
+      align-items: start;
+    }
+
+    @media (max-width: 950px) {
+      .game-layout {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .canvas-container {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      position: relative;
+    }
+
+    canvas {
+      background: #020617;
+      border-radius: var(--radius-md);
+      box-shadow: 0 0 25px rgba(0,0,0,0.8);
+      max-width: 100%;
+      height: auto;
+      touch-action: none;
+      cursor: crosshair;
+    }
+
+    .city-panel {
+      background: rgba(26, 33, 51, 0.7);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      padding: 1.25rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .dpad-container {
+      display: grid;
+      grid-template-columns: repeat(3, 48px);
+      grid-template-rows: repeat(3, 48px);
+      gap: 4px;
+      justify-content: center;
+      margin-top: 1rem;
+    }
+
+    .dpad-btn {
+      background: rgba(30, 41, 59, 0.8);
+      border: 1px solid var(--border-color);
+      color: white;
+      font-size: 1.2rem;
+      border-radius: var(--radius-md);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .dpad-btn:active {
+      background: var(--accent-primary);
+    }
+
+    .action-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.5rem;
+    }
+
+    .game-modal-card {
+      background: #0f172a;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      width: 90%;
+      max-width: 600px;
+      padding: 1.5rem;
+      position: relative;
+      box-shadow: var(--shadow-glow);
+    }
+  </style>
+</head>
+<body class="aurora-bg">
+
+  <header class="link-header">
+    <a href="../" class="btn-back"><span>← Catálogo</span></a>
+    <div class="link-logo">
+      <div class="link-logo-icon">🏙️</div>
+      <span>Ciudad Link — Simulador Urbano Flagship</span>
+    </div>
+    <button class="btn-guide" onclick="document.getElementById('guideModal').classList.add('active')">📖 Guía de la Ciudad</button>
+  </header>
+
+  <main class="container">
+    <!-- Metrics Bar -->
+    <div class="metrics-group">
+      <div class="metric-pill">
+        <span class="metric-label">Tiempo</span>
+        <span class="metric-value" style="color:#fde047;" id="lblTimeOfDay">Lunes 08:00</span>
+      </div>
+      <div class="metric-pill">
+        <span class="metric-label">Dinero</span>
+        <span class="metric-value" style="color:#facc15;" id="lblPlayerMoney">$500</span>
+      </div>
+      <div class="metric-pill">
+        <span class="metric-label">Salud</span>
+        <span class="metric-value" style="color:#f87171;" id="lblPlayerHealth">100/100</span>
+      </div>
+      <div class="metric-pill">
+        <span class="metric-label">Energía</span>
+        <span class="metric-value" style="color:#38bdf8;" id="lblPlayerEnergy">100/100</span>
+      </div>
+    </div>
+
+    <div class="game-layout">
+      <div class="canvas-container glass-panel">
+        <div class="touch-hint-banner">
+          👆 <b>Simulación Urbana Link:</b> Toca cualquier casilla o habitante para desplazarte con A* Pathfinding o inspeccionar su ficha oficial de ciudadano.
+        </div>
+
+        <canvas id="cityCanvas" width="800" height="500"></canvas>
+
+        <div class="dpad-container">
+          <div></div>
+          <button class="dpad-btn" id="btnUp">⬆️</button>
+          <div></div>
+          <button class="dpad-btn" id="btnLeft">⬅️</button>
+          <div></div>
+          <button class="dpad-btn" id="btnRight">➡️</button>
+          <div></div>
+          <button class="dpad-btn" id="btnDown">⬇️</button>
+          <div></div>
+        </div>
+      </div>
+
+      <div class="city-panel glass-panel">
+        <h3 style="font-size:1.05rem; margin:0; color:#38bdf8;">🏙️ Panel Municipal de Control</h3>
+        <p style="font-size:0.82rem; color:var(--text-secondary); line-height:1.4;">
+          Gestiona las instituciones de Ciudad Link, leyes, hoteles de 10 pisos y censos poblacionales.
+        </p>
+
+        <div class="action-grid">
+          <button class="btn btn-secondary" id="btnOpenLaws" style="font-size:0.8rem;">📜 Código de Leyes</button>
+          <button class="btn btn-secondary" id="btnOpenPresidencia" style="font-size:0.8rem;">👑 Presidencia Link</button>
+          <button class="btn btn-secondary" id="btnOpenCatalog" style="font-size:0.8rem;">📦 Catálogo (>1,000)</button>
+          <button class="btn btn-secondary" id="btnOpenCitizens" style="font-size:0.8rem;">👥 Censo Ciudadano</button>
+        </div>
+
+        <div style="background:rgba(255,255,255,0.03); border:1px solid var(--border-color); border-radius:var(--radius-md); padding:0.85rem; font-size:0.8rem; color:var(--text-secondary);">
+          <strong style="color:#eab308;">💡 Instituciones Clave:</strong>
+          <ul style="margin:0.25rem 0 0; padding-left:1.2rem; line-height:1.4;">
+            <li><b>Presidencia Link:</b> Sede del Gobierno</li>
+            <li><b>Estación de Policía:</b> Arrestos y Celdas</li>
+            <li><b>Juzgados:</b> Juicios con Abogado</li>
+            <li><b>Hoteles Sol, Luna y Estella:</b> 10 Pisos / Elevadores / 5 hab por piso</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- GAME INTERACTION MODAL -->
+  <div class="platform-modal-overlay" id="gameModal">
+    <div class="game-modal-card">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; border-bottom:1px solid var(--border-color); padding-bottom:0.5rem;">
+        <h3 style="margin:0; font-size:1.1rem; color:var(--text-primary);" id="gameModalTitle">Modal</h3>
+        <button class="guide-modal-close" onclick="closeModalCard()">✕</button>
+      </div>
+      <div id="gameModalBody">
+        <!-- Dynamic content -->
+      </div>
+    </div>
+  </div>
+
+  <!-- GUIDE MODAL -->
+  <div class="guide-modal-overlay" id="guideModal">
+    <div class="guide-modal-content">
+      <div class="guide-modal-header">
+        <div class="guide-modal-title">🏙️ Ciudad Link — Guía del Juego Flagship</div>
+        <button class="guide-modal-close" onclick="document.getElementById('guideModal').classList.remove('active')">✕</button>
+      </div>
+      <div class="guide-section">
+        <div class="guide-section-title">🏢 Hoteles con Elevadores de 10 Pisos</div>
+        <p>Los hoteles Rascacielos Sol, Luna y Estella cuentan con 10 pisos interconectados por elevadores. Cada piso alberga 5 habitaciones preparadas para hasta 3 residentes simultáneos.</p>
+      </div>
+      <div class="guide-section">
+        <div class="guide-section-title">👮 Leyes, Policía y Juzgados con Abogados</div>
+        <p>Cualquier infracción al Código Penal municipal conllevará arresto por la Policía y un Juicio Oral en los Juzgados de Link con participación de Jueces y Abogados defensores.</p>
+      </div>
+      <div class="guide-section">
+        <div class="guide-section-title">👁️ Visión Dinámica y Ciclo Día/Noche</div>
+        <p>Tu campo de visión se expande dinámicamente al caminar por la metrópoli y disminuye suavemente cuando te detienes, adaptándose al ciclo solar y horario de las actividades de los ciudadanos.</p>
+      </div>
+    </div>
+  </div>
+
+  <footer class="link-footer"><p>Ciudad Link — Simulador Urbano | Link Minigames</p></footer>
+
+  <script src="../assets/js/super-engine.js"></script>
+  <script src="./js/data_catalog.js"></script>
+  <script src="./js/city_map.js"></script>
+  <script src="./js/npc_system.js"></script>
+  <script src="./js/law_court.js"></script>
+  <script src="./js/main.js"></script>
+</body>
+</html>
