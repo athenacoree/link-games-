@@ -1,7 +1,7 @@
 /**
- * CIUDAD LINK - CITY MAP GENERATOR, REALISTIC MINI WORLD & DISTRICTS
- * Manages the 100x100 city grid, 3D building height/depth metadata, 10-floor hotel towers
- * with elevators (5 rooms/floor, 3 residents/room), parks, lakes, and A* pathfinding.
+ * CIUDAD LINK - CITY MAP GENERATOR, HIERARCHICAL QUADRANTS & PRIORITY ROUTING
+ * Manages 100x100 city grid, 10x10x10 Hierarchical Spatial Partitioning (10 Groups, 10 Subgroups, 10 Sub-subgroups),
+ * Numeric Tile Priority Routing System (Levels 1, 2, 3, 4 for Pedestrian vs. Driver), and A* Pathfinding.
  */
 
 window.CiudadLinkMap = (function () {
@@ -44,13 +44,44 @@ window.CiudadLinkMap = (function () {
   let grid = [];
   let buildings = [];
   let hotels = [];
-  let environmentalObjects = []; // Trees, Streetlights, Benches, Trash cans
+  let environmentalObjects = []; // Trees, Streetlights, Benches
 
-  // SECTORS / QUADRANTS SYSTEM (Performance Optimization & Dynamic World Partitioning)
-  // NW: x: 0..49, y: 0..49
-  // NE: x: 50..99, y: 0..49
-  // SW: x: 0..49, y: 50..99
-  // SE: x: 50..99, y: 50..99
+  // 10x10x10 HIERARCHICAL QUADRANT GRID PARTITIONING
+  // The 100x100 city is divided into 10 Main Groups (each 10x10 tiles or 100 tiles)
+  // Each Main Group contains 10 Subgroups (each 10 tiles)
+  // Each Subgroup contains 10 Sub-subgroups (individual micro-quadrant units / tiles)
+  function getQuadrantHierarchy(x, y) {
+    const clampedX = Math.max(0, Math.min(MAP_WIDTH - 1, Math.floor(x)));
+    const clampedY = Math.max(0, Math.min(MAP_HEIGHT - 1, Math.floor(y)));
+
+    const tileIndex = clampedY * MAP_WIDTH + clampedX; // 0..9999
+    const group = Math.floor(tileIndex / 1000) + 1;    // Group 1..10
+    const groupRem = tileIndex % 1000;
+    const subgroup = Math.floor(groupRem / 100) + 1;   // Subgroup 1..10
+    const subSubgroup = (groupRem % 10) + 1;           // Sub-subgroup 1..10
+
+    return {
+      group,
+      subgroup,
+      subSubgroup,
+      code: `G${group}-SG${subgroup}-SSG${subSubgroup}`,
+      title: `Grupo ${group} • Subgrupo ${subgroup} • Micro ${subSubgroup}`,
+      x: clampedX,
+      y: clampedY
+    };
+  }
+
+  // Active micro-quadrant area surrounding a given tile position
+  function getSurroundingQuadrantTiles(centerTileX, centerTileY, radiusInTiles = 15) {
+    const minX = Math.max(0, centerTileX - radiusInTiles);
+    const maxX = Math.min(MAP_WIDTH - 1, centerTileX + radiusInTiles);
+    const minY = Math.max(0, centerTileY - radiusInTiles);
+    const maxY = Math.min(MAP_HEIGHT - 1, centerTileY + radiusInTiles);
+
+    return { minX, maxX, minY, maxY };
+  }
+
+  // LEGACY SECTORS COMPATIBILITY (NW, NE, SW, SE)
   const SECTORS = {
     NW: { id: 'NW', name: 'Sector Noroeste (Cívico & Salud)', xMin: 0, xMax: 49, yMin: 0, yMax: 49, spawnX: 25, spawnY: 25 },
     NE: { id: 'NE', name: 'Sector Noreste (Tribunal & Comercio)', xMin: 50, xMax: 99, yMin: 0, yMax: 49, spawnX: 75, spawnY: 25 },
@@ -120,6 +151,30 @@ window.CiudadLinkMap = (function () {
   function setActiveSector(sectorId) {
     if (SECTORS[sectorId]) {
       activeSector = sectorId;
+    }
+  }
+
+  // TILE PRIORITY SYSTEM (LEVELS 1, 2, 3, 4)
+  // Each tile always has base cost 1, but priority multiplier alters choice in pathfinding:
+  // - Pedestrians: Sidewalk (STREET), Crosswalk, Park = Priority 1. Road = Priority 2. Dirt/Unpaved = Priority 3.
+  // - Drivers: Road, Crosswalk = Priority 1. Sidewalk (STREET) = Priority 3. Park / Dirt = Priority 4.
+  function getTilePriority(x, y, mode = 'pedestrian') {
+    if (x < 0 || x >= MAP_WIDTH || y < 0 || y >= MAP_HEIGHT) return 999;
+    const tileType = grid[y][x];
+
+    if (mode === 'driver') {
+      if (tileType === TILE.ROAD || tileType === TILE.CROSSWALK || tileType === TILE.TRAFFIC_LIGHT) return 1; // Highest priority for driving
+      if (tileType === TILE.GAS_STATION) return 2;
+      if (tileType === TILE.STREET) return 3; // Sidewalk (can enter if needed)
+      if (tileType === TILE.PARK || tileType === TILE.BARRIO_BAJERO) return 4; // Dirt / Offroad
+      return 10; // Impassable for cars
+    } else {
+      // Pedestrian
+      if (tileType === TILE.STREET || tileType === TILE.CROSSWALK || tileType === TILE.PARK || tileType === TILE.FOUNTAIN) return 1; // Highest priority for walking
+      if (tileType === TILE.HOUSE || tileType === TILE.STORE || tileType === TILE.PALADAR || tileType === TILE.DISCOTECA) return 2;
+      if (tileType === TILE.ROAD) return 2; // Road passable but secondary priority to sidewalk
+      if (tileType === TILE.BARRIO_BAJERO) return 3;
+      return 10;
     }
   }
 
@@ -392,8 +447,9 @@ window.CiudadLinkMap = (function () {
     return tile !== TILE.WALL && tile !== TILE.WATER && tile !== TILE.LAKE;
   }
 
-  // A* PATHFINDING ALGORITHM
-  function findPath(start, target, occupiedSet = new Set()) {
+  // PRIORITY-WEIGHTED A* PATHFINDING ALGORITHM
+  // mode: 'pedestrian' (sidewalk = 1, road = 2) or 'driver' (road = 1, sidewalk = 3)
+  function findPath(start, target, mode = 'pedestrian', occupiedSet = new Set()) {
     if (!isTileWalkable(target.x, target.y)) return [];
     if (start.x === target.x && start.y === target.y) return [];
 
@@ -447,7 +503,10 @@ window.CiudadLinkMap = (function () {
 
         if (occupiedSet.has(neighborKey) && neighborKey !== targetKey) continue;
 
-        const tentativeG = gScore.get(currentKey) + 1;
+        // Step cost = 1 * priority level multiplier (1, 2, 3, 4)
+        const priorityMult = getTilePriority(neighbor.x, neighbor.y, mode);
+        const stepCost = 1 * priorityMult;
+        const tentativeG = gScore.get(currentKey) + stepCost;
 
         if (!gScore.has(neighborKey) || tentativeG < gScore.get(neighborKey)) {
           cameFrom.set(neighborKey, current);
@@ -475,6 +534,9 @@ window.CiudadLinkMap = (function () {
     TILE_SIZE,
     TILE,
     SECTORS,
+    getQuadrantHierarchy,
+    getSurroundingQuadrantTiles,
+    getTilePriority,
     initCityMap,
     isTileWalkable,
     findPath,
