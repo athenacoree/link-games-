@@ -1,7 +1,7 @@
 /**
  * CIUDAD LINK - NPC SIMULATION, DYNAMIC VISUAL DIVERSITY & DAY/NIGHT CYCLES
  * Manages detailed NPC profiles (Name, Gender, Profession, Visual Outfits, Age, Kinship Tree, Schedules, Morality),
- * and time/day/night cycles without blinding FOV darkness.
+ * smooth sub-tile movement interpolation, and time/day/night cycles without blinding darkness.
  */
 
 window.CiudadLinkNPCs = (function () {
@@ -35,6 +35,7 @@ window.CiudadLinkNPCs = (function () {
     pres.profession = 'president';
     pres.shirtColor = '#b45309';
     pres.x = 50; pres.y = 10;
+    pres.renderX = 50; pres.renderY = 10;
     npcs.push(pres);
 
     // 2. Police Chief & Police Officers
@@ -42,6 +43,7 @@ window.CiudadLinkNPCs = (function () {
     chief.profession = 'police_chief';
     chief.shirtColor = '#1d4ed8';
     chief.x = 10; chief.y = 10;
+    chief.renderX = 10; chief.renderY = 10;
     npcs.push(chief);
 
     for (let i = 0; i < 6; i++) {
@@ -50,6 +52,7 @@ window.CiudadLinkNPCs = (function () {
       officer.profession = 'police_officer';
       officer.shirtColor = '#2563eb';
       officer.x = 8 + (i % 3) * 2; officer.y = 8 + Math.floor(i / 3) * 2;
+      officer.renderX = officer.x; officer.renderY = officer.y;
       npcs.push(officer);
     }
 
@@ -58,6 +61,7 @@ window.CiudadLinkNPCs = (function () {
     judge.profession = 'judge';
     judge.shirtColor = '#6b21a8';
     judge.x = 88; judge.y = 10;
+    judge.renderX = 88; judge.renderY = 10;
     npcs.push(judge);
 
     for (let i = 0; i < 4; i++) {
@@ -65,6 +69,7 @@ window.CiudadLinkNPCs = (function () {
       lawyer.profession = 'lawyer';
       lawyer.shirtColor = '#4338ca';
       lawyer.x = 85 + (i % 2) * 2; lawyer.y = 8 + Math.floor(i / 2) * 2;
+      lawyer.renderX = lawyer.x; lawyer.renderY = lawyer.y;
       npcs.push(lawyer);
     }
 
@@ -73,6 +78,7 @@ window.CiudadLinkNPCs = (function () {
     doc.profession = 'doctor';
     doc.shirtColor = '#059669';
     doc.x = 10; doc.y = 30;
+    doc.renderX = 10; doc.renderY = 30;
     npcs.push(doc);
 
     // 5. Teachers & Children & Mothers
@@ -85,6 +91,7 @@ window.CiudadLinkNPCs = (function () {
       let npc = createNPCProfile(idCounter++, gender, `ciudadano_${i}`, prof, age, 15 + i * 2, 35 + i);
       npc.profession = prof;
       npc.x = 8 + (i % 4) * 2; npc.y = 48 + Math.floor(i / 4) * 2;
+      npc.renderX = npc.x; npc.renderY = npc.y;
 
       if (hotels && hotels.length > 0) {
         let h = hotels[i % hotels.length];
@@ -114,6 +121,7 @@ window.CiudadLinkNPCs = (function () {
       let prof = professionsList[npcs.length % professionsList.length].id;
       let npc = createNPCProfile(idCounter++, g, `poblador_${npcs.length}`, prof, age, 20 + (npcs.length % 60), 20 + (npcs.length % 60));
       npc.profession = prof;
+      npc.renderX = npc.x; npc.renderY = npc.y;
 
       if (hotels && hotels.length > 0) {
         let h = hotels[npcs.length % hotels.length];
@@ -142,19 +150,20 @@ window.CiudadLinkNPCs = (function () {
       profession: title,
       x: x,
       y: y,
+      renderX: x,
+      renderY: y,
       targetX: x,
       targetY: y,
       path: [],
       motherId: null,
       fatherId: null,
       spouseId: null,
-      relationshipState: 'Soltero', // 'Soltero', 'Amigo', 'Pareja', 'Esposa', 'Esposo'
-      relationshipLevel: 0, // 0 to 100
-      // Sims-Style State & Needs (0 = empty, 100 = full/good)
-      hunger: 80 + Math.floor(Math.random() * 20),      // Hambre
-      sleep: 80 + Math.floor(Math.random() * 20),       // Sueño / Energía
-      mood: 75 + Math.floor(Math.random() * 25),        // Ánimo / Depresión (100 = Animado, <30 = Deprimido)
-      social: 60 + Math.floor(Math.random() * 40),      // Social / Fiesta
+      relationshipState: 'Soltero',
+      relationshipLevel: 0,
+      hunger: 80 + Math.floor(Math.random() * 20),
+      sleep: 80 + Math.floor(Math.random() * 20),
+      mood: 75 + Math.floor(Math.random() * 25),
+      social: 60 + Math.floor(Math.random() * 40),
       phone: `555-${Math.floor(1000 + Math.random() * 9000)}`,
       assignedHotelId: null,
       assignedFloor: 1,
@@ -177,7 +186,6 @@ window.CiudadLinkNPCs = (function () {
     };
   }
 
-  // Synchronize NPC positions across map sectors based on game time routines
   function synchronizeNPCRoutinesWithGameTime() {
     npcs.forEach(npc => {
       const rule = window.CiudadLinkData.SCHEDULE_RULES.getRuleForNPC(npc, timeOfDay, currentDay - 1);
@@ -186,12 +194,14 @@ window.CiudadLinkNPCs = (function () {
       if (targetCoords) {
         npc.x = targetCoords.x;
         npc.y = targetCoords.y;
+        npc.renderX = targetCoords.x;
+        npc.renderY = targetCoords.y;
         npc.path = [];
       }
     });
   }
 
-  // UPDATE TIME & NPC AI BEHAVIOR
+  // UPDATE TIME & PERSISTENT NPC SIMULATION ACROSS ALL QUADRANTS
   function updateNPCSimulation(deltaSec, playerIsWalking) {
     timeOfDay += (deltaSec * 0.0333);
     if (timeOfDay >= 24.0) {
@@ -213,7 +223,6 @@ window.CiudadLinkNPCs = (function () {
         npc.sleep = Math.max(0, npc.sleep - 0.15);
         npc.social = Math.max(0, npc.social - 0.1);
 
-        // Mood / Depression calculation
         const avgNeeds = (npc.hunger + npc.sleep + npc.social) / 3;
         npc.mood = Math.round(avgNeeds);
       }
@@ -224,7 +233,7 @@ window.CiudadLinkNPCs = (function () {
         if (Math.random() < 0.02) {
           let targetCoords = getTargetCoordsForAction(scheduleRule.target, npc);
           if (targetCoords) {
-            let path = window.CiudadLinkMap.findPath({ x: npc.x, y: npc.y }, targetCoords, occupiedSet);
+            let path = window.CiudadLinkMap.findPath({ x: npc.x, y: npc.y }, targetCoords, 'pedestrian', occupiedSet);
             if (path && path.length > 0) {
               npc.path = path;
             }
@@ -240,6 +249,14 @@ window.CiudadLinkNPCs = (function () {
           npc.y = nextStep.y;
         }
       }
+
+      // Smooth Sub-Tile Interpolation for Render Position
+      if (npc.renderX === undefined) npc.renderX = npc.x;
+      if (npc.renderY === undefined) npc.renderY = npc.y;
+
+      const lerpSpeed = 0.15;
+      npc.renderX += (npc.x - npc.renderX) * lerpSpeed;
+      npc.renderY += (npc.y - npc.renderY) * lerpSpeed;
     });
   }
 
@@ -272,7 +289,6 @@ window.CiudadLinkNPCs = (function () {
   }
 
   function getLightingOverlay() {
-    // Night ambient light tint (max 0.25 opacity so vision is completely clear)
     if (timeOfDay >= 6.0 && timeOfDay < 18.0) return 0.0;
     if (timeOfDay >= 18.0 && timeOfDay < 20.0) return ((timeOfDay - 18.0) / 2.0) * 0.2;
     if (timeOfDay >= 20.0 || timeOfDay < 5.0) return 0.25;

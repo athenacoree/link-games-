@@ -1,7 +1,7 @@
 /**
  * CIUDAD LINK - MAIN GAME LOOP, PSEUDO-3D RENDERING, CONTINUOUS TOUCH CONTROLS & AVATAR SELECTION
- * Handles 3D depth rendering of the city, clear unblinded map vision, vehicle traffic,
- * touch-anywhere controls for phone screens, multi-floor hotel elevators, and citizen profiles.
+ * Handles 3D depth rendering of the city, selective local quadrant simulation, priority routing,
+ * smooth natural movement animations, radio music integration, and citizen interactions.
  */
 
 (function () {
@@ -9,7 +9,7 @@
 
   let canvas, ctx;
 
-  // Active Player Character State
+  // Active Player Character State with Smooth Sub-Tile Interpolation
   let player = {
     avatarId: 'hero_link',
     name: 'Link',
@@ -20,21 +20,23 @@
     shirtColor: '#22c55e',
     pantsColor: '#15803d',
     skinTone: '#fde047',
-    x: 50, y: 12, // Starting position near Presidencia Link
+    x: 50, y: 12,
+    renderX: 50, renderY: 12, // Sub-tile smooth interpolation coordinates
+    walkAnimPhase: 0,
     money: 600,
     health: 100, maxHealth: 100,
     energy: 100, maxEnergy: 100,
     hunger: 90, maxHunger: 100,
     sleep: 90, maxSleep: 100,
-    mood: 85, maxMood: 100, // Ánimo / Depresión (100 = Animado, <30 = Deprimido)
-    spouse: null, // Married NPC
+    mood: 85, maxMood: 100,
+    spouse: null,
     isWalking: false,
     isSprinting: false,
     gameMode: 'SIMS', // 'SIMS', 'POLICE', 'MAYOR', 'DRIVER', 'DOCTOR', 'LAWYER', 'TYCOON', 'SEWER'
     facing: 'S', // 'N', 'S', 'E', 'W'
     path: [],
-    insideBuilding: null, // null if outside, or building object if inside
-    interiorFloor: 1,     // Floor active in interior (e.g. 1..10)
+    insideBuilding: null,
+    interiorFloor: 1,
     currentHotelId: null,
     currentFloor: 1,
     inventory: [],
@@ -45,19 +47,12 @@
   let lastTime = performance.now();
 
   // Weather System State
-  let currentWeather = 'CLEAR'; // 'CLEAR', 'RAIN', 'THUNDERSTORM', 'FOG'
+  let currentWeather = 'CLEAR';
   let weatherTimer = 0;
-  let rainParticles = [];
 
   // Radio Audio State
   let isRadioPlaying = false;
   let currentRadioStationIdx = 0;
-  const RADIO_STATIONS = [
-    { title: 'Radio Lofi Chill Beat', sub: 'Estación en Vivo para el Hogar' },
-    { title: 'Chiptune Link Synth FM', sub: 'Música Electrónica y Retro 8-Bit' },
-    { title: 'Noticias Ciudad Link 24/7', sub: 'Boletín Oficial de la Presidencia' },
-    { title: 'Jazz Nocturno Urbano', sub: 'Suave Saxofón para la Noche' }
-  ];
 
   // Continuous Pointer/Touch Interaction
   let isPointerDown = false;
@@ -80,9 +75,9 @@
 
     // Initial player inventory from catalog
     player.inventory = [
-      window.CiudadLinkData.ITEMS[0], // Llave del Elevador
-      window.CiudadLinkData.ITEMS[2], // Manual de Leyes
-      window.CiudadLinkData.ITEMS[8]  // Manzana
+      window.CiudadLinkData.ITEMS[0],
+      window.CiudadLinkData.ITEMS[2],
+      window.CiudadLinkData.ITEMS[8]
     ];
 
     setupEventListeners();
@@ -113,7 +108,6 @@
         const dx = Math.sign(targetTileX - player.x);
         const dy = Math.sign(targetTileY - player.y);
 
-        // Move step by step towards target
         let nextX = player.x;
         let nextY = player.y;
 
@@ -135,7 +129,7 @@
         }
       }
     } else if (player.path && player.path.length > 0) {
-      // Pathwalking A*
+      // Pathwalking priority A*
       player.isWalking = true;
       let nextTile = player.path.shift();
       player.facing = nextTile.x > player.x ? 'E' : (nextTile.x < player.x ? 'W' : (nextTile.y > player.y ? 'S' : 'N'));
@@ -149,6 +143,18 @@
       player.isWalking = false;
     }
 
+    // Smooth Sub-Tile Interpolation for Natural Human Movement
+    const isDriving = !!window.CiudadLinkVehicles.hijackedVehicle;
+    const lerpSpeed = isDriving ? 0.35 : (player.isSprinting ? 0.25 : 0.18);
+    player.renderX += (player.x - player.renderX) * lerpSpeed;
+    player.renderY += (player.y - player.renderY) * lerpSpeed;
+
+    if (player.isWalking) {
+      player.walkAnimPhase += deltaSec * (player.isSprinting ? 14 : 9);
+    } else {
+      player.walkAnimPhase = 0;
+    }
+
     // Weather Cycle logic
     weatherTimer += deltaSec;
     if (weatherTimer > 90) {
@@ -158,20 +164,20 @@
       addLog(`🌤️ Clima Urbano cambió a: ${currentWeather}`);
     }
 
-    // Track Player's Active World Sector/Quadrant
+    // Track Player's Active World Sector & 10x10x10 Hierarchical Quadrant
     const currentSector = window.CiudadLinkMap.getSectorForPos(player.x, player.y);
     window.CiudadLinkMap.setActiveSector(currentSector);
 
     // Update Tile Occupancy Grid (ON / OFF states)
     window.CiudadLinkMap.updateOccupancyState(window.CiudadLinkNPCs.npcs, window.CiudadLinkVehicles.vehicles, player);
 
-    // Update NPC AI Simulation & Traffic Vehicles
+    // Update Persistent NPC AI Simulation & Traffic Vehicles
     window.CiudadLinkNPCs.updateNPCSimulation(deltaSec, player.isWalking);
     window.CiudadLinkVehicles.updateVehicles(deltaSec, player.x, player.y);
 
-    // Update Camera smoothly centered on Player
-    const targetCamX = player.x * tileSize - canvas.width / 2 + tileSize / 2;
-    const targetCamY = player.y * tileSize - canvas.height / 2 + tileSize / 2;
+    // Update Camera smoothly centered on Player's smooth render position
+    const targetCamX = player.renderX * tileSize - canvas.width / 2 + tileSize / 2;
+    const targetCamY = player.renderY * tileSize - canvas.height / 2 + tileSize / 2;
     camera.x += (targetCamX - camera.x) * 0.15;
     camera.y += (targetCamY - camera.y) * 0.15;
 
@@ -179,14 +185,18 @@
     const elemTime = document.getElementById('hudTime');
     if (elemTime) elemTime.textContent = '🕒 ' + window.CiudadLinkNPCs.getTimeFormatted();
 
+    const quadHier = window.CiudadLinkMap.getQuadrantHierarchy(player.x, player.y);
     const elemSector = document.getElementById('hudSubSector');
-    if (elemSector) elemSector.textContent = '📍 Sector ' + window.CiudadLinkMap.activeSector;
+    if (elemSector) elemSector.textContent = `📍 ${quadHier.code}`;
 
     const elemAvatar = document.getElementById('hudAvatar');
     if (elemAvatar) elemAvatar.textContent = `${player.badge} ${player.name}`;
 
     const elemState = document.getElementById('hudState');
-    if (elemState) elemState.textContent = player.insideBuilding ? `🏢 ${player.insideBuilding.name}` : (player.isWalking ? '🏃 Caminando' : '🧘 Descansando');
+    if (elemState) {
+      const modeStr = isDriving ? '🚘 Conduciendo' : (player.insideBuilding ? `🏢 ${player.insideBuilding.name}` : (player.isWalking ? '🏃 Caminando' : '🧘 Descansando'));
+      elemState.textContent = modeStr;
+    }
 
     const elemMoney = document.getElementById('hudMoney');
     if (elemMoney) elemMoney.textContent = `💰 $${player.money}`;
@@ -204,12 +214,12 @@
     }
   }
 
-  // MAIN PSEUDO-3D CITY RENDERER
+  // MAIN PSEUDO-3D CITY RENDERER WITH LOCAL MICRO-QUADRANT OPTIMIZATION
   function render() {
     ctx.fillStyle = '#0f172a';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // IF PLAYER IS INSIDE A BUILDING INTERIOR -> RENDER INTERIOR MODE (ROOF REMOVED, FLOORS LOADED ON DEMAND)
+    // IF PLAYER IS INSIDE A BUILDING INTERIOR -> RENDER INTERIOR MODE
     if (player.insideBuilding) {
       renderBuildingInteriorMode();
       return;
@@ -225,7 +235,7 @@
     ctx.save();
     ctx.translate(-camera.x, -camera.y);
 
-    // 1. Draw Ground Tiles Grid (Streets, Sidewalks, Grass, Lake)
+    // 1. Draw Ground Tiles Grid within local micro-quadrants visible on viewport
     const minCol = Math.max(0, Math.floor((camera.x - 64) / tileSize));
     const maxCol = Math.min(mapW - 1, Math.ceil((camera.x + canvas.width + 64) / tileSize));
     const minRow = Math.max(0, Math.floor((camera.y - 64) / tileSize));
@@ -264,7 +274,6 @@
         } else if (tileType === window.CiudadLinkMap.TILE.LAKE) {
           ctx.fillStyle = '#0284c7'; // Water lake
           ctx.fillRect(sx, sy, tileSize, tileSize);
-          // Water ripples animation
           const ripple = Math.sin((performance.now() * 0.003) + (c + r)) * 3;
           ctx.fillStyle = '#38bdf8';
           ctx.fillRect(sx + 6 + ripple, sy + 12, 10, 2);
@@ -280,67 +289,78 @@
           ctx.arc(sx + tileSize / 2, sy + tileSize / 2, 6, 0, Math.PI * 2);
           ctx.fill();
         } else {
-          // Building base ground
           ctx.fillStyle = '#1e293b';
           ctx.fillRect(sx, sy, tileSize, tileSize);
         }
       }
     }
 
-    // 2. Y-SORTING ENTITIES (Buildings, Environmental Objects, Cars, NPCs, Player)
+    // 2. Y-SORTING ENTITIES WITHIN VISIBLE ACTIVE QUADRANTS
     const renderList = [];
 
-    // Add Buildings with 3D Depth
+    // Buildings
     window.CiudadLinkMap.buildings.forEach(b => {
-      renderList.push({
-        type: 'BUILDING',
-        yOrder: (b.y + b.h) * tileSize,
-        data: b
-      });
+      if (b.x + b.w >= minCol && b.x <= maxCol && b.y + b.h >= minRow && b.y <= maxRow) {
+        renderList.push({
+          type: 'BUILDING',
+          yOrder: (b.y + b.h) * tileSize,
+          data: b
+        });
+      }
     });
 
-    // Add Environmental Objects (Trees, Streetlights, Benches)
+    // Environmental Objects (Trees, Streetlights, Benches)
     window.CiudadLinkMap.environmentalObjects.forEach(obj => {
-      renderList.push({
-        type: 'ENV_OBJ',
-        yOrder: (obj.y + 1) * tileSize,
-        data: obj
-      });
+      if (obj.x >= minCol && obj.x <= maxCol && obj.y >= minRow && obj.y <= maxRow) {
+        renderList.push({
+          type: 'ENV_OBJ',
+          yOrder: (obj.y + 1) * tileSize,
+          data: obj
+        });
+      }
     });
 
-    // Add Cars & Vehicles
+    // Cars & Vehicles
     window.CiudadLinkVehicles.vehicles.forEach(v => {
-      renderList.push({
-        type: 'VEHICLE',
-        yOrder: (v.y + 0.5) * tileSize,
-        data: v
-      });
+      if (v.x >= minCol - 2 && v.x <= maxCol + 2 && v.y >= minRow - 2 && v.y <= maxRow + 2) {
+        renderList.push({
+          type: 'VEHICLE',
+          yOrder: (v.y + 0.5) * tileSize,
+          data: v
+        });
+      }
     });
 
-    // Add NPCs
+    // NPCs with smooth sub-tile rendering coordinates
     window.CiudadLinkNPCs.npcs.forEach(npc => {
-      renderList.push({
-        type: 'NPC',
-        yOrder: (npc.y + 0.5) * tileSize,
-        data: npc
-      });
+      if (npc.x >= minCol - 1 && npc.x <= maxCol + 1 && npc.y >= minRow - 1 && npc.y <= maxRow + 1) {
+        renderList.push({
+          type: 'NPC',
+          yOrder: ((npc.renderY !== undefined ? npc.renderY : npc.y) + 0.5) * tileSize,
+          data: npc
+        });
+      }
     });
 
-    // Add Dogs
+    // Dogs
     window.CiudadLinkVehicles.dogs.forEach(d => {
-      renderList.push({
-        type: 'DOG',
-        yOrder: (d.y + 0.5) * tileSize,
-        data: d
-      });
+      if (d.x >= minCol && d.x <= maxCol && d.y >= minRow && d.y <= maxRow) {
+        renderList.push({
+          type: 'DOG',
+          yOrder: (d.y + 0.5) * tileSize,
+          data: d
+        });
+      }
     });
 
-    // Add Player Character
-    renderList.push({
-      type: 'PLAYER',
-      yOrder: (player.y + 0.5) * tileSize,
-      data: player
-    });
+    // Player Character (If not driving inside a car)
+    if (!window.CiudadLinkVehicles.hijackedVehicle) {
+      renderList.push({
+        type: 'PLAYER',
+        yOrder: (player.renderY + 0.5) * tileSize,
+        data: player
+      });
+    }
 
     // Sort by Y-coordinate for correct depth overlap
     renderList.sort((a, b) => a.yOrder - b.yOrder);
@@ -369,14 +389,14 @@
 
     ctx.restore();
 
-    // 4. Subtle Day/Night Lighting Blend (Map remains 100% visible and unblinded)
+    // 4. Day/Night Lighting Blend
     const nightTint = window.CiudadLinkNPCs.getLightingOverlay();
     if (nightTint > 0) {
       ctx.fillStyle = `rgba(15, 23, 42, ${nightTint})`;
       ctx.fillRect(0, 0, canvas.width, canvas.height);
     }
 
-    // 5. Dynamic Weather Overlay Effects (Rain, Thunderstorm, Fog)
+    // 5. Dynamic Weather Overlay Effects
     if (currentWeather === 'RAIN' || currentWeather === 'THUNDERSTORM') {
       ctx.strokeStyle = 'rgba(186, 230, 253, 0.55)';
       ctx.lineWidth = 1;
@@ -399,12 +419,11 @@
     }
   }
 
-  // BUILDING INTERIOR RENDERER (ROOF REMOVED, FLOORS LOADED ON DEMAND)
+  // BUILDING INTERIOR RENDERER
   function renderBuildingInteriorMode() {
     const b = player.insideBuilding;
     const floor = player.interiorFloor || 1;
 
-    // Background Room Floor
     ctx.fillStyle = '#1e293b';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
@@ -413,40 +432,32 @@
     const roomW = canvas.width - (marginX * 2);
     const roomH = canvas.height - (marginY * 2);
 
-    // Walls
     ctx.strokeStyle = '#38bdf8';
     ctx.lineWidth = 6;
     ctx.strokeRect(marginX, marginY, roomW, roomH);
 
-    // Interior Tile Floor Patterns
     ctx.fillStyle = '#0f172a';
     ctx.fillRect(marginX + 4, marginY + 4, roomW - 8, roomH - 8);
 
-    // Rooms partitioning & furniture layout
     ctx.fillStyle = '#334155';
-    // Room Dividers
     ctx.fillRect(marginX + roomW * 0.5 - 2, marginY + 4, 4, roomH - 8);
     ctx.fillRect(marginX + 4, marginY + roomH * 0.5 - 2, roomW - 8, 4);
 
-    // Doorway cutouts
     ctx.fillStyle = '#0f172a';
     ctx.fillRect(marginX + roomW * 0.5 - 15, marginY + roomH * 0.25, 30, 20);
     ctx.fillRect(marginX + roomW * 0.25, marginY + roomH * 0.5 - 15, 20, 30);
 
-    // Furniture / Items
-    ctx.fillStyle = '#b45309'; // Wooden Table / Desk
+    ctx.fillStyle = '#b45309';
     ctx.fillRect(marginX + 30, marginY + 30, 60, 40);
 
-    ctx.fillStyle = '#0284c7'; // Beds / Sofas
+    ctx.fillStyle = '#0284c7';
     ctx.fillRect(marginX + roomW - 90, marginY + 30, 60, 80);
     ctx.fillRect(marginX + 30, marginY + roomH - 70, 70, 40);
 
-    // Floor Indicator Overlay
     ctx.fillStyle = '#ffffff';
     ctx.font = 'bold 16px sans-serif';
     ctx.fillText(`🏢 ${b.name} — Floor ${floor} (Interior Cargado)`, marginX + 10, marginY - 15);
 
-    // Render Player inside Interior Center
     const px = canvas.width / 2;
     const py = canvas.height / 2 + 20;
 
@@ -468,7 +479,6 @@
     ctx.textAlign = 'center';
     ctx.fillText(`${player.badge} ${player.name} (Piso ${floor})`, px, py - 35);
 
-    // Exit & Floor UI Banner
     ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
     ctx.fillRect(10, 10, 300, 40);
     ctx.strokeStyle = '#38bdf8';
@@ -487,19 +497,16 @@
     const by = b.y * tileSize;
     const bw = b.w * tileSize;
     const bh = b.h * tileSize;
-    const height = b.height || 28; // 3D Elevation
+    const height = b.height || 28;
 
     ctx.save();
 
-    // Drop Shadow on ground
     ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
     ctx.fillRect(bx + height * 0.4, by + bh, bw, height * 0.3);
 
-    // 1. Front Wall Facade
     ctx.fillStyle = b.wallColor || '#1e293b';
     ctx.fillRect(bx, by - height, bw, bh);
 
-    // 2. 3D Side Shadow Wall (Depth)
     ctx.fillStyle = '#0f172a';
     ctx.beginPath();
     ctx.moveTo(bx + bw, by - height);
@@ -509,11 +516,9 @@
     ctx.closePath();
     ctx.fill();
 
-    // 3. Roof Top Plate
     ctx.fillStyle = b.roofColor || '#334155';
     ctx.fillRect(bx, by - height, bw, 10);
 
-    // 4. Clean Architectural Windows Grid
     const numCols = Math.min(8, Math.max(2, Math.floor(bw / 48)));
     const numRows = Math.min(8, Math.max(2, Math.floor((bh - 20) / 36)));
     const winW = Math.floor((bw - 16) / numCols) - 8;
@@ -534,7 +539,6 @@
       }
     }
 
-    // 5. Entrance Door & Building Sign Title
     ctx.fillStyle = b.accentColor || '#38bdf8';
     ctx.fillRect(bx + bw / 2 - 10, by + bh - 16 - height, 20, 16);
 
@@ -553,17 +557,14 @@
     ctx.save();
 
     if (obj.type === 'TREE') {
-      // Tree Shadow
       ctx.fillStyle = 'rgba(0,0,0,0.3)';
       ctx.beginPath();
       ctx.ellipse(ox + 4, oy + 4, 12, 6, 0, 0, Math.PI * 2);
       ctx.fill();
 
-      // Tree Trunk
       ctx.fillStyle = '#78350f';
       ctx.fillRect(ox - 3, oy - 14, 6, 14);
 
-      // Layered Canopy
       ctx.fillStyle = '#15803d';
       ctx.beginPath();
       ctx.arc(ox, oy - 22, 14, 0, Math.PI * 2);
@@ -574,17 +575,14 @@
       ctx.arc(ox - 2, oy - 25, 10, 0, Math.PI * 2);
       ctx.fill();
     } else if (obj.type === 'LIGHT') {
-      // Streetlamp pole
       ctx.fillStyle = '#475569';
       ctx.fillRect(ox - 2, oy - 22, 4, 22);
 
-      // Light bulb
       ctx.fillStyle = '#fef08a';
       ctx.beginPath();
       ctx.arc(ox, oy - 22, 5, 0, Math.PI * 2);
       ctx.fill();
 
-      // Night light cone projected on ground
       if (isNight) {
         const lightGrad = ctx.createRadialGradient(ox, oy, 2, ox, oy, 35);
         lightGrad.addColorStop(0, 'rgba(254, 240, 138, 0.45)');
@@ -605,10 +603,12 @@
     ctx.restore();
   }
 
-  // 3D CHARACTER / NPC RENDERER
+  // 3D CHARACTER / NPC RENDERER WITH NATURAL SMOOTH SUB-TILE MOVEMENTS
   function renderNPC3D(ctx, npc, tileSize, isNight) {
-    const nx = npc.x * tileSize + tileSize / 2;
-    const ny = npc.y * tileSize + tileSize / 2;
+    const rx = (npc.renderX !== undefined ? npc.renderX : npc.x);
+    const ry = (npc.renderY !== undefined ? npc.renderY : npc.y);
+    const nx = rx * tileSize + tileSize / 2;
+    const ny = ry * tileSize + tileSize / 2;
 
     ctx.save();
 
@@ -649,10 +649,13 @@
     ctx.restore();
   }
 
-  // 3D PLAYER RENDERER
+  // 3D PLAYER RENDERER WITH SMOOTH SUB-TILE NATURAL MOVEMENT & ANIMATION
   function renderPlayer3D(ctx, p, tileSize, isNight) {
-    const px = p.x * tileSize + tileSize / 2;
-    const py = p.y * tileSize + tileSize / 2;
+    const px = p.renderX * tileSize + tileSize / 2;
+    const py = p.renderY * tileSize + tileSize / 2;
+
+    // Natural leg swing & gait animation offset
+    const legSwing = Math.sin(p.walkAnimPhase) * 4;
 
     ctx.save();
 
@@ -662,10 +665,10 @@
     ctx.ellipse(px, py + 8, 10, 5, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    // Legs / Pants
+    // Legs / Pants with gait swing
     ctx.fillStyle = p.pantsColor || '#15803d';
-    ctx.fillRect(px - 6, py, 5, 9);
-    ctx.fillRect(px + 1, py, 5, 9);
+    ctx.fillRect(px - 6, py + legSwing, 5, 9);
+    ctx.fillRect(px + 1, py - legSwing, 5, 9);
 
     // Body / Shirt
     ctx.fillStyle = p.shirtColor || '#22c55e';
@@ -701,7 +704,6 @@
 
   // CONTROLS & CONTINUOUS TOUCH LISTENERS
   function setupEventListeners() {
-    // Canvas Touch & Pointer Event Handlers for Touch-Anywhere Movement
     canvas.addEventListener('pointerdown', (e) => {
       isPointerDown = true;
       updatePointerPos(e);
@@ -720,7 +722,6 @@
     });
 
     canvas.addEventListener('click', (e) => {
-      // If player is inside an interior, tapping canvas exits to city street
       if (player.insideBuilding) {
         alert(`🚪 Saliste de ${player.insideBuilding.name}. Volviendo al mapa exterior.`);
         player.insideBuilding = null;
@@ -735,29 +736,27 @@
       const targetX = Math.floor(clickX / tileSize);
       const targetY = Math.floor(clickY / tileSize);
 
-      // Check if clicked on an NPC to inspect
       const clickedNpc = window.CiudadLinkNPCs.npcs.find(n => n.x === targetX && n.y === targetY);
       if (clickedNpc) {
         inspectNPC(clickedNpc);
         return;
       }
 
-      // Check if clicked on Elevator / Hotel
       const hotel = window.CiudadLinkMap.hotels.find(h => h.elevatorX === targetX && h.elevatorY === targetY);
       if (hotel) {
         openElevatorModal(hotel);
         return;
       }
 
-      // Check if clicked on a building to enter interior
       const bldg = window.CiudadLinkMap.buildings.find(b => targetX >= b.x && targetX < b.x + b.w && targetY >= b.y && targetY < b.y + b.h);
       if (bldg && bldg.tileType !== window.CiudadLinkMap.TILE.PARK) {
         openBuildingInteriorEntryModal(bldg);
         return;
       }
 
-      // A* Pathfinding to tapped position
-      const path = window.CiudadLinkMap.findPath({ x: player.x, y: player.y }, { x: targetX, y: targetY });
+      // Priority-Weighted A* Pathfinding (pedestrian vs driver)
+      const routingMode = window.CiudadLinkVehicles.hijackedVehicle ? 'driver' : 'pedestrian';
+      const path = window.CiudadLinkMap.findPath({ x: player.x, y: player.y }, { x: targetX, y: targetY }, routingMode);
       if (path && path.length > 0) {
         player.path = path;
       }
@@ -802,7 +801,7 @@
     document.getElementById('btnOpenCatalog')?.addEventListener('click', openCatalogModal);
     document.getElementById('btnOpenCitizens')?.addEventListener('click', openCitizensListModal);
 
-    // Live Radio Buttons inside interior/floating overlay
+    // Live Radio Buttons
     document.getElementById('btnToggleRadio')?.addEventListener('click', toggleRadio);
     document.getElementById('btnNextRadioStation')?.addEventListener('click', nextRadioStation);
   }
@@ -878,23 +877,35 @@
   function toggleRadio() {
     isRadioPlaying = !isRadioPlaying;
     const btn = document.getElementById('btnToggleRadio');
-    if (btn) {
-      btn.textContent = isRadioPlaying ? '⏸️ Pausar' : '▶️ Reproducir';
-    }
-    if (isRadioPlaying && window.SuperEngine && window.SuperEngine.Audio) {
-      window.SuperEngine.Audio.playSFX('aurora');
+    const audioElem = document.getElementById('radioAudioPlayer');
+
+    if (isRadioPlaying) {
+      if (btn) btn.textContent = '⏸️ Pausar';
+      if (audioElem) {
+        audioElem.play().catch(e => console.log('Audio play error:', e));
+      }
+    } else {
+      if (btn) btn.textContent = '▶️ Reproducir';
+      if (audioElem) {
+        audioElem.pause();
+      }
     }
   }
 
   function nextRadioStation() {
-    currentRadioStationIdx = (currentRadioStationIdx + 1) % RADIO_STATIONS.length;
-    const st = RADIO_STATIONS[currentRadioStationIdx];
+    const streams = window.CiudadLinkVehicles.RADIO_STREAMS;
+    currentRadioStationIdx = (currentRadioStationIdx + 1) % streams.length;
+    const st = streams[currentRadioStationIdx];
+
     const elemTitle = document.getElementById('mediaTitle');
     const elemSub = document.getElementById('mediaSub');
-    if (elemTitle) elemTitle.textContent = st.title;
-    if (elemSub) elemSub.textContent = st.sub;
-    if (window.SuperEngine && window.SuperEngine.Audio) {
-      window.SuperEngine.Audio.playSFX('item');
+    if (elemTitle) elemTitle.textContent = `📻 ${st.title}`;
+    if (elemSub) elemSub.textContent = '🎶 Radio en Vivo de Internet';
+
+    const audioElem = document.getElementById('radioAudioPlayer');
+    if (audioElem) {
+      audioElem.src = st.url;
+      if (isRadioPlaying) audioElem.play().catch(e => console.log('Audio play error:', e));
     }
   }
 
@@ -922,18 +933,17 @@
     let spouseNpc = npcs.find(n => n.name === player.spouse || n.spouseId === player.avatarId);
 
     if (spouseNpc) {
-      const sec = window.CiudadLinkMap.getSectorForPos(spouseNpc.x, spouseNpc.y);
+      const quad = window.CiudadLinkMap.getQuadrantHierarchy(spouseNpc.x, spouseNpc.y);
       const body = `
         <div style="text-align:center; padding:0.5rem;">
           <div style="font-size:3rem; margin-bottom:0.5rem;">👰</div>
           <h3 style="color:#ec4899; margin:0 0 0.25rem;">${spouseNpc.name} — Tu Esposa</h3>
           <p style="font-size:0.85rem; color:#cbd5e1; margin-bottom:1rem;">
-            📍 Ubicación Actual: <b>Sector ${sec} (${spouseNpc.x}, ${spouseNpc.y})</b><br>
+            📍 Ubicación Actual: <b>${quad.title} (${spouseNpc.x}, ${spouseNpc.y})</b><br>
             💖 Vínculo Matrimonial: <b>${spouseNpc.relationshipLevel}%</b> | Tel: 📞 <b>${spouseNpc.phone}</b>
           </p>
           <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.5rem;">
             <button class="btn btn-primary" onclick="teleportToSpouse('${spouseNpc.id}')">🌀 Rastrear y Teletransportar</button>
-
             <button class="btn btn-secondary" onclick="sendSpouseGift('${spouseNpc.id}')">🎁 Enviar Regalo ($50)</button>
           </div>
         </div>
@@ -965,6 +975,8 @@
     if (!npc) return;
     player.x = npc.x;
     player.y = npc.y;
+    player.renderX = npc.x;
+    player.renderY = npc.y;
     addLog(`👰 Te has desplazado junto a tu Esposa (${npc.name}).`);
     alert(`🌀 Te has desplazado junto a ${npc.name} en (${npc.x}, ${npc.y}).`);
     closeModalCard();
@@ -993,42 +1005,36 @@
         <div style="background:rgba(255,255,255,0.05); border:1px solid #38bdf8; border-radius:10px; padding:0.75rem;">
           <h4 style="margin:0; color:#38bdf8;">🚖 Taxista Urbano</h4>
           <p style="font-size:0.75rem; color:#cbd5e1; margin:0.25rem 0;">Recoge pasajeros en las avenidas y llévalos a su destino.</p>
-
           <button class="btn btn-primary" style="font-size:0.75rem; padding:0.3rem;" onclick="acceptJobMission('TAXI')">⚡ Iniciar Misión ($50/carrera)</button>
         </div>
 
         <div style="background:rgba(255,255,255,0.05); border:1px solid #eab308; border-radius:10px; padding:0.75rem;">
           <h4 style="margin:0; color:#eab308;">🍕 Delivery Express</h4>
           <p style="font-size:0.75rem; color:#cbd5e1; margin:0.25rem 0;">Entrega pedidos de pizza a los hoteles de 10 pisos.</p>
-
           <button class="btn btn-primary" style="font-size:0.75rem; padding:0.3rem;" onclick="acceptJobMission('DELIVERY')">⚡ Iniciar Misión ($40/pedido)</button>
         </div>
 
         <div style="background:rgba(255,255,255,0.05); border:1px solid #3b82f6; border-radius:10px; padding:0.75rem;">
           <h4 style="margin:0; color:#3b82f6;">👮 Oficial de Policía</h4>
           <p style="font-size:0.75rem; color:#cbd5e1; margin:0.25rem 0;">Patrulla la ciudad y arresta a los pandilleros en flagrancia.</p>
-
           <button class="btn btn-primary" style="font-size:0.75rem; padding:0.3rem;" onclick="acceptJobMission('POLICE')">⚡ Iniciar Misión ($100/arresto)</button>
         </div>
 
         <div style="background:rgba(255,255,255,0.05); border:1px solid #10b981; border-radius:10px; padding:0.75rem;">
           <h4 style="margin:0; color:#10b981;">🩺 Médico / Paramédico</h4>
           <p style="font-size:0.75rem; color:#cbd5e1; margin:0.25rem 0;">Trata y cura a los ciudadanos enfermos del Hospital.</p>
-
           <button class="btn btn-primary" style="font-size:0.75rem; padding:0.3rem;" onclick="acceptJobMission('DOCTOR')">⚡ Iniciar Misión ($80/curación)</button>
         </div>
 
         <div style="background:rgba(255,255,255,0.05); border:1px solid #c084fc; border-radius:10px; padding:0.75rem;">
           <h4 style="margin:0; color:#c084fc;">⚖️ Abogado Defensor</h4>
           <p style="font-size:0.75rem; color:#cbd5e1; margin:0.25rem 0;">Representa acusados en la Corte Judicial de Ciudad Link.</p>
-
           <button class="btn btn-primary" style="font-size:0.75rem; padding:0.3rem;" onclick="acceptJobMission('LAWYER')">⚡ Iniciar Misión ($120/juicio)</button>
         </div>
 
         <div style="background:rgba(255,255,255,0.05); border:1px solid #f97316; border-radius:10px; padding:0.75rem;">
           <h4 style="margin:0; color:#f97316;">🍽️ Cocinero / Mesero</h4>
           <p style="font-size:0.75rem; color:#cbd5e1; margin:0.25rem 0;">Prepara y sirve platillos típicos en el Paladar Don Link.</p>
-
           <button class="btn btn-primary" style="font-size:0.75rem; padding:0.3rem;" onclick="acceptJobMission('PALADAR')">⚡ Iniciar Misión ($60/servicio)</button>
         </div>
       </div>
@@ -1078,7 +1084,6 @@
           <div style="font-size:2rem;">🩺</div>
           <h4 style="margin:0.25rem 0; color:#10b981;">Tratamiento Integral</h4>
           <p style="font-size:0.75rem; color:#94a3b8; margin-bottom:0.75rem;">Restaura la Salud (HP) y Energía al 100%.</p>
-
           <button class="btn btn-primary" style="font-size:0.78rem;" onclick="healPlayerHospital()">🏥 Curar HP y Energía ($50)</button>
         </div>
 
@@ -1086,7 +1091,6 @@
           <div style="font-size:2rem;">🕳️</div>
           <h4 style="margin:0.25rem 0; color:#f97316;">Túneles Subterráneos</h4>
           <p style="font-size:0.75rem; color:#94a3b8; margin-bottom:0.75rem;">Red secreta de pasadizos para conectar distritos.</p>
-
           <button class="btn btn-secondary" style="font-size:0.78rem;" onclick="openSewerTunnelsModal()">🕳️ Explorar Túneles</button>
         </div>
       </div>
@@ -1117,7 +1121,6 @@
       <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.5rem;">
         <button class="btn btn-secondary" style="font-size:0.8rem;" onclick="teleportTunnel(10, 30, 'Hospital General')">🏥 Salida Hospital (NW)</button>
         <button class="btn btn-secondary" style="font-size:0.8rem;" onclick="teleportTunnel(88, 70, 'Banco Central')">🏦 Salida Bóveda Banco (NE)</button>
-
         <button class="btn btn-secondary" style="font-size:0.8rem;" onclick="teleportTunnel(10, 10, 'Estación Policía')">🚔 Salida Comisaría (NW)</button>
         <button class="btn btn-secondary" style="font-size:0.8rem;" onclick="teleportTunnel(88, 88, 'Barrio Bajero')">🥷 Salida Escondite Gang (SE)</button>
       </div>
@@ -1129,6 +1132,8 @@
   window.teleportTunnel = function(x, y, destName) {
     player.x = x;
     player.y = y;
+    player.renderX = x;
+    player.renderY = y;
     player.insideBuilding = null;
     addLog(`🕳️ Viajaste por los túneles subterráneos hacia ${destName}.`);
     alert(`🕳️ ¡Saliste del túnel subterráneo en ${destName}! Ubicación: (${x}, ${y}).`);
@@ -1144,65 +1149,61 @@
     pointerWorldPos.y = (e.clientY - rect.top) * scaleY + camera.y;
   }
 
-  // WORLD MAP & SECTOR NAVIGATION MODAL
+  // WORLD MAP & HIERARCHICAL QUADRANT NAVIGATION MODAL
   function openWorldMapModal() {
-    const sectors = window.CiudadLinkMap.SECTORS;
-    const currentSectorKey = window.CiudadLinkMap.activeSector;
+    const activeQuad = window.CiudadLinkMap.getQuadrantHierarchy(player.x, player.y);
 
-    let sectorsGridHTML = '';
-    const sectorKeys = ['NW', 'NE', 'SW', 'SE'];
-
-    sectorKeys.forEach(key => {
-      const sec = sectors[key];
-      const isCurrent = key === currentSectorKey;
-      sectorsGridHTML += `
-        <div style="background:${isCurrent ? 'rgba(56, 189, 248, 0.2)' : 'rgba(255, 255, 255, 0.05)'}; border:2px solid ${isCurrent ? '#38bdf8' : '#334155'}; border-radius:12px; padding:0.85rem; display:flex; flex-direction:column; justify-content:space-between; gap:0.5rem; text-align:center;">
-          <div>
-            <div style="font-size:1.1rem; font-weight:bold; color:${isCurrent ? '#38bdf8' : '#f8fafc'};">
-              ${isCurrent ? '📍 ' : ''}${sec.name}
-            </div>
-            <div style="font-size:0.75rem; color:#94a3b8; margin-top:0.25rem;">
-              Cuadrante (${sec.xMin}-${sec.xMax}, ${sec.yMin}-${sec.yMax})
-            </div>
+    let mainGroupsHTML = '';
+    for (let g = 1; g <= 10; g++) {
+      const isCurrentGroup = g === activeQuad.group;
+      mainGroupsHTML += `
+        <div style="background:${isCurrentGroup ? 'rgba(56, 189, 248, 0.2)' : 'rgba(255, 255, 255, 0.05)'}; border:2px solid ${isCurrentGroup ? '#38bdf8' : '#334155'}; border-radius:12px; padding:0.6rem; text-align:center;">
+          <div style="font-size:0.9rem; font-weight:bold; color:${isCurrentGroup ? '#38bdf8' : '#f8fafc'};">
+            ${isCurrentGroup ? '📍 ' : ''}Grupo ${g}
           </div>
-          <button class="btn ${isCurrent ? 'btn-secondary' : 'btn-primary'}" style="font-size:0.78rem; padding:0.4rem;" onclick="teleportToSector('${key}')">
-            ${isCurrent ? '✅ Sector Actual' : '🌀 Viajar Portal / Teletransportar'}
+          <div style="font-size:0.7rem; color:#94a3b8; margin-top:0.2rem;">
+            10 Subgrupos • 10 Sub-subgrupos
+          </div>
+          <button class="btn ${isCurrentGroup ? 'btn-secondary' : 'btn-primary'}" style="font-size:0.7rem; padding:0.25rem 0.5rem; margin-top:0.4rem;" onclick="teleportToMainGroup(${g})">
+            ${isCurrentGroup ? '✅ Activo' : '🌀 Teletransportar'}
           </button>
         </div>
       `;
-    });
+    }
 
     const body = `
       <div style="text-align:center; margin-bottom:1rem;">
         <p style="font-size:0.85rem; color:#cbd5e1; margin:0 0 0.5rem;">
-          🗺️ <b>Simulación Optimizada por Cuadrantes:</b> Tu ubicación actual es <b>(${player.x}, ${player.y})</b> en el <b>${sectors[currentSectorKey].name}</b>.
+          🗺️ <b>Jerarquía de 10 Grupos con 10 Subgrupos y 10 Sub-subgrupos:</b><br>
+          Ubicación actual: <b>${activeQuad.title} (${activeQuad.code})</b>.
         </p>
-        <span style="font-size:0.78rem; background:rgba(34, 197, 94, 0.15); border:1px solid rgba(34, 197, 94, 0.4); color:#4ade80; padding:0.3rem 0.6rem; border-radius:6px;">
-          ⚡ Rendimiento Activo: Solo el sector o edificio donde estás ejecuta simulación pesada.
+        <span style="font-size:0.75rem; background:rgba(34, 197, 94, 0.15); border:1px solid rgba(34, 197, 94, 0.4); color:#4ade80; padding:0.3rem 0.6rem; border-radius:6px;">
+          ⚡ Micro-Cuadrantes: Simulación pesada solo en cuadrante local. Tráfico y NPCs en segundo plano continuo sin congelarse.
         </span>
       </div>
 
-      <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem; margin-bottom:1rem;">
-        ${sectorsGridHTML}
+      <div style="display:grid; grid-template-columns:repeat(2, 1fr); gap:0.6rem; max-height:280px; overflow-y:auto;">
+        ${mainGroupsHTML}
       </div>
     `;
 
-    openModalCard('🗺️ Mapa del Mundo & Cuadrantes de Ciudad Link', body);
+    openModalCard('🗺️ Jerarquía de 10 Grupos y Micro-Cuadrantes', body);
   }
 
-  window.teleportToSector = function(sectorKey) {
-    const sec = window.CiudadLinkMap.SECTORS[sectorKey];
-    if (!sec) return;
+  window.teleportToMainGroup = function(groupId) {
+    const targetX = ((groupId - 1) * 10) + 5;
+    const targetY = ((groupId - 1) * 10) + 5;
 
-    window.CiudadLinkMap.setActiveSector(sectorKey);
-    player.x = sec.spawnX;
-    player.y = sec.spawnY;
+    player.x = targetX;
+    player.y = targetY;
+    player.renderX = targetX;
+    player.renderY = targetY;
     player.path = [];
 
-    // Synchronize time-based NPC routines when changing sectors
     window.CiudadLinkNPCs.synchronizeNPCRoutinesWithGameTime();
 
-    alert(`🌀 ¡Te has desplazado al ${sec.name}! Ubicación: (${player.x}, ${player.y}). NPCs sincronizados.`);
+    const newQuad = window.CiudadLinkMap.getQuadrantHierarchy(player.x, player.y);
+    alert(`🌀 ¡Te has desplazado a ${newQuad.title} (${newQuad.code})! Ubicación: (${targetX}, ${targetY}).`);
     closeModalCard();
   };
 
@@ -1251,7 +1252,7 @@
     closeModalCard();
   };
 
-  // SMARTPHONE UI (TELÉFONO LINK / LARA TELÉFONO)
+  // SMARTPHONE UI
   function openSmartphoneModal() {
     const body = `
       <div style="background:#020617; border:3px solid #38bdf8; border-radius:24px; padding:1rem; max-width:380px; margin:0 auto; box-shadow:0 0 20px rgba(56,189,248,0.4);">
@@ -1311,7 +1312,8 @@
     } else if (app === 'taxi') {
       if (player.money >= 15) {
         player.money -= 15;
-        player.x = 50; player.y = 50; // Central Park dropoff
+        player.x = 50; player.y = 50;
+        player.renderX = 50; player.renderY = 50;
         alert('🚖 ¡Taxi te ha trasladado al Gran Parque Central! -$15.');
       } else {
         alert('❌ Dinero insuficiente para el taxi ($15).');
@@ -1342,7 +1344,6 @@
   function inspectNPC(npc) {
     const kinship = window.CiudadLinkData.buildKinshipInfo(npc, window.CiudadLinkNPCs.npcs);
     const schedule = window.CiudadLinkData.SCHEDULE_RULES.getRuleForNPC(npc, window.CiudadLinkNPCs.timeOfDay, window.CiudadLinkNPCs.currentDay - 1);
-
     const moodStatus = npc.mood >= 75 ? '😄 Animado/a' : (npc.mood >= 40 ? '😐 Normal' : '😭 Deprimido/a');
 
     const body = `
@@ -1355,7 +1356,6 @@
         </div>
       </div>
 
-      <!-- Sims Needs Meters for NPC -->
       <div style="background:rgba(255,255,255,0.05); padding:0.75rem; border-radius:8px; margin-bottom:1rem; display:grid; grid-template-columns:1fr 1fr; gap:0.5rem; font-size:0.8rem;">
         <div>🍗 Hambre: <strong>${Math.round(npc.hunger)}/100</strong></div>
         <div>😴 Sueño: <strong>${Math.round(npc.sleep)}/100</strong></div>

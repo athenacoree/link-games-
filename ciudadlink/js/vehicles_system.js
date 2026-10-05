@@ -1,7 +1,7 @@
 /**
- * CIUDAD LINK - VEHICLES & TRAFFIC SYSTEM
+ * CIUDAD LINK - VEHICLES & TRAFFIC SYSTEM WITH RADIO & PERSISTENT QUADRANT MOTION
  * Manages active city vehicles (sedans, police cruisers, taxis, buses, sports cars, delivery vans),
- * road lanes, traffic light signals, headlights, and realistic drawing.
+ * continuous background position tracking across all city quadrants, car radio streams, and rendering.
  */
 
 window.CiudadLinkVehicles = (function () {
@@ -17,7 +17,15 @@ window.CiudadLinkVehicles = (function () {
 
   // WANTED & POLICE CHASE SYSTEM STATE (1-5 ⭐ Stars)
   let wantedLevel = 0; // 0 to 5
-  let hijackedVehicle = null; // Stolen vehicle player is currently driving
+  let hijackedVehicle = null; // Stolen/Mounted vehicle player is currently driving
+
+  // Public HTTPS Online Radio Streams (Free, Public Internet Streams)
+  const RADIO_STREAMS = [
+    { title: 'SomaFM Groove Salad (Lofi / Chill)', url: 'https://ice1.somafm.com/groovesalad-128-mp3' },
+    { title: 'SomaFM Secret Agent (Spy Lounge)', url: 'https://ice2.somafm.com/secretagent-128-mp3' },
+    { title: 'SomaFM DEF CON Radio (Synthwave / Electro)', url: 'https://ice4.somafm.com/defcon-128-mp3' }
+  ];
+  let currentRadioStreamIdx = 0;
 
   // Vehicle types configuration
   const VEHICLE_TYPES = [
@@ -50,7 +58,7 @@ window.CiudadLinkVehicles = (function () {
       lanes.push({ dir: 'N', startX: c + 1.4, startY: mapHeight - 2, endX: c + 1.4, endY: 2 });
     }
 
-    // Spawn 24 initial vehicles on road lanes
+    // Spawn 24 initial vehicles on road lanes distributed across all city quadrants
     for (let i = 0; i < 24; i++) {
       const lane = lanes[i % lanes.length];
       const vt = VEHICLE_TYPES[i % VEHICLE_TYPES.length];
@@ -111,28 +119,58 @@ window.CiudadLinkVehicles = (function () {
     }
   }
 
-  // CARJACKING / VEHICLE HIJACKING LOGIC
+  // CARJACKING / VEHICLE HIJACKING & MOUNTING LOGIC WITH AUTO RADIO PLAYBACK
   function hijackNearbyVehicle(playerX, playerY) {
     if (hijackedVehicle) {
       // Exit current hijacked vehicle
       alert(`🚗 Has bajado del vehículo (${hijackedVehicle.name}).`);
       hijackedVehicle.isStolen = false;
       hijackedVehicle = null;
+
+      // Stop vehicle radio
+      const audioElem = document.getElementById('radioAudioPlayer');
+      if (audioElem) {
+        audioElem.pause();
+      }
+      const radioOverlay = document.getElementById('radioOverlay');
+      if (radioOverlay) radioOverlay.style.display = 'none';
+
       return { success: true, action: 'EXIT' };
     }
 
-    // Find closest vehicle within 2 tiles radius
+    // Find closest vehicle within 2.2 tiles radius
     const closest = vehicles.find(v => Math.hypot(v.x - playerX, v.y - playerY) < 2.2);
 
     if (closest) {
       hijackedVehicle = closest;
       closest.isStolen = true;
       wantedLevel = Math.min(5, wantedLevel + 2); // Robo de autos triggers wanted stars!
-      alert(`🚘 ¡ROBO DE AUTO EXITOSO! Has robado el ${closest.name}. ¡Nivel de Búsqueda Policial: ${wantedLevel} ⭐!`);
+
+      // Play public radio music when mounting vehicle!
+      playVehicleRadioStream();
+
+      alert(`🚘 ¡TE HAS MONTADO EN EL VEHÍCULO! Has subido al ${closest.name}. 📻 Radio encendida FM en vivo. ¡Nivel de Búsqueda Policial: ${wantedLevel} ⭐!`);
       return { success: true, action: 'ENTER', vehicle: closest };
     } else {
-      alert('❌ No hay vehículos lo suficientemente cerca para robar (Ponte al lado de un auto).');
+      alert('❌ No hay vehículos lo suficientemente cerca para abordar (Camina al lado de un auto).');
       return { success: false };
+    }
+  }
+
+  function playVehicleRadioStream() {
+    const radioOverlay = document.getElementById('radioOverlay');
+    if (radioOverlay) radioOverlay.style.display = 'flex';
+
+    const st = RADIO_STREAMS[currentRadioStreamIdx];
+    const elemTitle = document.getElementById('mediaTitle');
+    const elemSub = document.getElementById('mediaSub');
+    if (elemTitle) elemTitle.textContent = `📻 ${st.title}`;
+    if (elemSub) elemSub.textContent = '🎶 Radio en Vivo de Internet';
+
+    const audioElem = document.getElementById('radioAudioPlayer');
+    if (audioElem) {
+      audioElem.src = st.url;
+      audioElem.play().catch(e => console.log('Radio Stream auto-play notice:', e));
     }
   }
 
@@ -140,7 +178,8 @@ window.CiudadLinkVehicles = (function () {
     wantedLevel = Math.max(0, Math.min(5, stars));
   }
 
-  // Update Vehicle Simulation, Helicopters, Dogs & Gangsters
+  // CONTINUOUS BACKGROUND SIMULATION ACROSS ALL QUADRANTS
+  // Vehicles outside the active player quadrant continue moving so they never get stuck or lost!
   function updateVehicles(deltaSec, playerX, playerY) {
     // Traffic Light timer loop (10s green, 3s yellow, 8s red)
     trafficLightTimer += deltaSec;
@@ -155,7 +194,7 @@ window.CiudadLinkVehicles = (function () {
       trafficLightState = 'GREEN';
     }
 
-    // Update each vehicle position & POLICE CHASE AI
+    // Update each vehicle position & POLICE CHASE AI persistently
     vehicles.forEach(v => {
       let isBlocked = false;
 
@@ -182,7 +221,7 @@ window.CiudadLinkVehicles = (function () {
         return;
       }
 
-      // If this vehicle is currently hijacked by player -> update pos to player position
+      // If this vehicle is currently mounted by player -> update pos to player position
       if (v === hijackedVehicle) {
         v.x = playerX;
         v.y = playerY;
@@ -198,7 +237,7 @@ window.CiudadLinkVehicles = (function () {
         if (v.dir === 'N' && Math.floor(v.y) % 20 === 1) isBlocked = true;
       }
 
-      // Check distance to player (slow down / stop for player)
+      // Check distance to player (slow down / stop for player if close)
       const distToPlayer = Math.hypot(v.x - playerX, v.y - playerY);
       if (distToPlayer < 1.8 && wantedLevel === 0) {
         isBlocked = true;
@@ -208,7 +247,7 @@ window.CiudadLinkVehicles = (function () {
       const targetSpeed = isBlocked ? 0 : v.baseSpeed;
       v.currentSpeed += (targetSpeed - v.currentSpeed) * 0.1;
 
-      // Move vehicle along its direction
+      // Move vehicle along its direction persistently across the entire 100x100 city map
       const step = v.currentSpeed * deltaSec * 1.5;
 
       if (v.dir === 'E') {
@@ -342,7 +381,6 @@ window.CiudadLinkVehicles = (function () {
 
     const length = v.type === 'bus' ? 48 : (v.type === 'van' ? 38 : 32);
     const width = 18;
-    const height = 12; // pseudo 3D elevation
 
     // 1. Drop Shadow under vehicle
     ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
@@ -438,7 +476,9 @@ window.CiudadLinkVehicles = (function () {
     renderHelicopterOverhead,
     renderDog,
     hijackNearbyVehicle,
+    playVehicleRadioStream,
     setWantedLevel,
+    RADIO_STREAMS,
     get wantedLevel() { return wantedLevel; },
     get hijackedVehicle() { return hijackedVehicle; },
     get vehicles() { return vehicles; },
