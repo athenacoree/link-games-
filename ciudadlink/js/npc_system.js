@@ -114,12 +114,21 @@ window.CiudadLinkNPCs = (function () {
       }
     });
 
-    // Populate up to 105 Citizens
-    while (npcs.length < 105) {
+    // Populate up to 50 Citizens (Halved for smoother performance and anti-crowding)
+    while (npcs.length < 50) {
       let g = npcs.length % 2 === 0 ? 'Masculino' : 'Femenino';
       let age = 18 + (npcs.length % 55);
       let prof = professionsList[npcs.length % professionsList.length].id;
-      let npc = createNPCProfile(idCounter++, g, `poblador_${npcs.length}`, prof, age, 20 + (npcs.length % 60), 20 + (npcs.length % 60));
+      // Scatter initial positions widely across city districts to prevent initial crowding
+      let spawnX = 10 + ((npcs.length * 13) % 80);
+      let spawnY = 10 + ((npcs.length * 17) % 80);
+
+      // Ensure tile is walkable
+      if (window.CiudadLinkMap && !window.CiudadLinkMap.isTileWalkable(spawnX, spawnY)) {
+        spawnX += 1;
+      }
+
+      let npc = createNPCProfile(idCounter++, g, `poblador_${npcs.length}`, prof, age, spawnX, spawnY);
       npc.profession = prof;
       npc.renderX = npc.x; npc.renderY = npc.y;
 
@@ -245,10 +254,36 @@ window.CiudadLinkNPCs = (function () {
         let nextStep = npc.path.shift();
         let key = `${nextStep.x},${nextStep.y}`;
         if (!occupiedSet.has(key)) {
+          occupiedSet.delete(`${npc.x},${npc.y}`);
           npc.x = nextStep.x;
           npc.y = nextStep.y;
+          occupiedSet.add(key);
         }
       }
+
+      // ANTI-CROWDING / DISPERSION LOGIC
+      // If NPCs are standing on the exact same tile or too close, push them apart to clear tumults
+      npcs.forEach(otherNpc => {
+        if (otherNpc.id !== npc.id && !otherNpc.isArrested) {
+          if (npc.x === otherNpc.x && npc.y === otherNpc.y) {
+            // Find adjacent free walkable tile for dispersion
+            const dirs = [{x:1,y:0}, {x:-1,y:0}, {x:0,y:1}, {x:0,y:-1}];
+            for (let d of dirs) {
+              let testX = npc.x + d.x;
+              let testY = npc.y + d.y;
+              let testKey = `${testX},${testY}`;
+              if (!occupiedSet.has(testKey) && window.CiudadLinkMap.isTileWalkable(testX, testY)) {
+                occupiedSet.delete(`${npc.x},${npc.y}`);
+                npc.x = testX;
+                npc.y = testY;
+                occupiedSet.add(testKey);
+                npc.path = []; // clear path so npc doesn't get stuck in crowd loop
+                break;
+              }
+            }
+          }
+        }
+      });
 
       // Smooth Sub-Tile Interpolation for Render Position
       if (npc.renderX === undefined) npc.renderX = npc.x;

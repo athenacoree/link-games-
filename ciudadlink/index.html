@@ -187,6 +187,7 @@
     <div class="floating-pill"><span id="hudTime">🕒 Lunes 08:00</span></div>
     <div class="floating-pill"><span id="hudSubSector">📍 Sector NW1</span></div>
     <div class="floating-pill"><span id="hudAvatar">🧝 Link</span></div>
+    <div class="floating-pill"><span id="hudLevel">⭐ Nivel 1 (0 XP)</span></div>
     <div class="floating-pill"><span id="hudState">🧘 Descansando</span></div>
     <div class="floating-pill"><span id="hudMoney">💰 $600</span></div>
     <div class="floating-pill"><span id="hudHealth">❤️ 100 HP</span></div>
@@ -208,6 +209,7 @@
 
   <!-- Bottom Touch Controls Floating Buttons -->
   <div class="floating-controls-bottom">
+    <button class="floating-btn" id="btnToggleMiniMap" style="background:linear-gradient(135deg, #059669, #0d9488);" onclick="toggleMiniMapRadar()">🗺️ Mini-Mapa Radar</button>
     <button class="floating-btn" id="btnToggleSprint">🏃 Modo: Caminar</button>
     <button class="floating-btn" id="btnOpenPhone">📱 Teléfono Smart</button>
     <button class="floating-btn" id="btnOpenLog" style="background:linear-gradient(135deg, #0d9488, #059669);">📜 Historial</button>
@@ -228,11 +230,14 @@
 
       <div class="options-grid">
         <button class="floating-btn" id="btnOpenGameMode" style="background:linear-gradient(135deg, #a855f7, #6366f1); grid-column: span 2;" onclick="openGameModeSelectorModal(); closeOptionsMenu();">🎮 Modos de Juego (8 Modos Activos)</button>
+        <button class="floating-btn" id="btnOpenMissions" style="background:linear-gradient(135deg, #dc2626, #ea580c); grid-column: span 2;" onclick="openMissionsModal(); closeOptionsMenu();">🚨 10 Misiones Peligrosas Co-op</button>
+        <button class="floating-btn" id="btnOpenMultiplayer" style="background:linear-gradient(135deg, #3b82f6, #1d4ed8); grid-column: span 2;" onclick="openMultiplayerModal(); closeOptionsMenu();">🌐 Multijugador Co-op & Chat de Voz</button>
         <button class="floating-btn" id="btnOpenWorldMap" style="background:linear-gradient(135deg, #059669, #0d9488); grid-column: span 2;" onclick="closeOptionsMenu()">🗺️ Mapa del Mundo (16 SubSectores)</button>
         <button class="floating-btn" id="btnOpenWife" style="background:linear-gradient(135deg, #ec4899, #be185d); grid-column: span 2;" onclick="closeOptionsMenu()">👰 Esposa (Rastreo & Citas)</button>
         <button class="floating-btn" id="btnOpenJobs" style="background:linear-gradient(135deg, #eab308, #ca8a04); grid-column: span 2;" onclick="closeOptionsMenu()">💼 Empleos & Trabajos (Ganar Dinero)</button>
         <button class="floating-btn" id="btnOpenHospitalMenu" style="background:linear-gradient(135deg, #10b981, #047857); grid-column: span 2;" onclick="closeOptionsMenu()">🏥 Hospital (Tratamiento & Túneles)</button>
         <button class="floating-btn" id="btnHijackVehicle" style="background:linear-gradient(135deg, #dc2626, #991b1b); grid-column: span 2;" onclick="closeOptionsMenu()">🚘 Manejar / Bajar / Helicóptero</button>
+        <button class="floating-btn" id="btnCustomAvatar" style="background:linear-gradient(135deg, #ec4899, #8b5cf6);" onclick="openAvatarCustomizerModal(); closeOptionsMenu();">🎨 Personalizar Avatar</button>
         <button class="floating-btn" id="btnChooseAvatar" onclick="closeOptionsMenu()">👥 Cambiar Personaje</button>
         <button class="floating-btn" id="btnOpenLaws" onclick="closeOptionsMenu()">📜 Leyes & Juzgados</button>
         <button class="floating-btn" id="btnOpenPresidencia" onclick="closeOptionsMenu()">👑 Presidencia Link</button>
@@ -285,6 +290,8 @@
   <script src="./js/npc_system.js"></script>
   <script src="./js/vehicles_system.js"></script>
   <script src="./js/law_court.js"></script>
+  <script src="./js/multiplayer_system.js"></script>
+  <script src="./js/missions_system.js"></script>
   <script src="./js/main.js"></script>
 </body>
 </html>
