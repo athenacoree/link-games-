@@ -148,22 +148,31 @@ window.CiudadLinkNPCs = (function () {
       motherId: null,
       fatherId: null,
       spouseId: null,
+      relationshipState: 'Soltero', // 'Soltero', 'Amigo', 'Pareja', 'Esposa', 'Esposo'
+      relationshipLevel: 0, // 0 to 100
+      // Sims-Style State & Needs (0 = empty, 100 = full/good)
+      hunger: 80 + Math.floor(Math.random() * 20),      // Hambre
+      sleep: 80 + Math.floor(Math.random() * 20),       // Sueño / Energía
+      mood: 75 + Math.floor(Math.random() * 25),        // Ánimo / Depresión (100 = Animado, <30 = Deprimido)
+      social: 60 + Math.floor(Math.random() * 40),      // Social / Fiesta
+      phone: `555-${Math.floor(1000 + Math.random() * 9000)}`,
+      assignedHotelId: null,
+      assignedFloor: 1,
+      assignedRoom: 1,
+      assignedHouseId: null,
+      currentHotelId: null,
+      currentFloor: 1,
       money: 100 + Math.floor(Math.random() * 400),
       morality: 50 + Math.floor(Math.random() * 50),
       isArrested: false,
       crimeLevel: 0,
-      assignedHotelId: null,
-      assignedFloor: 1,
-      assignedRoom: 1,
-      currentHotelId: null,
-      currentFloor: 1,
       skinTone: SKIN_TONES[Math.floor(Math.random() * SKIN_TONES.length)],
       hairColor: HAIR_COLORS[Math.floor(Math.random() * HAIR_COLORS.length)],
       shirtColor: SHIRT_COLORS[Math.floor(Math.random() * SHIRT_COLORS.length)],
       pantsColor: PANTS_COLORS[Math.floor(Math.random() * PANTS_COLORS.length)],
       inventory: [
         { name: 'Documento de Identidad', icon: '🪪' },
-        { name: 'Pase de Hotel', icon: '🔑' }
+        { name: 'Teléfono Link Smart', icon: '📱' }
       ]
     };
   }
@@ -183,6 +192,17 @@ window.CiudadLinkNPCs = (function () {
 
     npcs.forEach(npc => {
       if (npc.isArrested) return;
+
+      // Sims-style status decay over time
+      if (Math.random() < 0.05) {
+        npc.hunger = Math.max(0, npc.hunger - 0.2);
+        npc.sleep = Math.max(0, npc.sleep - 0.15);
+        npc.social = Math.max(0, npc.social - 0.1);
+
+        // Mood / Depression calculation
+        const avgNeeds = (npc.hunger + npc.sleep + npc.social) / 3;
+        npc.mood = Math.round(avgNeeds);
+      }
 
       const scheduleRule = window.CiudadLinkData.SCHEDULE_RULES.getRuleForNPC(npc, timeOfDay, currentDay - 1);
 
@@ -217,6 +237,10 @@ window.CiudadLinkNPCs = (function () {
     if (targetType === 'presidencia') return { x: 50, y: 10 };
     if (targetType === 'cementerio') return { x: 88, y: 30 };
     if (targetType === 'tienda') return { x: 88, y: 50 };
+    if (targetType === 'paladar') return { x: 28, y: 84 };
+    if (targetType === 'discoteca') return { x: 48, y: 84 };
+    if (targetType === 'club_vip') return { x: 68, y: 84 };
+    if (targetType === 'barrio_bajero') return { x: 88, y: 84 };
     if (targetType === 'hotel') {
       return { x: 28, y: 28 };
     }
