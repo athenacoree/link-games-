@@ -15,6 +15,10 @@ window.CiudadLinkVehicles = (function () {
   let trafficLightTimer = 0;
   let trafficLightState = 'GREEN'; // 'GREEN', 'YELLOW', 'RED'
 
+  // WANTED & POLICE CHASE SYSTEM STATE (1-5 ⭐ Stars)
+  let wantedLevel = 0; // 0 to 5
+  let hijackedVehicle = null; // Stolen vehicle player is currently driving
+
   // Vehicle types configuration
   const VEHICLE_TYPES = [
     { type: 'sedan', name: 'Auto Sedán', width: 28, length: 44, color: '#0284c7', roofColor: '#38bdf8', speed: 2.2 },
@@ -107,6 +111,35 @@ window.CiudadLinkVehicles = (function () {
     }
   }
 
+  // CARJACKING / VEHICLE HIJACKING LOGIC
+  function hijackNearbyVehicle(playerX, playerY) {
+    if (hijackedVehicle) {
+      // Exit current hijacked vehicle
+      alert(`🚗 Has bajado del vehículo (${hijackedVehicle.name}).`);
+      hijackedVehicle.isStolen = false;
+      hijackedVehicle = null;
+      return { success: true, action: 'EXIT' };
+    }
+
+    // Find closest vehicle within 2 tiles radius
+    const closest = vehicles.find(v => Math.hypot(v.x - playerX, v.y - playerY) < 2.2);
+
+    if (closest) {
+      hijackedVehicle = closest;
+      closest.isStolen = true;
+      wantedLevel = Math.min(5, wantedLevel + 2); // Robo de autos triggers wanted stars!
+      alert(`🚘 ¡ROBO DE AUTO EXITOSO! Has robado el ${closest.name}. ¡Nivel de Búsqueda Policial: ${wantedLevel} ⭐!`);
+      return { success: true, action: 'ENTER', vehicle: closest };
+    } else {
+      alert('❌ No hay vehículos lo suficientemente cerca para robar (Ponte al lado de un auto).');
+      return { success: false };
+    }
+  }
+
+  function setWantedLevel(stars) {
+    wantedLevel = Math.max(0, Math.min(5, stars));
+  }
+
   // Update Vehicle Simulation, Helicopters, Dogs & Gangsters
   function updateVehicles(deltaSec, playerX, playerY) {
     // Traffic Light timer loop (10s green, 3s yellow, 8s red)
@@ -122,9 +155,39 @@ window.CiudadLinkVehicles = (function () {
       trafficLightState = 'GREEN';
     }
 
-    // Update each vehicle position
+    // Update each vehicle position & POLICE CHASE AI
     vehicles.forEach(v => {
       let isBlocked = false;
+
+      // POLICE PURSUIT MODE when player has Wanted Level (>0)
+      if (v.isPolice && wantedLevel > 0) {
+        const dx = playerX - v.x;
+        const dy = playerY - v.y;
+        const dist = Math.hypot(dx, dy);
+
+        if (dist > 0.5) {
+          v.x += (dx / dist) * v.baseSpeed * 1.3 * deltaSec;
+          v.y += (dy / dist) * v.baseSpeed * 1.3 * deltaSec;
+        }
+
+        // Arrest player if police car catches player
+        if (dist < 1.2) {
+          alert(`🚨 ¡LA POLICÍA TE HA ARRESTADO EN LA PERSECUCIÓN! Has sido trasladado a la Comisaría.`);
+          wantedLevel = 0;
+          if (hijackedVehicle) {
+            hijackedVehicle.isStolen = false;
+            hijackedVehicle = null;
+          }
+        }
+        return;
+      }
+
+      // If this vehicle is currently hijacked by player -> update pos to player position
+      if (v === hijackedVehicle) {
+        v.x = playerX;
+        v.y = playerY;
+        return;
+      }
 
       // Check traffic light signal at nearest intersection
       if (trafficLightState === 'RED') {
@@ -137,7 +200,7 @@ window.CiudadLinkVehicles = (function () {
 
       // Check distance to player (slow down / stop for player)
       const distToPlayer = Math.hypot(v.x - playerX, v.y - playerY);
-      if (distToPlayer < 1.8) {
+      if (distToPlayer < 1.8 && wantedLevel === 0) {
         isBlocked = true;
       }
 
@@ -374,6 +437,10 @@ window.CiudadLinkVehicles = (function () {
     renderVehicle,
     renderHelicopterOverhead,
     renderDog,
+    hijackNearbyVehicle,
+    setWantedLevel,
+    get wantedLevel() { return wantedLevel; },
+    get hijackedVehicle() { return hijackedVehicle; },
     get vehicles() { return vehicles; },
     get helicopters() { return helicopters; },
     get dogs() { return dogs; },

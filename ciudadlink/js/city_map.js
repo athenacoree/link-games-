@@ -46,6 +46,71 @@ window.CiudadLinkMap = (function () {
   let hotels = [];
   let environmentalObjects = []; // Trees, Streetlights, Benches, Trash cans
 
+  // SECTORS / QUADRANTS SYSTEM (Performance Optimization & Dynamic World Partitioning)
+  // NW: x: 0..49, y: 0..49
+  // NE: x: 50..99, y: 0..49
+  // SW: x: 0..49, y: 50..99
+  // SE: x: 50..99, y: 50..99
+  const SECTORS = {
+    NW: { id: 'NW', name: 'Sector Noroeste (Cívico & Salud)', xMin: 0, xMax: 49, yMin: 0, yMax: 49, spawnX: 25, spawnY: 25 },
+    NE: { id: 'NE', name: 'Sector Noreste (Tribunal & Comercio)', xMin: 50, xMax: 99, yMin: 0, yMax: 49, spawnX: 75, spawnY: 25 },
+    SW: { id: 'SW', name: 'Sector Suroeste (Residencial & Escolar)', xMin: 0, xMax: 49, yMin: 50, yMax: 99, spawnX: 25, spawnY: 75 },
+    SE: { id: 'SE', name: 'Sector Sureste (Parque & Ocio Nocturno)', xMin: 50, xMax: 99, yMin: 50, yMax: 99, spawnX: 75, spawnY: 75 }
+  };
+
+  let activeSector = 'NW';
+
+  // DYNAMIC OCCUPANCY TILE STATE (ON = Free/Passable, OFF = Occupied/Impassable)
+  let tileOccupancyGrid = Array(MAP_HEIGHT).fill(0).map(() => Array(MAP_WIDTH).fill('ON'));
+
+  function updateOccupancyState(npcs = [], vehicles = [], player = null) {
+    // Reset all walkable tiles to ON
+    for (let r = 0; r < MAP_HEIGHT; r++) {
+      for (let c = 0; c < MAP_WIDTH; c++) {
+        tileOccupancyGrid[r][c] = isTileWalkable(c, r) ? 'ON' : 'OFF';
+      }
+    }
+
+    // Set tiles occupied by NPCs to OFF
+    npcs.forEach(n => {
+      if (n.x >= 0 && n.x < MAP_WIDTH && n.y >= 0 && n.y < MAP_HEIGHT) {
+        tileOccupancyGrid[n.y][n.x] = 'OFF';
+      }
+    });
+
+    // Set tiles occupied by vehicles to OFF
+    vehicles.forEach(v => {
+      const vx = Math.floor(v.x);
+      const vy = Math.floor(v.y);
+      if (vx >= 0 && vx < MAP_WIDTH && vy >= 0 && vy < MAP_HEIGHT) {
+        tileOccupancyGrid[vy][vx] = 'OFF';
+      }
+    });
+
+    // Player position
+    if (player && player.x >= 0 && player.x < MAP_WIDTH && player.y >= 0 && player.y < MAP_HEIGHT) {
+      tileOccupancyGrid[player.y][player.x] = 'OFF';
+    }
+  }
+
+  function isTileOccupiedON(x, y) {
+    if (x < 0 || x >= MAP_WIDTH || y < 0 || y >= MAP_HEIGHT) return false;
+    return tileOccupancyGrid[y][x] === 'ON';
+  }
+
+  function getSectorForPos(x, y) {
+    if (x < 50 && y < 50) return 'NW';
+    if (x >= 50 && y < 50) return 'NE';
+    if (x < 50 && y >= 50) return 'SW';
+    return 'SE';
+  }
+
+  function setActiveSector(sectorId) {
+    if (SECTORS[sectorId]) {
+      activeSector = sectorId;
+    }
+  }
+
   // Generate City Grid with Real-World District Layout
   function initCityMap() {
     grid = Array(MAP_HEIGHT).fill(0).map(() => Array(MAP_WIDTH).fill(TILE.PARK));
@@ -397,9 +462,16 @@ window.CiudadLinkMap = (function () {
     MAP_HEIGHT,
     TILE_SIZE,
     TILE,
+    SECTORS,
     initCityMap,
     isTileWalkable,
     findPath,
+    updateOccupancyState,
+    isTileOccupiedON,
+    get tileOccupancyGrid() { return tileOccupancyGrid; },
+    getSectorForPos,
+    setActiveSector,
+    get activeSector() { return activeSector; },
     get hotels() { return hotels; },
     get buildings() { return buildings; },
     get grid() { return grid; },
