@@ -7,7 +7,89 @@
 window.CiudadLinkData = (function () {
   'use strict';
 
-  // 1. PROFESSIONS & ROLES
+  // 1. PLAYABLE CHARACTER AVATARS
+  const AVATARS = [
+    {
+      id: 'hero_link',
+      name: 'Link',
+      title: 'Héroe Urbano',
+      badge: '🧝',
+      color: '#22c55e',
+      hatColor: '#16a34a',
+      shirtColor: '#22c55e',
+      pantsColor: '#15803d',
+      skinTone: '#fde047',
+      perk: 'Velocidad de exploración +15% y buscador de reliquias.',
+      startingMoney: 600
+    },
+    {
+      id: 'police_marcos',
+      name: 'Oficial Marcos',
+      title: 'Comisionado de Policía',
+      badge: '👮',
+      color: '#3b82f6',
+      hatColor: '#1e40af',
+      shirtColor: '#2563eb',
+      pantsColor: '#1e3a8a',
+      skinTone: '#fed7aa',
+      perk: 'Autoridad para realizar arrestos en flagrancia.',
+      startingMoney: 850
+    },
+    {
+      id: 'doctor_elena',
+      name: 'Dra. Elena',
+      title: 'Médica Cirujana',
+      badge: '🩺',
+      color: '#10b981',
+      hatColor: '#ffffff',
+      shirtColor: '#f8fafc',
+      pantsColor: '#0f766e',
+      skinTone: '#fecdd3',
+      perk: 'Regeneración constante de energía y tratamiento médico.',
+      startingMoney: 950
+    },
+    {
+      id: 'president_javier',
+      name: 'Presidente Javier',
+      title: 'Mandatario Principal',
+      badge: '👑',
+      color: '#f59e0b',
+      hatColor: '#fbbf24',
+      shirtColor: '#b45309',
+      pantsColor: '#451a03',
+      skinTone: '#fde047',
+      perk: 'Facultad para emitir Decretos Presidenciales y presupuesto.',
+      startingMoney: 2500
+    },
+    {
+      id: 'architect_sofia',
+      name: 'Sofía',
+      title: 'Arquitecta y Planificadora',
+      badge: '📐',
+      color: '#f97316',
+      hatColor: '#ea580c',
+      shirtColor: '#f97316',
+      pantsColor: '#7c2d12',
+      skinTone: '#fecdd3',
+      perk: 'Acceso prioritario a elevadores y diseños de hoteles.',
+      startingMoney: 750
+    },
+    {
+      id: 'merchant_carlos',
+      name: 'Carlos',
+      title: 'Comerciante & Empresario',
+      badge: '💼',
+      color: '#a855f7',
+      hatColor: '#9333ea',
+      shirtColor: '#7e22ce',
+      pantsColor: '#581c87',
+      skinTone: '#fed7aa',
+      perk: 'Descuento en compras y comisión por transacciones.',
+      startingMoney: 1800
+    }
+  ];
+
+  // 2. PROFESSIONS & ROLES
   const PROFESSIONS = [
     { id: 'president', title: 'Presidente de la Ciudad', workplace: 'presidencia', salary: 1000, icon: '👑', color: '#f59e0b' },
     { id: 'lawyer', title: 'Abogado Defensor', workplace: 'juzgado', salary: 450, icon: '⚖️', color: '#6366f1' },
@@ -26,7 +108,7 @@ window.CiudadLinkData = (function () {
     { id: 'child', title: 'Niño/a (Menor de Edad)', workplace: 'escuela', salary: 0, icon: '👶', color: '#f472b6' }
   ];
 
-  // 2. UNIVERSAL LAWS CATALOG (>50 Laws)
+  // 3. UNIVERSAL LAWS CATALOG (>50 Laws)
   const LAWS = [
     { id: 'L01', title: 'Prohibición de Robo e Invasión de Morada', fine: 200, jailHours: 12, dangerLevel: 3, desc: 'Entrar o sustraer bienes ajenos en hoteles o residencias privadas.' },
     { id: 'L02', title: 'Respeto a los Horarios Escolares Nocturnos', fine: 50, jailHours: 2, dangerLevel: 1, desc: 'Los menores deben estar acompañados de un tutor después de las 20:00.' },
@@ -40,7 +122,6 @@ window.CiudadLinkData = (function () {
     { id: 'L10', title: 'Derecho a Juicio Justo con Abogado Defensor', fine: 0, jailHours: 0, dangerLevel: 0, desc: 'Garantía constitucional de la Ciudad Link para todos los acusados.' }
   ];
 
-  // Dynamically generate laws up to 60 laws for depth
   for (let i = 11; i <= 60; i++) {
     LAWS.push({
       id: `L${i < 10 ? '0' + i : i}`,
@@ -52,7 +133,7 @@ window.CiudadLinkData = (function () {
     });
   }
 
-  // 3. GENERATE >1,000 UNIQUE ITEMS CATALOG
+  // 4. GENERATE >1,000 UNIQUE ITEMS CATALOG
   const ITEM_CATEGORIES = ['Comida', 'Herramientas', 'Documentos', 'Ropa', 'Medicina', 'Habilidades', 'Muebles', 'Tecnología'];
   const ITEMS = [];
 
@@ -73,7 +154,6 @@ window.CiudadLinkData = (function () {
 
   ITEMS.push(...baseItems);
 
-  // Generate catalog items up to 1020 items programmatically
   const itemPrefixes = ['Súper', 'Urbano', 'Especial', 'Pro', 'Elite', 'Oficial', 'Ejecutivo', 'Escolar', 'Médico', 'Judicial'];
   const itemNouns = ['Lente', 'Cuaderno', 'Reloj', 'Uniforme', 'Tarjeta', 'Silla', 'Plano', 'Medalla', 'Camiseta', 'Zapatos', 'Pluma', 'Teléfono', 'Escáner', 'Sello', 'Brújula', 'Llave maestra', 'Cámara', 'Termómetro', 'Diploma', 'Taza'];
 
@@ -95,7 +175,7 @@ window.CiudadLinkData = (function () {
     idCounter++;
   }
 
-  // 4. GENERATE >50 SKILLS / HABILIDADES CATALOG
+  // 5. SKILLS
   const SKILLS = [
     { id: 'S01', name: 'Navegación Veloz', cost: 0, icon: '👟', desc: 'Aumenta la velocidad de caminata por las aceras de la ciudad.' },
     { id: 'S02', name: 'Visión Expandida', cost: 10, icon: '👁️', desc: 'Expande el campo de visión del jugador un 30% adicional al caminar.' },
@@ -119,10 +199,10 @@ window.CiudadLinkData = (function () {
     });
   }
 
-  // 5. UNIVERSAL SCHEDULE RULES & TIME ENGINE
+  // 6. SCHEDULE RULES
   const SCHEDULE_RULES = {
-    SCHOOL_START: 7.5,      // 7:30 AM
-    SCHOOL_END: 14.0,       // 2:00 PM
+    SCHOOL_START: 7.5,
+    SCHOOL_END: 14.0,
     WORK_SHIFT_MORNING_START: 8.0,
     WORK_SHIFT_MORNING_END: 16.0,
     COURT_SESSIONS_START: 9.0,
@@ -133,11 +213,9 @@ window.CiudadLinkData = (function () {
     CURFEW_END: 5.0,
 
     getRuleForNPC(npc, currentHour, currentDay) {
-      // Day of week: 0 = Sunday, 1 = Monday, ..., 6 = Saturday
       const isWeekend = (currentDay === 0 || currentDay === 6);
 
       if (npc.age < 18) {
-        // Child schedule
         if (!isWeekend && currentHour >= this.SCHOOL_START && currentHour < this.SCHOOL_END) {
           return { action: 'GO_TO_SCHOOL', target: 'escuela', desc: 'Asistir a clases escolares.' };
         }
@@ -147,7 +225,6 @@ window.CiudadLinkData = (function () {
         return { action: 'PLAY_OUTDOORS', target: 'parque', desc: 'Jugar libremente con otros niños.' };
       }
 
-      // Adult Schedules based on profession
       if (npc.profession === 'teacher') {
         if (!isWeekend && currentHour >= 7.0 && currentHour < 14.5) {
           return { action: 'TEACH_AT_SCHOOL', target: 'escuela', desc: 'Impartir clases a los niños.' };
@@ -174,7 +251,6 @@ window.CiudadLinkData = (function () {
         }
       }
 
-      // Default night behavior for all adults
       if (currentHour >= 22.0 || currentHour < 6.0) {
         return { action: 'SLEEP', target: 'hotel', desc: 'Dormir en su piso del hotel.' };
       }
@@ -183,7 +259,7 @@ window.CiudadLinkData = (function () {
     }
   };
 
-  // 6. FAMILY RELATION & KINSHIP TREE HELPER
+  // 7. KINSHIP TREE HELPER
   function buildKinshipInfo(npc, allNpcs) {
     let relations = [];
     if (npc.motherId) {
@@ -207,6 +283,7 @@ window.CiudadLinkData = (function () {
   }
 
   return {
+    AVATARS,
     PROFESSIONS,
     LAWS,
     ITEMS,
