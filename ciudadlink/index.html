@@ -68,6 +68,38 @@
       gap: 5px;
     }
 
+    /* On-Screen Virtual D-Pad Touch Controls */
+    .virtual-dpad {
+      position: absolute;
+      bottom: 12px;
+      left: 12px;
+      z-index: 15;
+      display: grid;
+      grid-template-columns: repeat(3, 38px);
+      grid-template-rows: repeat(3, 38px);
+      gap: 4px;
+      pointer-events: auto;
+    }
+
+    .dpad-btn {
+      background: rgba(15, 23, 42, 0.85);
+      border: 1px solid #38bdf8;
+      color: #38bdf8;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      font-size: 1rem;
+      user-select: none;
+      cursor: pointer;
+      backdrop-filter: blur(6px);
+    }
+    .dpad-btn:active {
+      background: #38bdf8;
+      color: #0f172a;
+    }
+
     .floating-btn {
       background: linear-gradient(135deg, #0284c7, #0d9488);
       border: 1px solid rgba(255, 255, 255, 0.2);
@@ -207,8 +239,22 @@
     <audio id="radioAudioPlayer" preload="none"></audio>
   </div>
 
+  <!-- On-Screen Virtual D-Pad Overlay -->
+  <div class="virtual-dpad">
+    <div></div>
+    <div class="dpad-btn" onclick="movePlayerDirection(0, -1)">▲</div>
+    <div></div>
+    <div class="dpad-btn" onclick="movePlayerDirection(-1, 0)">◄</div>
+    <div class="dpad-btn" onclick="openBarrioSelectorModal()">🏙️</div>
+    <div class="dpad-btn" onclick="movePlayerDirection(1, 0)">►</div>
+    <div></div>
+    <div class="dpad-btn" onclick="movePlayerDirection(0, 1)">▼</div>
+    <div></div>
+  </div>
+
   <!-- Bottom Touch Controls Floating Buttons -->
   <div class="floating-controls-bottom">
+    <button class="floating-btn" id="btnOpenBarriosBtn" style="background:linear-gradient(135deg, #3b82f6, #0284c7);" onclick="openBarrioSelectorModal()">🏙️ 10 Barrios / Sectores</button>
     <button class="floating-btn" id="btnToggleMiniMap" style="background:linear-gradient(135deg, #059669, #0d9488);" onclick="toggleMiniMapRadar()">🗺️ Mini-Mapa Radar</button>
     <button class="floating-btn" id="btnToggleSprint">🏃 Modo: Caminar</button>
     <button class="floating-btn" id="btnOpenPhone">📱 Teléfono Smart</button>
@@ -229,10 +275,11 @@
       </div>
 
       <div class="options-grid">
+        <button class="floating-btn" id="btnOpenBarrioModal" style="background:linear-gradient(135deg, #0284c7, #3b82f6); grid-column: span 2;" onclick="openBarrioSelectorModal(); closeOptionsMenu();">🏙️ 10 Barrios / Sectores Carga On-Demand</button>
         <button class="floating-btn" id="btnOpenGameMode" style="background:linear-gradient(135deg, #a855f7, #6366f1); grid-column: span 2;" onclick="openGameModeSelectorModal(); closeOptionsMenu();">🎮 Modos de Juego (8 Modos Activos)</button>
         <button class="floating-btn" id="btnOpenMissions" style="background:linear-gradient(135deg, #dc2626, #ea580c); grid-column: span 2;" onclick="openMissionsModal(); closeOptionsMenu();">🚨 10 Misiones Peligrosas Co-op</button>
         <button class="floating-btn" id="btnOpenMultiplayer" style="background:linear-gradient(135deg, #3b82f6, #1d4ed8); grid-column: span 2;" onclick="openMultiplayerModal(); closeOptionsMenu();">🌐 Multijugador Co-op & Chat de Voz</button>
-        <button class="floating-btn" id="btnOpenWorldMap" style="background:linear-gradient(135deg, #059669, #0d9488); grid-column: span 2;" onclick="closeOptionsMenu()">🗺️ Mapa del Mundo (16 SubSectores)</button>
+        <button class="floating-btn" id="btnOpenWorldMap" style="background:linear-gradient(135deg, #059669, #0d9488); grid-column: span 2;" onclick="closeOptionsMenu()">🗺️ Mapa del Mundo (10 Grupos)</button>
         <button class="floating-btn" id="btnOpenWife" style="background:linear-gradient(135deg, #ec4899, #be185d); grid-column: span 2;" onclick="closeOptionsMenu()">👰 Esposa (Rastreo & Citas)</button>
         <button class="floating-btn" id="btnOpenJobs" style="background:linear-gradient(135deg, #eab308, #ca8a04); grid-column: span 2;" onclick="closeOptionsMenu()">💼 Empleos & Trabajos (Ganar Dinero)</button>
         <button class="floating-btn" id="btnOpenHospitalMenu" style="background:linear-gradient(135deg, #10b981, #047857); grid-column: span 2;" onclick="closeOptionsMenu()">🏥 Hospital (Tratamiento & Túneles)</button>

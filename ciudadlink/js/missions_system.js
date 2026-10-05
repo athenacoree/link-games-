@@ -7,6 +7,19 @@
 window.CiudadLinkMissions = (function () {
   'use strict';
 
+  const BARRIO_TASKS = {
+    'B1': { barrioName: 'Barrio 1: Cívico & Comisaría Central', taskName: '🚔 Inspección de Celdas y Patrullaje Cívico', desc: 'Realiza la ronda de vigilancia por la Comisaría Central.', targetX: 10, targetY: 10, reward: 350 },
+    'B2': { barrioName: 'Barrio 2: Presidencial Norte', taskName: '👑 Custodia de la Guardia Presidencial', desc: 'Presenta el informe de seguridad ante el Palacio Presidencial.', targetX: 50, targetY: 10, reward: 500 },
+    'B3': { barrioName: 'Barrio 3: Tribunal & Cementerio', taskName: '⚖️ Verificación de Juicios & Criptas', desc: 'Inspeciona las criptas y entrega expedientes en la Corte.', targetX: 82, targetY: 10, reward: 400 },
+    'B4': { barrioName: 'Barrio 4: Hospital & Emergencias', taskName: '🏥 Suministro Urgente de Antídotos', desc: 'Lleva insumos médicos a la zona de Urgencias del Hospital.', targetX: 10, targetY: 30, reward: 450 },
+    'B5': { barrioName: 'Barrio 5: Centro Histórico & Hotel Sol', taskName: '🏨 Mantenimiento del Hotel Sol', desc: 'Revisa los elevadores y el hall del Hotel Rascacielos Sol.', targetX: 25, targetY: 24, reward: 300 },
+    'B6': { barrioName: 'Barrio 6: Comercial & Banco Central', taskName: '🏦 Depósito en la Bóveda del Banco', desc: 'Verifica los sistemas de alarma en el Banco Central.', targetX: 82, targetY: 64, reward: 550 },
+    'B7': { barrioName: 'Barrio 7: Residencial & Escuela Central', taskName: '🏫 Supervisión del Horario Escolar', desc: 'Visita la Escuela Central para el control de alumnos.', targetX: 10, targetY: 80, reward: 250 },
+    'B8': { barrioName: 'Barrio 8: Gran Parque & Lago Ecológico', taskName: '⛲ Mantenimiento del Lago & Fuentes', desc: 'Inspecciona la gran fuente y el puente del lago central.', targetX: 50, targetY: 66, reward: 300 },
+    'B9': { barrioName: 'Barrio 9: Nocturno & Discoteca Neon', taskName: '💃 Control de Acceso VIP & DJ', desc: 'Supervisa la entrada de la Discoteca Neon y Paladar Don Link.', targetX: 42, targetY: 82, reward: 400 },
+    'B10': { barrioName: 'Barrio 10: Bajero Gangster & Mercado Negro', taskName: '🥷 Infiltración en el Callejón Peligroso', desc: 'Rastrea pistas del mercado negro en el Barrio Bajero.', targetX: 88, targetY: 88, reward: 600 }
+  };
+
   const MISSIONS = [
     {
       id: 'M1_BANK_DEFENSE',
@@ -16,7 +29,7 @@ window.CiudadLinkMissions = (function () {
       rewardXP: 1000,
       rewardItem: '👑 Titulo Protector Bancario & Recompensa $5,000',
       stages: [
-        { desc: '1️⃣ Ve al Banco Central Financiero (Sector NE) y asegura la puerta de la bóveda.', targetX: 82, targetY: 64, reqType: 'LOCATION' },
+        { desc: '1️⃣ Ve al Banco Central Financiero y asegura la puerta de la bóveda.', targetX: 82, targetY: 64, reqType: 'LOCATION' },
         { desc: '2️⃣ Defiende la bóveda repeliendo a los atracadores fuertemente armados.', reqType: 'ACTION', actionMsg: '🛡️ Defendiste la Bóveda con éxito.' },
         { desc: '3️⃣ Escolta el furgón blindado hasta la Comisaría de Policía.', targetX: 10, targetY: 10, reqType: 'LOCATION' }
       ]
@@ -228,6 +241,7 @@ window.CiudadLinkMissions = (function () {
   }
 
   return {
+    BARRIO_TASKS,
     MISSIONS,
     startMission,
     updateMissionProgress,

@@ -181,14 +181,20 @@
       addLog(`🌤️ Clima Urbano cambió a: ${currentWeather}`);
     }
 
-    // Track Player's Active World Sector & 10x10x10 Hierarchical Quadrant
+    // Track Player's Active World Sector & 10 Sectors / Barrios On-Demand State
+    const activeBarrio = window.CiudadLinkMap.getBarrioForPos(player.x, player.y);
+    if (activeBarrio && activeBarrio.id !== window.CiudadLinkMap.activeBarrioId) {
+      window.CiudadLinkMap.setActiveBarrioId(activeBarrio.id);
+      addLog(`🏙️ Has ingresado a ${activeBarrio.name}. Cargas activadas solo en este barrio.`);
+    }
+
     const currentSector = window.CiudadLinkMap.getSectorForPos(player.x, player.y);
     window.CiudadLinkMap.setActiveSector(currentSector);
 
     // Update Tile Occupancy Grid (ON / OFF states)
     window.CiudadLinkMap.updateOccupancyState(window.CiudadLinkNPCs.npcs, window.CiudadLinkVehicles.vehicles, player);
 
-    // Update Persistent NPC AI Simulation & Traffic Vehicles
+    // Update Persistent NPC AI Simulation & Traffic Vehicles (Active Barrio Scope)
     window.CiudadLinkNPCs.updateNPCSimulation(deltaSec, player.isWalking);
     window.CiudadLinkVehicles.updateVehicles(deltaSec, player.x, player.y);
 
@@ -236,8 +242,9 @@
     if (elemTime) elemTime.textContent = '🕒 ' + window.CiudadLinkNPCs.getTimeFormatted();
 
     const quadHier = window.CiudadLinkMap.getQuadrantHierarchy(player.x, player.y);
+    const curBarrio = window.CiudadLinkMap.getActiveBarrio();
     const elemSector = document.getElementById('hudSubSector');
-    if (elemSector) elemSector.textContent = `📍 ${quadHier.code}`;
+    if (elemSector) elemSector.textContent = `📍 ${curBarrio ? curBarrio.name : quadHier.code}`;
 
     const elemAvatar = document.getElementById('hudAvatar');
     if (elemAvatar) elemAvatar.textContent = `${player.badge} ${player.name}`;
@@ -316,11 +323,17 @@
     ctx.save();
     ctx.translate(-camera.x, -camera.y);
 
-    // 1. Draw Ground Tiles Grid within local micro-quadrants visible on viewport
-    const minCol = Math.max(0, Math.floor((camera.x - 64) / tileSize));
-    const maxCol = Math.min(mapW - 1, Math.ceil((camera.x + canvas.width + 64) / tileSize));
-    const minRow = Math.max(0, Math.floor((camera.y - 64) / tileSize));
-    const maxRow = Math.min(mapH - 1, Math.ceil((camera.y + canvas.height + 64) / tileSize));
+    // 1. Draw Ground Tiles Grid within ACTIVE BARRIO bounds (On-demand selective sector rendering)
+    const activeBarrio = window.CiudadLinkMap.getActiveBarrio();
+    const bMinCol = activeBarrio ? activeBarrio.xMin : 0;
+    const bMaxCol = activeBarrio ? activeBarrio.xMax : mapW - 1;
+    const bMinRow = activeBarrio ? activeBarrio.yMin : 0;
+    const bMaxRow = activeBarrio ? activeBarrio.yMax : mapH - 1;
+
+    const minCol = Math.max(bMinCol, Math.floor((camera.x - 64) / tileSize));
+    const maxCol = Math.min(bMaxCol, Math.ceil((camera.x + canvas.width + 64) / tileSize));
+    const minRow = Math.max(bMinRow, Math.floor((camera.y - 64) / tileSize));
+    const maxRow = Math.min(bMaxRow, Math.ceil((camera.y + canvas.height + 64) / tileSize));
 
     for (let r = minRow; r <= maxRow; r++) {
       for (let c = minCol; c <= maxCol; c++) {
@@ -501,6 +514,11 @@
     window.CiudadLinkVehicles.helicopters.forEach(h => {
       window.CiudadLinkVehicles.renderHelicopterOverhead(ctx, h, tileSize, isNight);
     });
+
+    // 3.5 Render Active Barrio Boundary Edge Overlay with Directional Arrows (⬆️ ⬇️ ⬅️ ➡️)
+    if (activeBarrio) {
+      renderActiveBarrioBoundariesAndArrows(ctx, activeBarrio, tileSize);
+    }
 
     // Render Multiplayer Remote Player Avatars
     if (window.CiudadLinkMultiplayer && window.CiudadLinkMultiplayer.isConnected) {
@@ -904,6 +922,50 @@
   }
 
   // CONTROLS & CONTINUOUS TOUCH LISTENERS
+  // RENDER SECTOR BOUNDARY MARKERS & DIRECTIONAL TRANSITION ARROWS
+  function renderActiveBarrioBoundariesAndArrows(ctx, b, tileSize) {
+    const pulse = Math.sin(performance.now() * 0.006) * 4;
+
+    ctx.save();
+    ctx.strokeStyle = '#38bdf8';
+    ctx.lineWidth = 3;
+    ctx.setLineDash([8, 8]);
+    ctx.strokeRect(b.xMin * tileSize, b.yMin * tileSize, (b.xMax - b.xMin + 1) * tileSize, (b.yMax - b.yMin + 1) * tileSize);
+    ctx.setLineDash([]);
+
+    // Check adjacent barrios and draw transition arrows on sector edges
+    const directions = [
+      { dir: 'N', x: Math.floor((b.xMin + b.xMax) / 2), y: b.yMin, label: '⬆️ Pasar a Sector Norte' },
+      { dir: 'S', x: Math.floor((b.xMin + b.xMax) / 2), y: b.yMax, label: '⬇️ Pasar a Sector Sur' },
+      { dir: 'W', x: b.xMin, y: Math.floor((b.yMin + b.yMax) / 2), label: '⬅️ Pasar a Sector Oeste' },
+      { dir: 'E', x: b.xMax, y: Math.floor((b.yMin + b.yMax) / 2), label: '➡️ Pasar a Sector Este' }
+    ];
+
+    directions.forEach(d => {
+      const neighbor = window.CiudadLinkMap.getNeighboringBarrio(b.id, d.dir);
+      if (neighbor) {
+        const ax = d.x * tileSize + tileSize / 2;
+        const ay = d.y * tileSize + tileSize / 2;
+
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
+        ctx.strokeStyle = '#facc15';
+        ctx.lineWidth = 2;
+
+        ctx.beginPath();
+        ctx.arc(ax, ay + pulse, 16, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 12px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(d.dir === 'N' ? '⬆️' : (d.dir === 'S' ? '⬇️' : (d.dir === 'W' ? '⬅️' : '➡️')), ax, ay + pulse + 4);
+      }
+    });
+
+    ctx.restore();
+  }
+
   function setupEventListeners() {
     canvas.addEventListener('pointerdown', (e) => {
       isPointerDown = true;
@@ -936,6 +998,28 @@
       const tileSize = window.CiudadLinkMap.TILE_SIZE;
       const targetX = Math.floor(clickX / tileSize);
       const targetY = Math.floor(clickY / tileSize);
+
+      // Check click on Boundary Transition Arrows
+      const activeBarrio = window.CiudadLinkMap.getActiveBarrio();
+      if (activeBarrio) {
+        const dirs = [
+          { dir: 'N', x: Math.floor((activeBarrio.xMin + activeBarrio.xMax) / 2), y: activeBarrio.yMin },
+          { dir: 'S', x: Math.floor((activeBarrio.xMin + activeBarrio.xMax) / 2), y: activeBarrio.yMax },
+          { dir: 'W', x: activeBarrio.xMin, y: Math.floor((activeBarrio.yMin + activeBarrio.yMax) / 2) },
+          { dir: 'E', x: activeBarrio.xMax, y: Math.floor((activeBarrio.yMin + activeBarrio.yMax) / 2) }
+        ];
+
+        for (let i = 0; i < dirs.length; i++) {
+          const d = dirs[i];
+          if (Math.abs(targetX - d.x) <= 1 && Math.abs(targetY - d.y) <= 1) {
+            const nextB = window.CiudadLinkMap.getNeighboringBarrio(activeBarrio.id, d.dir);
+            if (nextB) {
+              transitionToBarrio(nextB, d.dir);
+              return;
+            }
+          }
+        }
+      }
 
       const clickedNpc = window.CiudadLinkNPCs.npcs.find(n => n.x === targetX && n.y === targetY);
       if (clickedNpc) {
@@ -974,6 +1058,25 @@
       if (dx !== 0 || dy !== 0) {
         let nx = player.x + dx;
         let ny = player.y + dy;
+
+        const curB = window.CiudadLinkMap.getActiveBarrio();
+        if (curB) {
+          // Check if walking into sector boundary transition arrow
+          if (ny < curB.yMin) {
+            const nextB = window.CiudadLinkMap.getNeighboringBarrio(curB.id, 'N');
+            if (nextB) { transitionToBarrio(nextB, 'N'); return; }
+          } else if (ny > curB.yMax) {
+            const nextB = window.CiudadLinkMap.getNeighboringBarrio(curB.id, 'S');
+            if (nextB) { transitionToBarrio(nextB, 'S'); return; }
+          } else if (nx < curB.xMin) {
+            const nextB = window.CiudadLinkMap.getNeighboringBarrio(curB.id, 'W');
+            if (nextB) { transitionToBarrio(nextB, 'W'); return; }
+          } else if (nx > curB.xMax) {
+            const nextB = window.CiudadLinkMap.getNeighboringBarrio(curB.id, 'E');
+            if (nextB) { transitionToBarrio(nextB, 'E'); return; }
+          }
+        }
+
         if (window.CiudadLinkMap.isTileWalkable(nx, ny)) {
           player.x = nx;
           player.y = ny;
@@ -1745,6 +1848,72 @@
     openModalCard('🗺️ Jerarquía de 10 Grupos y Micro-Cuadrantes', body);
   }
 
+  function transitionToBarrio(targetBarrio, entryDir) {
+    window.CiudadLinkMap.setActiveBarrioId(targetBarrio.id);
+
+    let newX = targetBarrio.spawnX;
+    let newY = targetBarrio.spawnY;
+
+    if (entryDir === 'N') newY = targetBarrio.yMax - 1;
+    if (entryDir === 'S') newY = targetBarrio.yMin + 1;
+    if (entryDir === 'W') newX = targetBarrio.xMax - 1;
+    if (entryDir === 'E') newX = targetBarrio.xMin + 1;
+
+    player.x = newX;
+    player.y = newY;
+    player.renderX = newX;
+    player.renderY = newY;
+    player.path = [];
+
+    if (window.SuperEngine && window.SuperEngine.Audio) {
+      window.SuperEngine.Audio.playSFX('select');
+    }
+
+    addLog(`➡️ Has pasado a ${targetBarrio.name}. Cargas del sector anterior desactivadas.`);
+    alert(`➡️ ¡Has entrado a ${targetBarrio.name}!\n\n${targetBarrio.desc}\n\n💡 La parte previa del mapa se desactivó y solo este sector está funcionando ahora.`);
+  }
+
+  window.transitionToBarrio = transitionToBarrio;
+
+  function openBarrioSelectorModal() {
+    const barrios = window.CiudadLinkMap.BARRIOS;
+    const currentActiveId = window.CiudadLinkMap.activeBarrioId;
+
+    const listHTML = barrios.map(b => `
+      <div style="background:${currentActiveId === b.id ? 'rgba(56,189,248,0.2)' : 'rgba(255,255,255,0.05)'}; border:2px solid ${currentActiveId === b.id ? '#38bdf8' : '#334155'}; border-radius:10px; padding:0.75rem; margin-bottom:0.5rem; display:flex; justify-content:space-between; align-items:center;">
+        <div>
+          <h4 style="margin:0; color:${b.color || '#38bdf8'};">${b.name} ${currentActiveId === b.id ? ' (ACTIVO)' : ''}</h4>
+          <p style="margin:0.2rem 0 0; font-size:0.78rem; color:#cbd5e1;">${b.desc}</p>
+        </div>
+        <button class="btn ${currentActiveId === b.id ? 'btn-secondary' : 'btn-primary'}" style="font-size:0.75rem; white-space:nowrap;" onclick="selectBarrioFromModal('${b.id}')">
+          ${currentActiveId === b.id ? '✅ Activo' : '🌀 Pasar al Barrio'}
+        </button>
+      </div>
+    `).join('');
+
+    const body = `
+      <p style="font-size:0.85rem; color:#cbd5e1; margin-bottom:1rem;">
+        🗺️ <b>10 Sectores / Barrios con Carga On-Demand Independiente:</b><br>
+        Selecciona un barrio para pasar inmediatamente. Se cargará únicamente el barrio seleccionado, manteniendo los demás desactivados:
+      </p>
+      <div style="max-height:340px; overflow-y:auto;">
+        ${listHTML}
+      </div>
+    `;
+
+    openModalCard('🏙️ 10 Sectores / Barrios de Ciudad Link', body);
+  }
+
+  window.selectBarrioFromModal = function(barrioId) {
+    const b = window.CiudadLinkMap.BARRIOS.find(item => item.id === barrioId);
+    if (b) {
+      transitionToBarrio(b, 'CENTER');
+      closeModalCard();
+    }
+  };
+
+  window.openBarrioSelectorModal = openBarrioSelectorModal;
+
   window.teleportToMainGroup = function(groupId) {
     const targetX = ((groupId - 1) * 10) + 5;
     const targetY = ((groupId - 1) * 10) + 5;
@@ -1854,6 +2023,38 @@
     `;
     openModalCard('📱 Teléfono Inteligente', body);
   }
+
+  window.movePlayerDirection = function(dx, dy) {
+    let nx = player.x + dx;
+    let ny = player.y + dy;
+
+    const curB = window.CiudadLinkMap.getActiveBarrio();
+    if (curB) {
+      if (ny < curB.yMin) {
+        const nextB = window.CiudadLinkMap.getNeighboringBarrio(curB.id, 'N');
+        if (nextB) { transitionToBarrio(nextB, 'N'); return; }
+      } else if (ny > curB.yMax) {
+        const nextB = window.CiudadLinkMap.getNeighboringBarrio(curB.id, 'S');
+        if (nextB) { transitionToBarrio(nextB, 'S'); return; }
+      } else if (nx < curB.xMin) {
+        const nextB = window.CiudadLinkMap.getNeighboringBarrio(curB.id, 'W');
+        if (nextB) { transitionToBarrio(nextB, 'W'); return; }
+      } else if (nx > curB.xMax) {
+        const nextB = window.CiudadLinkMap.getNeighboringBarrio(curB.id, 'E');
+        if (nextB) { transitionToBarrio(nextB, 'E'); return; }
+      }
+    }
+
+    if (window.CiudadLinkMap.isTileWalkable(nx, ny)) {
+      player.x = nx;
+      player.y = ny;
+      player.isWalking = true;
+      player.facing = dx > 0 ? 'E' : (dx < 0 ? 'W' : (dy > 0 ? 'S' : 'N'));
+      if (window.SuperEngine && window.SuperEngine.Audio) {
+        window.SuperEngine.Audio.playSFX('step');
+      }
+    }
+  };
 
   window.openPhoneApp = function(app) {
     if (app === 'delivery') {

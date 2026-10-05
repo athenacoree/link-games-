@@ -81,7 +81,60 @@ window.CiudadLinkMap = (function () {
     return { minX, maxX, minY, maxY };
   }
 
-  // LEGACY SECTORS COMPATIBILITY (NW, NE, SW, SE)
+  // 10 DISTINCT SECTORS / BARRIOS WITH ON-DEMAND INDEPENDENT LOADING
+  const BARRIOS = [
+    { id: 'B1', num: 1, name: 'Barrio 1: Cívico & Comisaría Central', desc: 'Comisaría de policía, celdas y zona cívica.', xMin: 0, xMax: 31, yMin: 0, yMax: 31, spawnX: 16, spawnY: 16, color: '#38bdf8' },
+    { id: 'B2', num: 2, name: 'Barrio 2: Presidencial Norte', desc: 'Palacio de la Presidencia Link y plazas de gobierno.', xMin: 32, xMax: 67, yMin: 0, yMax: 31, spawnX: 50, spawnY: 16, color: '#fbbf24' },
+    { id: 'B3', num: 3, name: 'Barrio 3: Tribunal & Cementerio', desc: 'Corte Judicial, juzgados y cementerio municipal.', xMin: 68, xMax: 99, yMin: 0, yMax: 31, spawnX: 84, spawnY: 16, color: '#c084fc' },
+    { id: 'B4', num: 4, name: 'Barrio 4: Hospital & Emergencias', desc: 'Hospital General Link y estación de bomberos.', xMin: 0, xMax: 31, yMin: 32, yMax: 67, spawnX: 16, spawnY: 50, color: '#34d399' },
+    { id: 'B5', num: 5, name: 'Barrio 5: Centro Histórico & Hotel Sol', desc: 'Hotel Rascacielos Sol y torres de apartamentos.', xMin: 32, xMax: 67, yMin: 32, yMax: 67, spawnX: 50, spawnY: 50, color: '#eab308' },
+    { id: 'B6', num: 6, name: 'Barrio 6: Comercial & Banco Central', desc: 'Banco Central Financiero y centro comercial.', xMin: 68, xMax: 99, yMin: 32, yMax: 67, spawnX: 84, spawnY: 50, color: '#2dd4bf' },
+    { id: 'B7', num: 7, name: 'Barrio 7: Residencial & Escuela Central', desc: 'Casas familiares Sims y Escuela Central.', xMin: 0, xMax: 31, yMin: 68, yMax: 99, spawnX: 16, spawnY: 84, color: '#f472b6' },
+    { id: 'B8', num: 8, name: 'Barrio 8: Gran Parque & Lago Ecológico', desc: 'Lago central, fuentes y parques recreativos.', xMin: 32, xMax: 49, yMin: 68, yMax: 99, spawnX: 40, spawnY: 84, color: '#22c55e' },
+    { id: 'B9', num: 9, name: 'Barrio 9: Nocturno & Discoteca Neon', desc: 'Gastronomía, Paladar Don Link y Club Velvet.', xMin: 50, xMax: 74, yMin: 68, yMax: 99, spawnX: 62, spawnY: 84, color: '#a855f7' },
+    { id: 'B10', num: 10, name: 'Barrio 10: Bajero Gangster & Mercado Negro', desc: 'Barrio peligroso, callejones y banda nocturna.', xMin: 75, xMax: 99, yMin: 68, yMax: 99, spawnX: 86, spawnY: 84, color: '#ef4444' }
+  ];
+
+  let activeBarrioId = 'B2';
+
+  function getBarrioForPos(x, y) {
+    for (let i = 0; i < BARRIOS.length; i++) {
+      const b = BARRIOS[i];
+      if (x >= b.xMin && x <= b.xMax && y >= b.yMin && y <= b.yMax) {
+        return b;
+      }
+    }
+    return BARRIOS[1]; // Default B2
+  }
+
+  function getActiveBarrio() {
+    return BARRIOS.find(b => b.id === activeBarrioId) || BARRIOS[1];
+  }
+
+  function setActiveBarrioId(id) {
+    const found = BARRIOS.find(b => b.id === id);
+    if (found) {
+      activeBarrioId = id;
+    }
+  }
+
+  function getNeighboringBarrio(currentId, dir) {
+    const curr = BARRIOS.find(b => b.id === currentId);
+    if (!curr) return null;
+
+    let targetX = (curr.xMin + curr.xMax) / 2;
+    let targetY = (curr.yMin + curr.yMax) / 2;
+
+    if (dir === 'N') targetY = curr.yMin - 2;
+    if (dir === 'S') targetY = curr.yMax + 2;
+    if (dir === 'W') targetX = curr.xMin - 2;
+    if (dir === 'E') targetX = curr.xMax + 2;
+
+    if (targetX < 0 || targetX >= MAP_WIDTH || targetY < 0 || targetY >= MAP_HEIGHT) return null;
+    return getBarrioForPos(targetX, targetY);
+  }
+
+  // LEGACY SECTORS COMPATIBILITY
   const SECTORS = {
     NW: { id: 'NW', name: 'Sector Noroeste (Cívico & Salud)', xMin: 0, xMax: 49, yMin: 0, yMax: 49, spawnX: 25, spawnY: 25 },
     NE: { id: 'NE', name: 'Sector Noreste (Tribunal & Comercio)', xMin: 50, xMax: 99, yMin: 0, yMax: 49, spawnX: 75, spawnY: 25 },
@@ -207,46 +260,46 @@ window.CiudadLinkMap = (function () {
 
     // 2. District 1: Civic & Government Center (North District)
     createBuildingZone(42, 4, 16, 14, TILE.PRESIDENCIA, 'Presidencia Link', '👑 Casa del Presidente & Palacio Municipal', {
-      height: 38, wallColor: '#b45309', roofColor: '#78350f', accentColor: '#fbbf24', style: 'PALACE'
+      height: 18, wallColor: '#b45309', roofColor: '#78350f', accentColor: '#fbbf24', style: 'PALACE'
     });
 
     createBuildingZone(5, 4, 12, 12, TILE.POLICE, 'Estación de Policía Central', '🚔 Comisaría, Celdas y Custodia', {
-      height: 28, wallColor: '#1e3a8a', roofColor: '#1e40af', accentColor: '#38bdf8', style: 'POLICE'
+      height: 14, wallColor: '#1e3a8a', roofColor: '#1e40af', accentColor: '#38bdf8', style: 'POLICE'
     });
 
     createBuildingZone(82, 4, 12, 12, TILE.COURT, 'Tribunal & Juzgados', '⚖️ Corte Judicial y Colegio de Abogados', {
-      height: 30, wallColor: '#581c87', roofColor: '#6b21a8', accentColor: '#c084fc', style: 'COURT'
+      height: 15, wallColor: '#581c87', roofColor: '#6b21a8', accentColor: '#c084fc', style: 'COURT'
     });
 
     // 3. District 2: Healthcare & Emergency Services (West District)
     createBuildingZone(5, 24, 12, 12, TILE.HOSPITAL, 'Hospital General Link', '🏥 Centro de Urgencias, Quirófanos y Sanidad', {
-      height: 32, wallColor: '#047857', roofColor: '#065f46', accentColor: '#34d399', style: 'HOSPITAL'
+      height: 16, wallColor: '#047857', roofColor: '#065f46', accentColor: '#34d399', style: 'HOSPITAL'
     });
 
     createBuildingZone(5, 64, 12, 12, TILE.FIRE_STATION, 'Estación de Bomberos Link', '🚒 Cuartel de Bomberos y Rescate', {
-      height: 26, wallColor: '#991b1b', roofColor: '#7f1d1d', accentColor: '#f87171', style: 'FIRE_STATION'
+      height: 13, wallColor: '#991b1b', roofColor: '#7f1d1d', accentColor: '#f87171', style: 'FIRE_STATION'
     });
 
     // 4. District 3: Financial & Commercial District (East & Central Districts)
     createBuildingZone(82, 64, 12, 12, TILE.BANK, 'Banco Central Financiero', '🏦 Banco Nacional, Cajas Fuertes y Finanzas', {
-      height: 36, wallColor: '#0f766e', roofColor: '#115e59', accentColor: '#2dd4bf', style: 'BANK'
+      height: 18, wallColor: '#0f766e', roofColor: '#115e59', accentColor: '#2dd4bf', style: 'BANK'
     });
 
     createBuildingZone(82, 44, 12, 12, TILE.STORE, 'Gran Mercado & Malls', '🛒 Centro Comercial, Supermercado y Tiendas', {
-      height: 24, wallColor: '#0d9488', roofColor: '#115e59', accentColor: '#facc15', style: 'MARKET'
+      height: 12, wallColor: '#0d9488', roofColor: '#115e59', accentColor: '#facc15', style: 'MARKET'
     });
 
     createBuildingZone(82, 84, 12, 12, TILE.GAS_STATION, 'Estación de Gasolina & Taller', '⛽ Combustible, Lavado y Servicio Mecánico', {
-      height: 20, wallColor: '#ea580c', roofColor: '#c2410c', accentColor: '#fbbf24', style: 'GAS_STATION'
+      height: 10, wallColor: '#ea580c', roofColor: '#c2410c', accentColor: '#fbbf24', style: 'GAS_STATION'
     });
 
     // 5. District 4: Education & Culture (South-West & East)
     createBuildingZone(5, 44, 12, 12, TILE.SCHOOL, 'Escuela Central Link', '🏫 Aulas Escolares, Laboratorios y Patio', {
-      height: 25, wallColor: '#be185d', roofColor: '#9d174d', accentColor: '#f472b6', style: 'SCHOOL'
+      height: 12, wallColor: '#be185d', roofColor: '#9d174d', accentColor: '#f472b6', style: 'SCHOOL'
     });
 
     createBuildingZone(82, 24, 12, 12, TILE.CEMETERY, 'Cementerio Municipal', '🪦 Criptas, Mausoleos y Capilla', {
-      height: 18, wallColor: '#374151', roofColor: '#1f2937', accentColor: '#9ca3af', style: 'CEMETERY'
+      height: 10, wallColor: '#374151', roofColor: '#1f2937', accentColor: '#9ca3af', style: 'CEMETERY'
     });
 
     // 6. District 5: Central Park, Lake & Recreation Zone (Center x: 42..58, y: 64..78)
@@ -275,25 +328,25 @@ window.CiudadLinkMap = (function () {
 
     // 7b. District 6: Paladares, Restaurants, Discotecas & VIP Nightclubs (South District)
     createBuildingZone(22, 82, 12, 12, TILE.PALADAR, 'Paladar & Restaurante Don Link', '🍽️ Gastronomía, Jefe de Cocina, Meseros y Bar', {
-      height: 24, wallColor: '#854d0e', roofColor: '#a16207', accentColor: '#facc15', style: 'RESTAURANT'
+      height: 12, wallColor: '#854d0e', roofColor: '#a16207', accentColor: '#facc15', style: 'RESTAURANT'
     });
 
     createBuildingZone(42, 82, 12, 12, TILE.DISCOTECA, 'Discoteca & Club Neon', '💃 Pista de baile, Luces Neón, DJ y Fiestas Sims', {
-      height: 32, wallColor: '#581c87', roofColor: '#3b0764', accentColor: '#f472b6', style: 'DISCO'
+      height: 16, wallColor: '#581c87', roofColor: '#3b0764', accentColor: '#f472b6', style: 'DISCO'
     });
 
     createBuildingZone(62, 82, 12, 12, TILE.CLUB_VIP, 'Club VIP Puticlub Velvet', '🍸 Zona Exclusiva VIP, Fiestas Nocturnas y Espectáculos', {
-      height: 28, wallColor: '#831843', roofColor: '#500724', accentColor: '#ec4899', style: 'VIP_CLUB'
+      height: 14, wallColor: '#831843', roofColor: '#500724', accentColor: '#ec4899', style: 'VIP_CLUB'
     });
 
     createBuildingZone(82, 82, 12, 12, TILE.BARRIO_BAJERO, 'Barrio Bajero Gangster', '🥷 Zonas peligrosas, Pandilleros, Ladrones y Mercado Negro', {
-      height: 18, wallColor: '#1c1917', roofColor: '#0c0a09', accentColor: '#ef4444', style: 'GANG'
+      height: 10, wallColor: '#1c1917', roofColor: '#0c0a09', accentColor: '#ef4444', style: 'GANG'
     });
 
     // Residential Houses
     for (let i = 0; i < 4; i++) {
       createBuildingZone(25 + (i * 12), 62, 8, 8, TILE.HOUSE, `Casa Familiar Sims N° ${i + 1}`, '🏡 Residencia Privada con Jardín', {
-        height: 16, wallColor: '#334155', roofColor: '#475569', accentColor: '#38bdf8', style: 'HOUSE'
+        height: 10, wallColor: '#334155', roofColor: '#475569', accentColor: '#38bdf8', style: 'HOUSE'
       });
     }
 
@@ -315,7 +368,7 @@ window.CiudadLinkMap = (function () {
       desc,
       x, y, w, h,
       tileType,
-      height: styleConfig.height || 24,
+      height: styleConfig.height || 12,
       wallColor: styleConfig.wallColor || '#1e293b',
       roofColor: styleConfig.roofColor || '#334155',
       accentColor: styleConfig.accentColor || '#38bdf8',
@@ -360,7 +413,7 @@ window.CiudadLinkMap = (function () {
       elevatorX, elevatorY,
       floorsCount,
       floors,
-      height: 52, // High-rise 3D building
+      height: 20, // Scaled 3D building height for screen visibility
       wallColor: '#0f172a',
       roofColor: '#1e293b',
       accentColor: '#eab308'
@@ -373,7 +426,7 @@ window.CiudadLinkMap = (function () {
       desc: `Hotel de ${floorsCount} pisos con elevadores express. 5 hab/piso (3 pers/hab).`,
       x, y, w, h,
       tileType: TILE.HOTEL,
-      height: 52,
+      height: 20,
       wallColor: '#0f172a',
       roofColor: '#1e293b',
       accentColor: '#eab308',
@@ -543,6 +596,12 @@ window.CiudadLinkMap = (function () {
     updateOccupancyState,
     isTileOccupiedON,
     get tileOccupancyGrid() { return tileOccupancyGrid; },
+    BARRIOS,
+    getBarrioForPos,
+    getActiveBarrio,
+    setActiveBarrioId,
+    getNeighboringBarrio,
+    get activeBarrioId() { return activeBarrioId; },
     getSectorForPos,
     setActiveSector,
     get activeSector() { return activeSector; },
