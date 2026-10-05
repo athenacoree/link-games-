@@ -9,31 +9,46 @@
 
   let canvas, ctx;
 
-  // Active Player Character State with Smooth Sub-Tile Interpolation
+  // Active Player Character State with Leveling, Pet, Equipment & Achievements
   let player = {
     avatarId: 'hero_link',
     name: 'Link',
     title: 'Héroe Urbano',
     badge: '🧝',
+    level: 1,
+    xp: 0,
+    nextXp: 500,
     color: '#22c55e',
     hatColor: '#16a34a',
     shirtColor: '#22c55e',
     pantsColor: '#15803d',
     skinTone: '#fde047',
+    hairColor: '#1e293b',
+    accessory: 'cap', // 'none', 'cap', 'glasses', 'sunglasses', 'mask', 'crown'
+    equippedWeapon: 'taser', // 'none', 'taser', 'shield', 'flashlight', 'laser'
+    bankSavings: 500,
+    ownedProperties: [],
+    bountiesClaimed: 0,
+    pet: { name: 'Firulais', badge: '🐕', x: 50, y: 13, renderX: 50, renderY: 13 },
+    phoneWallpaper: 'cyberpunk', // 'dark', 'cyberpunk', 'sunset', 'matrix'
+    achievements: [],
+    activeEmote: null,
+    emoteTimer: 0,
     x: 50, y: 12,
-    renderX: 50, renderY: 12, // Sub-tile smooth interpolation coordinates
+    renderX: 50, renderY: 12,
     walkAnimPhase: 0,
     money: 600,
     health: 100, maxHealth: 100,
     energy: 100, maxEnergy: 100,
+    stamina: 100, maxStamina: 100,
     hunger: 90, maxHunger: 100,
     sleep: 90, maxSleep: 100,
     mood: 85, maxMood: 100,
     spouse: null,
     isWalking: false,
     isSprinting: false,
-    gameMode: 'SIMS', // 'SIMS', 'POLICE', 'MAYOR', 'DRIVER', 'DOCTOR', 'LAWYER', 'TYCOON', 'SEWER'
-    facing: 'S', // 'N', 'S', 'E', 'W'
+    gameMode: 'SIMS',
+    facing: 'S',
     path: [],
     insideBuilding: null,
     interiorFloor: 1,
@@ -42,6 +57,8 @@
     inventory: [],
     logHistory: ['🌟 Bienvenido a Ciudad Link — Simulador Urbano 3D.']
   };
+
+  let showMiniMap = false;
 
   let camera = { x: 0, y: 0 };
   let lastTime = performance.now();
@@ -175,6 +192,39 @@
     window.CiudadLinkNPCs.updateNPCSimulation(deltaSec, player.isWalking);
     window.CiudadLinkVehicles.updateVehicles(deltaSec, player.x, player.y);
 
+    // Update Active Mission Objectives & Progress
+    if (window.CiudadLinkMissions) {
+      window.CiudadLinkMissions.updateMissionProgress(player.x, player.y);
+    }
+
+    // Update Multiplayer Networking & Proximity Voice Spatial Volume Calculation
+    if (window.CiudadLinkMultiplayer) {
+      if (window.CiudadLinkMultiplayer.isConnected) {
+        window.CiudadLinkMultiplayer.broadcastPlayerState(player);
+      }
+      window.CiudadLinkMultiplayer.updateProximityAudio(player.renderX, player.renderY);
+    }
+
+    // Update Pet Dog Companion Position (Follows Player smoothly 1 tile behind)
+    if (player.pet) {
+      const petDx = player.x - player.pet.x;
+      const petDy = player.y - player.pet.y;
+      if (Math.abs(petDx) > 1 || Math.abs(petDy) > 1) {
+        player.pet.x += Math.sign(petDx);
+        player.pet.y += Math.sign(petDy);
+      }
+      player.pet.renderX += (player.pet.x - player.pet.renderX) * 0.2;
+      player.pet.renderY += (player.pet.y - player.pet.renderY) * 0.2;
+    }
+
+    // Stamina Regeneration & Sprint Consumption
+    if (player.isSprinting && player.isWalking) {
+      player.stamina = Math.max(0, player.stamina - deltaSec * 15);
+      if (player.stamina <= 0) toggleSprint();
+    } else {
+      player.stamina = Math.min(100, player.stamina + deltaSec * 10);
+    }
+
     // Update Camera smoothly centered on Player's smooth render position
     const targetCamX = player.renderX * tileSize - canvas.width / 2 + tileSize / 2;
     const targetCamY = player.renderY * tileSize - canvas.height / 2 + tileSize / 2;
@@ -191,6 +241,9 @@
 
     const elemAvatar = document.getElementById('hudAvatar');
     if (elemAvatar) elemAvatar.textContent = `${player.badge} ${player.name}`;
+
+    const elemLevel = document.getElementById('hudLevel');
+    if (elemLevel) elemLevel.textContent = `⭐ Nivel ${player.level} (${player.xp}/${player.nextXp} XP)`;
 
     const elemState = document.getElementById('hudState');
     if (elemState) {
@@ -214,10 +267,38 @@
     }
   }
 
-  // MAIN PSEUDO-3D CITY RENDERER WITH LOCAL MICRO-QUADRANT OPTIMIZATION
+  // Weather Particle Engine
+  let rainParticles = [];
+  let fogClouds = [];
+
+  function initVisualParticles() {
+    rainParticles = [];
+    for (let i = 0; i < 120; i++) {
+      rainParticles.push({
+        x: Math.random() * window.innerWidth,
+        y: Math.random() * window.innerHeight,
+        length: 8 + Math.random() * 12,
+        speed: 12 + Math.random() * 8
+      });
+    }
+
+    fogClouds = [];
+    for (let i = 0; i < 8; i++) {
+      fogClouds.push({
+        x: Math.random() * window.innerWidth,
+        y: Math.random() * window.innerHeight,
+        radius: 100 + Math.random() * 150,
+        speedX: 0.2 + Math.random() * 0.3
+      });
+    }
+  }
+
+  // MAIN PSEUDO-3D CITY RENDERER WITH ENHANCED GRAPHICS & VISUAL FX
   function render() {
     ctx.fillStyle = '#0f172a';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    if (rainParticles.length === 0) initVisualParticles();
 
     // IF PLAYER IS INSIDE A BUILDING INTERIOR -> RENDER INTERIOR MODE
     if (player.insideBuilding) {
@@ -248,45 +329,64 @@
         const tileType = grid[r][c];
 
         if (tileType === window.CiudadLinkMap.TILE.ROAD) {
-          ctx.fillStyle = '#334155';
+          // Asphalt texture with subtle dark gradient
+          const roadGrad = ctx.createLinearGradient(sx, sy, sx + tileSize, sy + tileSize);
+          roadGrad.addColorStop(0, '#1e293b');
+          roadGrad.addColorStop(1, '#334155');
+          ctx.fillStyle = roadGrad;
           ctx.fillRect(sx, sy, tileSize, tileSize);
+
           ctx.strokeStyle = '#475569';
           ctx.lineWidth = 1;
           ctx.strokeRect(sx, sy, tileSize, tileSize);
         } else if (tileType === window.CiudadLinkMap.TILE.CROSSWALK) {
-          ctx.fillStyle = '#334155';
+          ctx.fillStyle = '#1e293b';
           ctx.fillRect(sx, sy, tileSize, tileSize);
-          ctx.fillStyle = '#f8fafc'; // White zebra lines
+          ctx.fillStyle = '#f8fafc'; // Crisp zebra lines
           ctx.fillRect(sx + 4, sy + 2, tileSize - 8, 5);
           ctx.fillRect(sx + 4, sy + 12, tileSize - 8, 5);
           ctx.fillRect(sx + 4, sy + 22, tileSize - 8, 5);
         } else if (tileType === window.CiudadLinkMap.TILE.STREET) {
-          ctx.fillStyle = '#64748b'; // Sidewalk pavement
+          // Polished concrete sidewalk pavement
+          ctx.fillStyle = '#475569';
           ctx.fillRect(sx, sy, tileSize, tileSize);
-          // 3D Curb lines
+          ctx.fillStyle = '#64748b';
+          ctx.fillRect(sx + 1, sy + 1, tileSize - 2, tileSize - 2);
+          // 3D Curb highlight
           ctx.fillStyle = '#94a3b8';
           ctx.fillRect(sx, sy, tileSize, 2);
         } else if (tileType === window.CiudadLinkMap.TILE.PARK) {
-          ctx.fillStyle = '#15803d'; // Park grass
+          // Rich vibrant grass with texture dots
+          const grassGrad = ctx.createLinearGradient(sx, sy, sx, sy + tileSize);
+          grassGrad.addColorStop(0, '#15803d');
+          grassGrad.addColorStop(1, '#166534');
+          ctx.fillStyle = grassGrad;
           ctx.fillRect(sx, sy, tileSize, tileSize);
-          ctx.fillStyle = '#166534';
-          ctx.fillRect(sx + 2, sy + 2, 4, 4);
+
+          ctx.fillStyle = '#22c55e';
+          ctx.fillRect(sx + 4, sy + 6, 2, 3);
+          ctx.fillRect(sx + 18, sy + 20, 2, 3);
         } else if (tileType === window.CiudadLinkMap.TILE.LAKE) {
-          ctx.fillStyle = '#0284c7'; // Water lake
+          // Dynamic water sheen with moving ripples
+          const waterGrad = ctx.createLinearGradient(sx, sy, sx + tileSize, sy + tileSize);
+          waterGrad.addColorStop(0, '#0284c7');
+          waterGrad.addColorStop(1, '#0369a1');
+          ctx.fillStyle = waterGrad;
           ctx.fillRect(sx, sy, tileSize, tileSize);
-          const ripple = Math.sin((performance.now() * 0.003) + (c + r)) * 3;
-          ctx.fillStyle = '#38bdf8';
-          ctx.fillRect(sx + 6 + ripple, sy + 12, 10, 2);
+
+          const ripple = Math.sin((performance.now() * 0.003) + (c + r)) * 4;
+          ctx.fillStyle = 'rgba(56, 189, 248, 0.6)';
+          ctx.fillRect(sx + 6 + ripple, sy + 12, 12, 2);
         } else if (tileType === window.CiudadLinkMap.TILE.FOUNTAIN) {
           ctx.fillStyle = '#0284c7';
           ctx.fillRect(sx, sy, tileSize, tileSize);
           ctx.fillStyle = '#cbd5e1';
           ctx.beginPath();
-          ctx.arc(sx + tileSize / 2, sy + tileSize / 2, 12, 0, Math.PI * 2);
+          ctx.arc(sx + tileSize / 2, sy + tileSize / 2, 13, 0, Math.PI * 2);
           ctx.fill();
           ctx.fillStyle = '#38bdf8';
           ctx.beginPath();
-          ctx.arc(sx + tileSize / 2, sy + tileSize / 2, 6, 0, Math.PI * 2);
+          ctx.arc(sx + tileSize / 2, sy + tileSize / 2, 7, 0, Math.PI * 2);
           ctx.fill();
         } else {
           ctx.fillStyle = '#1e293b';
@@ -382,40 +482,113 @@
       }
     });
 
+    // Render Pet Dog Companion
+    if (player.pet) {
+      const px = player.pet.renderX * tileSize + tileSize / 2;
+      const py = player.pet.renderY * tileSize + tileSize / 2;
+      ctx.save();
+      ctx.fillStyle = 'rgba(0,0,0,0.3)';
+      ctx.beginPath();
+      ctx.ellipse(px, py + 6, 6, 3, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.font = '14px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(player.pet.badge, px, py + 2);
+      ctx.restore();
+    }
+
     // Render Overhead Helicopters on Top Z-Layer
     window.CiudadLinkVehicles.helicopters.forEach(h => {
       window.CiudadLinkVehicles.renderHelicopterOverhead(ctx, h, tileSize, isNight);
     });
 
+    // Render Multiplayer Remote Player Avatars
+    if (window.CiudadLinkMultiplayer && window.CiudadLinkMultiplayer.isConnected) {
+      window.CiudadLinkMultiplayer.renderRemotePlayers(ctx, tileSize, isNight);
+    }
+
     ctx.restore();
 
-    // 4. Day/Night Lighting Blend
+    // 4. Day/Night Lighting Blend & Dynamic Streetlamp Lighting Glow
     const nightTint = window.CiudadLinkNPCs.getLightingOverlay();
     if (nightTint > 0) {
       ctx.fillStyle = `rgba(15, 23, 42, ${nightTint})`;
       ctx.fillRect(0, 0, canvas.width, canvas.height);
     }
 
-    // 5. Dynamic Weather Overlay Effects
+    // 5. Enhanced Weather Particle Systems & Lighting Flashes
     if (currentWeather === 'RAIN' || currentWeather === 'THUNDERSTORM') {
-      ctx.strokeStyle = 'rgba(186, 230, 253, 0.55)';
-      ctx.lineWidth = 1;
-      const time = performance.now() * 0.005;
-      for (let i = 0; i < 70; i++) {
-        const rx = (Math.sin(i * 127 + time) * 0.5 + 0.5) * canvas.width;
-        const ry = ((i * 17 + time * 100) % canvas.height);
+      ctx.strokeStyle = 'rgba(186, 230, 253, 0.65)';
+      ctx.lineWidth = 1.2;
+
+      rainParticles.forEach(pt => {
+        pt.y += pt.speed;
+        pt.x -= 2;
+        if (pt.y > canvas.height) {
+          pt.y = -10;
+          pt.x = Math.random() * canvas.width;
+        }
+
         ctx.beginPath();
-        ctx.moveTo(rx, ry);
-        ctx.lineTo(rx - 4, ry + 10);
+        ctx.moveTo(pt.x, pt.y);
+        ctx.lineTo(pt.x - 3, pt.y + pt.length);
         ctx.stroke();
-      }
-      if (currentWeather === 'THUNDERSTORM' && Math.random() < 0.015) {
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+      });
+
+      if (currentWeather === 'THUNDERSTORM' && Math.random() < 0.02) {
+        // Soft thunder flash light
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.35)';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
       }
     } else if (currentWeather === 'FOG') {
-      ctx.fillStyle = 'rgba(203, 213, 225, 0.12)';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      fogClouds.forEach(cloud => {
+        cloud.x += cloud.speedX;
+        if (cloud.x - cloud.radius > canvas.width) {
+          cloud.x = -cloud.radius;
+        }
+
+        const fogGrad = ctx.createRadialGradient(cloud.x, cloud.y, 10, cloud.x, cloud.y, cloud.radius);
+        fogGrad.addColorStop(0, 'rgba(203, 213, 225, 0.18)');
+        fogGrad.addColorStop(1, 'rgba(203, 213, 225, 0)');
+        ctx.fillStyle = fogGrad;
+        ctx.beginPath();
+        ctx.arc(cloud.x, cloud.y, cloud.radius, 0, Math.PI * 2);
+        ctx.fill();
+      });
+    }
+
+    // 6. Interactive Canvas Mini-Map Radar Overlay
+    if (showMiniMap) {
+      renderMiniMapRadar(ctx);
+    }
+
+    // 7. Mission Target Indicator Pointer Arrow
+    if (window.CiudadLinkMissions && window.CiudadLinkMissions.activeMissionIdx >= 0) {
+      const activeM = window.CiudadLinkMissions.MISSIONS[window.CiudadLinkMissions.activeMissionIdx];
+      const stIdx = window.CiudadLinkMissions.currentStageIdx;
+      const stage = activeM.stages[stIdx];
+
+      if (stage && stage.targetX !== undefined) {
+        const tx = stage.targetX * tileSize - camera.x + tileSize / 2;
+        const ty = stage.targetY * tileSize - camera.y + tileSize / 2;
+
+        ctx.save();
+        ctx.fillStyle = '#ef4444';
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 2;
+
+        const pulse = Math.sin(Date.now() * 0.008) * 6;
+        ctx.beginPath();
+        ctx.arc(tx, ty - 30 + pulse, 10, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 10px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('🎯', tx, ty - 26 + pulse);
+        ctx.restore();
+      }
     }
   }
 
@@ -686,6 +859,34 @@
     ctx.arc(px, py - 18, 8, Math.PI, Math.PI * 2);
     ctx.fill();
 
+    // Custom Accessories (Glasses, Sunglasses, Crown, Cap Visor, Mask)
+    if (p.accessory === 'cap') {
+      ctx.fillStyle = p.hatColor || '#16a34a';
+      ctx.fillRect(px - 10, py - 18, 12, 3); // Cap visor
+    } else if (p.accessory === 'glasses') {
+      ctx.strokeStyle = '#38bdf8';
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(px - 5, py - 17, 4, 4);
+      ctx.strokeRect(px + 1, py - 17, 4, 4);
+    } else if (p.accessory === 'sunglasses') {
+      ctx.fillStyle = '#0f172a';
+      ctx.fillRect(px - 6, py - 17, 5, 4);
+      ctx.fillRect(px + 1, py - 17, 5, 4);
+    } else if (p.accessory === 'crown') {
+      ctx.fillStyle = '#facc15';
+      ctx.beginPath();
+      ctx.moveTo(px - 7, py - 22);
+      ctx.lineTo(px - 4, py - 27);
+      ctx.lineTo(px, py - 22);
+      ctx.lineTo(px + 4, py - 27);
+      ctx.lineTo(px + 7, py - 22);
+      ctx.closePath();
+      ctx.fill();
+    } else if (p.accessory === 'mask') {
+      ctx.fillStyle = '#3b82f6';
+      ctx.fillRect(px - 6, py - 14, 12, 5);
+    }
+
     // Selection Ring around Hero
     ctx.strokeStyle = '#38bdf8';
     ctx.lineWidth = 2;
@@ -860,6 +1061,360 @@
   };
 
   window.openGameModeSelectorModal = openGameModeSelectorModal;
+
+  function openAvatarCustomizerModal() {
+    const skinTones = ['#fde047', '#fed7aa', '#fecdd3', '#f59e0b', '#d97706', '#78350f'];
+    const shirtColors = ['#22c55e', '#38bdf8', '#f472b6', '#ef4444', '#a855f7', '#eab308', '#0f172a', '#ffffff'];
+    const pantsColors = ['#15803d', '#1e293b', '#334155', '#1d4ed8', '#7c2d12', '#4c1d95'];
+    const hatColors = ['#16a34a', '#0284c7', '#be185d', '#dc2626', '#1e293b', '#ca8a04'];
+
+    const body = `
+      <div style="text-align:center; margin-bottom:1rem;">
+        <h3 style="color:#ec4899; margin:0 0 0.25rem;">🎨 Personalizador Completo de Avatar</h3>
+        <p style="font-size:0.82rem; color:#cbd5e1;">Ajusta la vestimenta, tonos de piel, gorra y accesorios de tu personaje:</p>
+      </div>
+
+      <div style="display:flex; flex-direction:column; gap:0.85rem; max-height:340px; overflow-y:auto; padding-right:0.25rem;">
+        <div>
+          <label style="font-size:0.8rem; font-weight:bold; color:#38bdf8; display:block; margin-bottom:0.25rem;">👤 Nombre del Avatar:</label>
+          <input type="text" id="custNameInput" value="${player.name}" style="width:100%; padding:0.4rem; background:#1e293b; border:1px solid #334155; color:#fff; border-radius:6px; box-sizing:border-box;">
+        </div>
+
+        <div>
+          <label style="font-size:0.8rem; font-weight:bold; color:#38bdf8; display:block; margin-bottom:0.25rem;">🏽 Tono de Piel:</label>
+          <div style="display:flex; gap:0.4rem;">
+            ${skinTones.map(c => `
+              <div onclick="setAvatarCustomProp('skinTone', '${c}')" style="width:28px; height:28px; background:${c}; border:${player.skinTone === c ? '3px solid #38bdf8' : '1px solid #64748b'}; border-radius:50%; cursor:pointer;"></div>
+            `).join('')}
+          </div>
+        </div>
+
+        <div>
+          <label style="font-size:0.8rem; font-weight:bold; color:#38bdf8; display:block; margin-bottom:0.25rem;">👕 Color de Camiseta:</label>
+          <div style="display:flex; gap:0.4rem;">
+            ${shirtColors.map(c => `
+              <div onclick="setAvatarCustomProp('shirtColor', '${c}')" style="width:28px; height:28px; background:${c}; border:${player.shirtColor === c ? '3px solid #38bdf8' : '1px solid #64748b'}; border-radius:50%; cursor:pointer;"></div>
+            `).join('')}
+          </div>
+        </div>
+
+        <div>
+          <label style="font-size:0.8rem; font-weight:bold; color:#38bdf8; display:block; margin-bottom:0.25rem;">👖 Color de Pantalón:</label>
+          <div style="display:flex; gap:0.4rem;">
+            ${pantsColors.map(c => `
+              <div onclick="setAvatarCustomProp('pantsColor', '${c}')" style="width:28px; height:28px; background:${c}; border:${player.pantsColor === c ? '3px solid #38bdf8' : '1px solid #64748b'}; border-radius:50%; cursor:pointer;"></div>
+            `).join('')}
+          </div>
+        </div>
+
+        <div>
+          <label style="font-size:0.8rem; font-weight:bold; color:#38bdf8; display:block; margin-bottom:0.25rem;">🧢 Color de Gorra / Cabello:</label>
+          <div style="display:flex; gap:0.4rem;">
+            ${hatColors.map(c => `
+              <div onclick="setAvatarCustomProp('hatColor', '${c}')" style="width:28px; height:28px; background:${c}; border:${player.hatColor === c ? '3px solid #38bdf8' : '1px solid #64748b'}; border-radius:50%; cursor:pointer;"></div>
+            `).join('')}
+          </div>
+        </div>
+
+        <div>
+          <label style="font-size:0.8rem; font-weight:bold; color:#38bdf8; display:block; margin-bottom:0.25rem;">🕶️ Accesorios de Rostro:</label>
+          <select id="custAccessorySelect" onchange="setAvatarCustomProp('accessory', this.value)" style="width:100%; padding:0.4rem; background:#1e293b; border:1px solid #334155; color:#fff; border-radius:6px; box-sizing:border-box;">
+            <option value="none" ${player.accessory === 'none' ? 'selected' : ''}>Sin Accesorio</option>
+            <option value="cap" ${player.accessory === 'cap' ? 'selected' : ''}>🧢 Visera de Gorra</option>
+            <option value="glasses" ${player.accessory === 'glasses' ? 'selected' : ''}>👓 Lentes de Aumento</option>
+            <option value="sunglasses" ${player.accessory === 'sunglasses' ? 'selected' : ''}>🕶️ Gafas de Sol VIP</option>
+            <option value="mask" ${player.accessory === 'mask' ? 'selected' : ''}>😷 Mascarilla Médica</option>
+            <option value="crown" ${player.accessory === 'crown' ? 'selected' : ''}>👑 Corona Real</option>
+          </select>
+        </div>
+      </div>
+
+      <div style="margin-top:1rem; text-align:center;">
+        <button class="btn btn-primary" onclick="saveAvatarCustomization()">✨ Guardar Personalización</button>
+      </div>
+    `;
+
+    openModalCard('🎨 Personalizar Avatar', body);
+  }
+
+  window.setAvatarCustomProp = function(prop, value) {
+    player[prop] = value;
+    openAvatarCustomizerModal();
+  };
+
+  function openMultiplayerModal() {
+    const isConn = window.CiudadLinkMultiplayer ? window.CiudadLinkMultiplayer.isConnected : false;
+    const currentRoom = window.CiudadLinkMultiplayer ? window.CiudadLinkMultiplayer.roomId : 'Ninguna';
+    const isMicOn = window.CiudadLinkMultiplayer ? window.CiudadLinkMultiplayer.isMicActive : false;
+    const remPlayers = window.CiudadLinkMultiplayer ? Object.values(window.CiudadLinkMultiplayer.remotePlayers) : [];
+
+    const remoteListHTML = remPlayers.length > 0 ? remPlayers.map(rp => `
+      <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.05); padding:0.5rem; border-radius:6px; margin-bottom:0.4rem;">
+        <div>
+          <span style="font-size:1.1rem;">${rp.badge || '👤'}</span> <b>${rp.name}</b>
+          <span style="font-size:0.75rem; color:#38bdf8;"> (${Math.round(rp.distance || 0)} tiles)</span>
+        </div>
+        <span style="font-size:0.75rem; color:${rp.isMicOn ? '#22c55e' : '#94a3b8'};">
+          ${rp.isMicOn ? '🎙️ Mic Activo' : '🔇 Silenciado'}
+        </span>
+      </div>
+    `).join('') : '<p style="font-size:0.8rem; color:#94a3b8; margin:0;">Esperando otros jugadores en la sala...</p>';
+
+    const body = `
+      <div style="text-align:center; margin-bottom:1rem;">
+        <h3 style="color:#38bdf8; margin:0 0 0.25rem;">🌐 Multijugador Co-op & Chat de Voz de Proximidad</h3>
+        <p style="font-size:0.82rem; color:#cbd5e1;">Conéctate con amigos en tiempo real. ¡Al acercarse sus avatares se escuchará su voz con volumen espacial según la distancia!</p>
+      </div>
+
+      <div style="background:rgba(255,255,255,0.05); border:1px solid #334155; padding:0.75rem; border-radius:10px; margin-bottom:1rem;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
+          <span style="font-size:0.85rem; font-weight:bold;">Estado: <span style="color:${isConn ? '#22c55e' : '#ef4444'};">${isConn ? '🟢 Conectado (' + currentRoom + ')' : '🔴 Desconectado'}</span></span>
+          <button class="btn ${isConn ? 'btn-secondary' : 'btn-primary'}" style="font-size:0.75rem; padding:0.3rem 0.6rem;" onclick="${isConn ? 'toggleNetConnect(false)' : 'toggleNetConnect(true)'}">
+            ${isConn ? '🚪 Salir de Sala' : '⚡ Unirse a Sala'}
+          </button>
+        </div>
+
+        <div style="display:flex; gap:0.5rem; margin-top:0.5rem;">
+          <input type="text" id="netRoomInput" value="${currentRoom !== 'Ninguna' ? currentRoom : 'CIUDADLINK_SALA_1'}" style="flex:1; padding:0.35rem; background:#1e293b; border:1px solid #334155; color:#fff; border-radius:6px; font-size:0.8rem;">
+          <button class="btn btn-secondary" style="font-size:0.75rem;" onclick="joinNetRoomFromInput()">🔑 Cambiar Sala</button>
+        </div>
+      </div>
+
+      <div style="background:rgba(255,255,255,0.05); border:1px solid #10b981; padding:0.75rem; border-radius:10px; margin-bottom:1rem; display:flex; justify-content:space-between; align-items:center;">
+        <div>
+          <div style="font-size:0.85rem; font-weight:bold; color:#10b981;">🎙️ Chat de Voz de Proximidad</div>
+          <p style="font-size:0.72rem; color:#cbd5e1; margin:0.2rem 0 0;">El volumen de voz baja automáticamente si los avatares se alejan.</p>
+        </div>
+        <button class="btn ${isMicOn ? 'btn-secondary' : 'btn-primary'}" id="btnToggleMic" style="font-size:0.75rem; padding:0.4rem 0.75rem;" onclick="toggleNetMicrophone()">
+          ${isMicOn ? '🎙️ Micrófono: ON' : '🔇 Activar Micrófono'}
+        </button>
+      </div>
+
+      <div style="margin-bottom:1rem;">
+        <label style="font-size:0.8rem; font-weight:bold; color:#38bdf8; display:block; margin-bottom:0.3rem;">💬 Reacciones & Emotes Rápidos:</label>
+        <div style="display:flex; gap:0.4rem; flex-wrap:wrap;">
+          <button class="btn btn-secondary" style="font-size:0.9rem; padding:0.25rem 0.6rem;" onclick="sendNetEmote('👋')">👋 Saludo</button>
+          <button class="btn btn-secondary" style="font-size:0.9rem; padding:0.25rem 0.6rem;" onclick="sendNetEmote('🔥')">🔥 Fuego</button>
+          <button class="btn btn-secondary" style="font-size:0.9rem; padding:0.25rem 0.6rem;" onclick="sendNetEmote('🚔')">🚔 Policía</button>
+          <button class="btn btn-secondary" style="font-size:0.9rem; padding:0.25rem 0.6rem;" onclick="sendNetEmote('💰')">💰 Dinero</button>
+          <button class="btn btn-secondary" style="font-size:0.9rem; padding:0.25rem 0.6rem;" onclick="sendNetEmote('💖')">💖 Amor</button>
+        </div>
+      </div>
+
+      <div style="margin-bottom:0.5rem;">
+        <label style="font-size:0.8rem; font-weight:bold; color:#38bdf8; display:block; margin-bottom:0.3rem;">👥 Jugadores Conectados en la Sala:</label>
+        <div style="max-height:160px; overflow-y:auto;">
+          ${remoteListHTML}
+        </div>
+      </div>
+    `;
+
+    openModalCard('🌐 Multijugador Co-op & Chat de Voz', body);
+  }
+
+  window.toggleNetConnect = function(connect) {
+    if (connect) {
+      const roomInput = document.getElementById('netRoomInput');
+      const rId = roomInput ? roomInput.value.trim() : 'CIUDADLINK_SALA_1';
+      window.CiudadLinkMultiplayer.joinRoom(rId);
+    } else {
+      window.CiudadLinkMultiplayer.leaveRoom();
+    }
+    openMultiplayerModal();
+  };
+
+  window.joinNetRoomFromInput = function() {
+    const roomInput = document.getElementById('netRoomInput');
+    if (roomInput && roomInput.value.trim()) {
+      window.CiudadLinkMultiplayer.joinRoom(roomInput.value.trim());
+      openMultiplayerModal();
+    }
+  };
+
+  window.toggleNetMicrophone = function() {
+    window.CiudadLinkMultiplayer.toggleMicrophone();
+  };
+
+  window.sendNetEmote = function(emoteSymbol) {
+    window.CiudadLinkMultiplayer.sendEmote(emoteSymbol);
+    addLog(`💬 Enviaste emote: ${emoteSymbol}`);
+  };
+
+  function openMissionsModal() {
+    const missions = window.CiudadLinkMissions ? window.CiudadLinkMissions.MISSIONS : [];
+    const activeIdx = window.CiudadLinkMissions ? window.CiudadLinkMissions.activeMissionIdx : -1;
+    const completedList = window.CiudadLinkMissions ? window.CiudadLinkMissions.missionCompletedList : [];
+
+    let activeBannerHTML = '';
+    if (activeIdx >= 0) {
+      const activeM = missions[activeIdx];
+      const stIdx = window.CiudadLinkMissions.currentStageIdx;
+      const stage = activeM.stages[stIdx];
+
+      activeBannerHTML = `
+        <div style="background:rgba(220,38,38,0.2); border:2px solid #ef4444; border-radius:12px; padding:0.85rem; margin-bottom:1rem;">
+          <h4 style="margin:0; color:#f87171;">🚨 MISIÓN EN CURSO: ${activeM.title}</h4>
+          <p style="font-size:0.8rem; color:#cbd5e1; margin:0.3rem 0;">Peligro: <b>${activeM.danger}</b></p>
+          <div style="background:rgba(0,0,0,0.4); padding:0.5rem; border-radius:6px; margin:0.5rem 0; font-size:0.82rem; color:#fbbf24;">
+            <b>Objetivo Actual (Etapa ${stIdx + 1}/${activeM.stages.length}):</b><br>
+            ${stage ? stage.desc : 'Completado'}
+          </div>
+          ${stage && stage.reqType === 'ACTION' ? `
+            <button class="btn btn-primary" style="font-size:0.8rem; padding:0.4rem 0.8rem; width:100%;" onclick="triggerActiveMissionAction()">⚡ Ejecutar Acción de Misión</button>
+          ` : ''}
+        </div>
+      `;
+    }
+
+    const missionsListHTML = missions.map((m, idx) => {
+      const isDone = completedList.includes(m.id);
+      const isActive = activeIdx === idx;
+
+      return `
+        <div style="background:${isActive ? 'rgba(234,179,8,0.2)' : (isDone ? 'rgba(34,197,94,0.1)' : 'rgba(255,255,255,0.05)')}; border:1px solid ${isActive ? '#eab308' : (isDone ? '#22c55e' : '#334155')}; border-radius:10px; padding:0.75rem; margin-bottom:0.6rem;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.25rem;">
+            <h4 style="margin:0; font-size:0.9rem; color:${isActive ? '#facc15' : (isDone ? '#4ade80' : '#38bdf8')};">${m.title}</h4>
+            <span style="font-size:0.7rem; color:#f87171; font-weight:bold;">${m.danger}</span>
+          </div>
+          <p style="font-size:0.75rem; color:#cbd5e1; margin:0.2rem 0;">Recompensa: <b>💰 $${m.rewardMoney} | ⭐ ${m.rewardXP} XP</b></p>
+          <p style="font-size:0.72rem; color:#94a3b8; margin:0 0 0.5rem;">${m.rewardItem}</p>
+          <button class="btn ${isActive ? 'btn-secondary' : (isDone ? 'btn-secondary' : 'btn-primary')}" style="font-size:0.75rem; padding:0.3rem 0.6rem;" onclick="acceptMissionById(${idx})" ${isActive ? 'disabled' : ''}>
+            ${isActive ? '🟡 Misión Activa' : (isDone ? '✅ Repetir Misión' : '⚡ Aceptar Misión Peligrosa')}
+          </button>
+        </div>
+      `;
+    }).join('');
+
+    const body = `
+      <div style="text-align:center; margin-bottom:1rem;">
+        <h3 style="color:#ef4444; margin:0 0 0.25rem;">🚨 10 Misiones Peligrosas de Gran Escala</h3>
+        <p style="font-size:0.82rem; color:#cbd5e1;">Misiones largas y arriesgadas con altas recompensas monetarias, XP y accesorios exclusivos:</p>
+      </div>
+
+      ${activeBannerHTML}
+
+      <div style="max-height:300px; overflow-y:auto; padding-right:0.25rem;">
+        ${missionsListHTML}
+      </div>
+    `;
+
+    openModalCard('🚨 Misiones Peligrosas Co-op', body);
+  }
+
+  window.acceptMissionById = function(idx) {
+    if (window.CiudadLinkMissions) {
+      window.CiudadLinkMissions.startMission(idx);
+      openMissionsModal();
+    }
+  };
+
+  window.triggerActiveMissionAction = function() {
+    if (window.CiudadLinkMissions) {
+      window.CiudadLinkMissions.triggerMissionAction();
+      openMissionsModal();
+    }
+  };
+
+  function addReward(money, xp) {
+    player.money += money;
+    addLog(`🎁 Recompensa Ganada: +$${money} en efectivo | +${xp} XP.`);
+  }
+
+  // XP & Level Progression System
+  function addXP(amount) {
+    player.xp += amount;
+    addLog(`⭐ Ganaste +${amount} XP.`);
+
+    if (player.xp >= player.nextXp) {
+      player.level++;
+      player.xp -= player.nextXp;
+      player.nextXp = Math.floor(player.nextXp * 1.5);
+      player.maxHealth += 10;
+      player.health = player.maxHealth;
+      player.maxEnergy += 10;
+      player.energy = player.maxEnergy;
+      player.money += 250;
+
+      unlockAchievement('LEVEL_UP', `Level ${player.level} Alcanzado`);
+      addLog(`🎉 ¡LEVEL UP! Has subido al Nivel ${player.level}. Salud & Energía aumentadas +10. Premio: +$250.`);
+      alert(`🎉 ¡FELICITACIONES! HAS SUBIDO AL NIVEL ${player.level}!\n\n❤️ HP Máximo: ${player.maxHealth}\n⚡ Energía Máxima: ${player.maxEnergy}\n💰 Bonificación: +$250`);
+    }
+  }
+
+  function unlockAchievement(id, name) {
+    if (!player.achievements.includes(id)) {
+      player.achievements.push(id);
+      addLog(`🏆 ¡LOGRO DESBLOQUEADO! ${name}`);
+    }
+  }
+
+  // Interactive Mini-Map Radar Renderer
+  function renderMiniMapRadar(ctx) {
+    const mapW = 160;
+    const mapH = 160;
+    const mx = canvas.width - mapW - 12;
+    const my = 50;
+
+    ctx.save();
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
+    ctx.fillRect(mx, my, mapW, mapH);
+    ctx.strokeStyle = '#38bdf8';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(mx, my, mapW, mapH);
+
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 10px sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText('🗺️ MINI-MAPA RADAR', mx + 8, my + 14);
+
+    // Player position dot
+    const px = mx + (player.x / 100) * mapW;
+    const py = my + (player.y / 100) * mapH;
+    ctx.fillStyle = '#22c55e';
+    ctx.beginPath();
+    ctx.arc(px, py, 4, 0, Math.PI * 2);
+    ctx.fill();
+
+    // NPCs dots
+    ctx.fillStyle = '#38bdf8';
+    window.CiudadLinkNPCs.npcs.forEach(n => {
+      const nx = mx + (n.x / 100) * mapW;
+      const ny = my + (n.y / 100) * mapH;
+      ctx.fillRect(nx - 1, ny - 1, 2, 2);
+    });
+
+    ctx.restore();
+  }
+
+  function toggleMiniMapRadar() {
+    showMiniMap = !showMiniMap;
+    addLog(showMiniMap ? '🗺️ Mini-Mapa Radar activado.' : '🗺️ Mini-Mapa Radar desactivado.');
+  }
+
+  window.toggleMiniMapRadar = toggleMiniMapRadar;
+  window.addXP = addXP;
+  window.addReward = addReward;
+  window.addLog = addLog;
+  window.openMissionsModal = openMissionsModal;
+
+  // Global namespace export for inter-module communication
+  window.CiudadLinkMain = {
+    addReward: addReward,
+    addLog: addLog,
+    getPlayerState: () => player
+  };
+
+  window.saveAvatarCustomization = function() {
+    const inputName = document.getElementById('custNameInput');
+    if (inputName && inputName.value.trim()) {
+      player.name = inputName.value.trim();
+    }
+    addLog(`✨ Personalizaste a tu avatar: ${player.name}.`);
+    alert(`✨ ¡Avatar personalizado con éxito! Nombre: ${player.name}.`);
+    closeModalCard();
+  };
+
+  window.openAvatarCustomizerModal = openAvatarCustomizerModal;
 
   function openOptionsMenu() {
     const modal = document.getElementById('optionsModal');
