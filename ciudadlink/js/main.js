@@ -29,21 +29,45 @@
     mood: 85, maxMood: 100, // Ánimo / Depresión (100 = Animado, <30 = Deprimido)
     spouse: null, // Married NPC
     isWalking: false,
+    isSprinting: false,
+    gameMode: 'SIMS', // 'SIMS', 'POLICE', 'MAYOR', 'DRIVER', 'DOCTOR', 'LAWYER', 'TYCOON', 'SEWER'
     facing: 'S', // 'N', 'S', 'E', 'W'
     path: [],
     insideBuilding: null, // null if outside, or building object if inside
     interiorFloor: 1,     // Floor active in interior (e.g. 1..10)
     currentHotelId: null,
     currentFloor: 1,
-    inventory: []
+    inventory: [],
+    logHistory: ['🌟 Bienvenido a Ciudad Link — Simulador Urbano 3D.']
   };
 
   let camera = { x: 0, y: 0 };
   let lastTime = performance.now();
 
+  // Weather System State
+  let currentWeather = 'CLEAR'; // 'CLEAR', 'RAIN', 'THUNDERSTORM', 'FOG'
+  let weatherTimer = 0;
+  let rainParticles = [];
+
+  // Radio Audio State
+  let isRadioPlaying = false;
+  let currentRadioStationIdx = 0;
+  const RADIO_STATIONS = [
+    { title: 'Radio Lofi Chill Beat', sub: 'Estación en Vivo para el Hogar' },
+    { title: 'Chiptune Link Synth FM', sub: 'Música Electrónica y Retro 8-Bit' },
+    { title: 'Noticias Ciudad Link 24/7', sub: 'Boletín Oficial de la Presidencia' },
+    { title: 'Jazz Nocturno Urbano', sub: 'Suave Saxofón para la Noche' }
+  ];
+
   // Continuous Pointer/Touch Interaction
   let isPointerDown = false;
   let pointerWorldPos = { x: 50, y: 12 };
+
+  function addLog(msg) {
+    const timeStr = window.CiudadLinkNPCs ? window.CiudadLinkNPCs.getTimeFormatted() : '08:00';
+    player.logHistory.unshift(`[${timeStr}] ${msg}`);
+    if (player.logHistory.length > 50) player.logHistory.pop();
+  }
 
   function initGame() {
     canvas = document.getElementById('cityCanvas');
@@ -125,6 +149,15 @@
       player.isWalking = false;
     }
 
+    // Weather Cycle logic
+    weatherTimer += deltaSec;
+    if (weatherTimer > 90) {
+      weatherTimer = 0;
+      const weathers = ['CLEAR', 'RAIN', 'THUNDERSTORM', 'FOG'];
+      currentWeather = weathers[Math.floor(Math.random() * weathers.length)];
+      addLog(`🌤️ Clima Urbano cambió a: ${currentWeather}`);
+    }
+
     // Track Player's Active World Sector/Quadrant
     const currentSector = window.CiudadLinkMap.getSectorForPos(player.x, player.y);
     window.CiudadLinkMap.setActiveSector(currentSector);
@@ -143,20 +176,31 @@
     camera.y += (targetCamY - camera.y) * 0.15;
 
     // Update HUD Metrics
-    document.getElementById('lblTimeOfDay').textContent = window.CiudadLinkNPCs.getTimeFormatted();
-    document.getElementById('lblPlayerAvatar').textContent = `${player.badge} ${player.name}`;
-    document.getElementById('lblPlayerMoney').textContent = `$${player.money}`;
-    document.getElementById('lblPlayerHealth').textContent = `${player.health}/100`;
-    document.getElementById('lblPlayerEnergy').textContent = `${player.energy}/100`;
-    if (document.getElementById('lblPlayerHunger')) document.getElementById('lblPlayerHunger').textContent = `${Math.round(player.hunger)}/100`;
-    if (document.getElementById('lblPlayerMood')) document.getElementById('lblPlayerMood').textContent = `${Math.round(player.mood)}/100`;
+    const elemTime = document.getElementById('hudTime');
+    if (elemTime) elemTime.textContent = '🕒 ' + window.CiudadLinkNPCs.getTimeFormatted();
 
-    if (document.getElementById('lblPlayerSector')) {
-      document.getElementById('lblPlayerSector').textContent = window.CiudadLinkMap.activeSector;
-    }
-    if (document.getElementById('lblPlayerWanted')) {
+    const elemSector = document.getElementById('hudSubSector');
+    if (elemSector) elemSector.textContent = '📍 Sector ' + window.CiudadLinkMap.activeSector;
+
+    const elemAvatar = document.getElementById('hudAvatar');
+    if (elemAvatar) elemAvatar.textContent = `${player.badge} ${player.name}`;
+
+    const elemState = document.getElementById('hudState');
+    if (elemState) elemState.textContent = player.insideBuilding ? `🏢 ${player.insideBuilding.name}` : (player.isWalking ? '🏃 Caminando' : '🧘 Descansando');
+
+    const elemMoney = document.getElementById('hudMoney');
+    if (elemMoney) elemMoney.textContent = `💰 $${player.money}`;
+
+    const elemHealth = document.getElementById('hudHealth');
+    if (elemHealth) elemHealth.textContent = `❤️ ${player.health}/${player.maxHealth} HP`;
+
+    const elemEnergy = document.getElementById('hudEnergy');
+    if (elemEnergy) elemEnergy.textContent = `⚡ ${Math.round(player.energy)}/${player.maxEnergy}`;
+
+    const elemWanted = document.getElementById('hudWanted');
+    if (elemWanted) {
       const wantedStars = window.CiudadLinkVehicles.wantedLevel;
-      document.getElementById('lblPlayerWanted').textContent = wantedStars > 0 ? '⭐'.repeat(wantedStars) : 'Limpio';
+      elemWanted.textContent = wantedStars > 0 ? '⭐'.repeat(wantedStars) : '⭐ Limpio';
     }
   }
 
@@ -329,6 +373,28 @@
     const nightTint = window.CiudadLinkNPCs.getLightingOverlay();
     if (nightTint > 0) {
       ctx.fillStyle = `rgba(15, 23, 42, ${nightTint})`;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+
+    // 5. Dynamic Weather Overlay Effects (Rain, Thunderstorm, Fog)
+    if (currentWeather === 'RAIN' || currentWeather === 'THUNDERSTORM') {
+      ctx.strokeStyle = 'rgba(186, 230, 253, 0.55)';
+      ctx.lineWidth = 1;
+      const time = performance.now() * 0.005;
+      for (let i = 0; i < 70; i++) {
+        const rx = (Math.sin(i * 127 + time) * 0.5 + 0.5) * canvas.width;
+        const ry = ((i * 17 + time * 100) % canvas.height);
+        ctx.beginPath();
+        ctx.moveTo(rx, ry);
+        ctx.lineTo(rx - 4, ry + 10);
+        ctx.stroke();
+      }
+      if (currentWeather === 'THUNDERSTORM' && Math.random() < 0.015) {
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      }
+    } else if (currentWeather === 'FOG') {
+      ctx.fillStyle = 'rgba(203, 213, 225, 0.12)';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
     }
   }
@@ -713,8 +779,15 @@
       }
     });
 
-    // Nav Menu Buttons
+    // Nav & Bottom HUD Floating Buttons
+    document.getElementById('btnToggleSprint')?.addEventListener('click', toggleSprint);
+    document.getElementById('btnOpenLog')?.addEventListener('click', openLogModal);
+    document.getElementById('btnOpenMainMenu')?.addEventListener('click', openOptionsMenu);
+
     document.getElementById('btnOpenWorldMap')?.addEventListener('click', openWorldMapModal);
+    document.getElementById('btnOpenWife')?.addEventListener('click', openWifeModal);
+    document.getElementById('btnOpenJobs')?.addEventListener('click', openJobsModal);
+    document.getElementById('btnOpenHospitalMenu')?.addEventListener('click', openHospitalMenuModal);
     document.getElementById('btnHijackVehicle')?.addEventListener('click', () => {
       window.CiudadLinkVehicles.hijackNearbyVehicle(player.x, player.y);
     });
@@ -724,7 +797,339 @@
     document.getElementById('btnOpenPresidencia')?.addEventListener('click', openPresidenciaModal);
     document.getElementById('btnOpenCatalog')?.addEventListener('click', openCatalogModal);
     document.getElementById('btnOpenCitizens')?.addEventListener('click', openCitizensListModal);
+
+    // Live Radio Buttons inside interior/floating overlay
+    document.getElementById('btnToggleRadio')?.addEventListener('click', toggleRadio);
+    document.getElementById('btnNextRadioStation')?.addEventListener('click', nextRadioStation);
   }
+
+  function toggleSprint() {
+    player.isSprinting = !player.isSprinting;
+    const btn = document.getElementById('btnToggleSprint');
+    if (btn) {
+      btn.textContent = player.isSprinting ? '⚡ Modo: Correr' : '🏃 Modo: Caminar';
+      btn.classList.toggle('active', player.isSprinting);
+    }
+    addLog(player.isSprinting ? '⚡ Modo Correr activado.' : '🏃 Modo Caminar activado.');
+  }
+
+  function openGameModeSelectorModal() {
+    const modes = [
+      { id: 'SIMS', title: '🧘 Modo Vida Sims Libre', desc: 'Simulación social, necesidades, matrimonio, hogar, compras y libertad total.' },
+      { id: 'POLICE', title: '👮 Modo Carrera Policial & Vigilante', desc: 'Patrullaje urbano, arrestos de pandilleros, persecuciones y recompensas.' },
+      { id: 'MAYOR', title: '👑 Modo Presidencia / Alcalde', desc: 'Emisión de Decretos Presidenciales, gestión de impuestos y regulaciones.' },
+      { id: 'DRIVER', title: '🚘 Modo Conductor / Gran Robo de Autos', desc: 'Robo de vehículos, carreras callejeras y transportes de mercancía.' },
+      { id: 'DOCTOR', title: '🩺 Modo Emergencias Médicas', desc: 'Conducción de ambulancias, curación de enfermos y urgencias del Hospital.' },
+      { id: 'LAWYER', title: '⚖️ Modo Abogado Defensor', desc: 'Audiencias judiciales, alegatos procesales en la Corte y modificación de leyes.' },
+      { id: 'TYCOON', title: '🏦 Modo Magnate de Negocios', desc: 'Inversiones inmobiliarias, cobro de alquileres en hoteles y depósitos bancarios.' },
+      { id: 'SEWER', title: '🕳️ Modo Explorador Subterráneo', desc: 'Exploración de alcantarillas, contrabando y pasadizos secretos.' }
+    ];
+
+    const modesHTML = modes.map(m => `
+      <div style="background:${player.gameMode === m.id ? 'rgba(56,189,248,0.2)' : 'rgba(255,255,255,0.05)'}; border:2px solid ${player.gameMode === m.id ? '#38bdf8' : '#334155'}; padding:0.75rem; border-radius:10px; margin-bottom:0.5rem; display:flex; justify-content:space-between; align-items:center;">
+        <div>
+          <h4 style="margin:0; color:#38bdf8;">${m.title} ${player.gameMode === m.id ? ' (ACTIVO)' : ''}</h4>
+          <p style="margin:0.2rem 0 0; font-size:0.78rem; color:#cbd5e1;">${m.desc}</p>
+        </div>
+        <button class="btn ${player.gameMode === m.id ? 'btn-secondary' : 'btn-primary'}" style="font-size:0.75rem; white-space:nowrap;" onclick="setPlayerGameMode('${m.id}')">
+          ${player.gameMode === m.id ? '✅ Seleccionado' : '⚡ Activar Modo'}
+        </button>
+      </div>
+    `).join('');
+
+    const body = `
+      <p style="font-size:0.85rem; color:#cbd5e1; margin-bottom:1rem;">
+        🎮 <b>Selección de Modo de Juego Principal:</b> Puedes cambiar el enfoque de juego en cualquier momento para experimentar diferentes roles urbanos:
+      </p>
+      <div style="max-height:340px; overflow-y:auto;">
+        ${modesHTML}
+      </div>
+    `;
+
+    openModalCard('🎮 Modos de Juego (8 Modos Activos)', body);
+  }
+
+  window.setPlayerGameMode = function(modeId) {
+    player.gameMode = modeId;
+    addLog(`🎮 Cambiaste al Modo de Juego: ${modeId}`);
+    alert(`🎮 ¡Modo de Juego activado! Tu rol activo en la ciudad ahora es: ${modeId}.`);
+    closeModalCard();
+  };
+
+  window.openGameModeSelectorModal = openGameModeSelectorModal;
+
+  function openOptionsMenu() {
+    const modal = document.getElementById('optionsModal');
+    if (modal) modal.classList.add('active');
+  }
+
+  function closeOptionsMenu() {
+    const modal = document.getElementById('optionsModal');
+    if (modal) modal.classList.remove('active');
+  }
+
+  window.openOptionsMenu = openOptionsMenu;
+  window.closeOptionsMenu = closeOptionsMenu;
+
+  function toggleRadio() {
+    isRadioPlaying = !isRadioPlaying;
+    const btn = document.getElementById('btnToggleRadio');
+    if (btn) {
+      btn.textContent = isRadioPlaying ? '⏸️ Pausar' : '▶️ Reproducir';
+    }
+    if (isRadioPlaying && window.SuperEngine && window.SuperEngine.Audio) {
+      window.SuperEngine.Audio.playSFX('aurora');
+    }
+  }
+
+  function nextRadioStation() {
+    currentRadioStationIdx = (currentRadioStationIdx + 1) % RADIO_STATIONS.length;
+    const st = RADIO_STATIONS[currentRadioStationIdx];
+    const elemTitle = document.getElementById('mediaTitle');
+    const elemSub = document.getElementById('mediaSub');
+    if (elemTitle) elemTitle.textContent = st.title;
+    if (elemSub) elemSub.textContent = st.sub;
+    if (window.SuperEngine && window.SuperEngine.Audio) {
+      window.SuperEngine.Audio.playSFX('item');
+    }
+  }
+
+  function openLogModal() {
+    const logsHTML = player.logHistory.map(entry => `
+      <div style="background:rgba(255,255,255,0.05); border-left:3px solid #38bdf8; padding:0.5rem 0.75rem; border-radius:4px; margin-bottom:0.4rem; font-size:0.82rem;">
+        ${entry}
+      </div>
+    `).join('');
+
+    const body = `
+      <p style="font-size:0.85rem; color:#94a3b8; margin-bottom:1rem;">
+        📜 Historial de Eventos y Bitácora de la Ciudad:
+      </p>
+      <div style="max-height:320px; overflow-y:auto;">
+        ${logsHTML || '<p style="color:#cbd5e1;">Sin registro de eventos aún.</p>'}
+      </div>
+    `;
+
+    openModalCard('📜 Historial & Bitácora Urbana', body);
+  }
+
+  function openWifeModal() {
+    const npcs = window.CiudadLinkNPCs.npcs;
+    let spouseNpc = npcs.find(n => n.name === player.spouse || n.spouseId === player.avatarId);
+
+    if (spouseNpc) {
+      const sec = window.CiudadLinkMap.getSectorForPos(spouseNpc.x, spouseNpc.y);
+      const body = `
+        <div style="text-align:center; padding:0.5rem;">
+          <div style="font-size:3rem; margin-bottom:0.5rem;">👰</div>
+          <h3 style="color:#ec4899; margin:0 0 0.25rem;">${spouseNpc.name} — Tu Esposa</h3>
+          <p style="font-size:0.85rem; color:#cbd5e1; margin-bottom:1rem;">
+            📍 Ubicación Actual: <b>Sector ${sec} (${spouseNpc.x}, ${spouseNpc.y})</b><br>
+            💖 Vínculo Matrimonial: <b>${spouseNpc.relationshipLevel}%</b> | Tel: 📞 <b>${spouseNpc.phone}</b>
+          </p>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.5rem;">
+            <button class="btn btn-primary" onclick="teleportToSpouse('${spouseNpc.id}')">🌀 Rastrear y Teletransportar</button>
+
+            <button class="btn btn-secondary" onclick="sendSpouseGift('${spouseNpc.id}')">🎁 Enviar Regalo ($50)</button>
+          </div>
+        </div>
+      `;
+      openModalCard('👰 Esposa & Vida Matrimonial', body);
+    } else {
+      const singleNpcs = npcs.filter(n => n.relationshipState === 'Soltero' || n.relationshipState === 'Amigo').slice(0, 10);
+      const listHTML = singleNpcs.map(n => `
+        <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.05); padding:0.5rem; border-radius:6px; margin-bottom:0.35rem;">
+          <span>${n.gender === 'Masculino' ? '👨' : '👩'} <b>${n.name}</b> (${n.profession})</span>
+          <button class="btn btn-secondary" style="font-size:0.75rem;" onclick="inspectNPCById('${n.id}')">💘 Coquetear</button>
+        </div>
+      `).join('');
+
+      const body = `
+        <p style="font-size:0.85rem; color:#cbd5e1; margin-bottom:1rem;">
+          💍 Aún no estás casado. Explora la ciudad o conoce solteros en el Padrón Municipal para iniciar un romance Sims:
+        </p>
+        <div style="max-height:280px; overflow-y:auto;">
+          ${listHTML}
+        </div>
+      `;
+      openModalCard('👰 Esposa & Rastreo de Citas', body);
+    }
+  }
+
+  window.teleportToSpouse = function(spouseId) {
+    const npc = window.CiudadLinkNPCs.npcs.find(n => n.id === spouseId);
+    if (!npc) return;
+    player.x = npc.x;
+    player.y = npc.y;
+    addLog(`👰 Te has desplazado junto a tu Esposa (${npc.name}).`);
+    alert(`🌀 Te has desplazado junto a ${npc.name} en (${npc.x}, ${npc.y}).`);
+    closeModalCard();
+  };
+
+  window.sendSpouseGift = function(spouseId) {
+    const npc = window.CiudadLinkNPCs.npcs.find(n => n.id === spouseId);
+    if (!npc) return;
+    if (player.money >= 50) {
+      player.money -= 50;
+      npc.relationshipLevel = Math.min(100, npc.relationshipLevel + 15);
+      alert(`🎁 ¡Le enviaste un hermoso regalo a ${npc.name}! Amor +15%.`);
+      openWifeModal();
+    } else {
+      alert('❌ Dinero insuficiente ($50).');
+    }
+  };
+
+  function openJobsModal() {
+    const body = `
+      <p style="font-size:0.85rem; color:#cbd5e1; margin-bottom:1rem;">
+        💼 <b>Bolsa de Trabajo y Empleos de Ciudad Link:</b> Selecciona una vacante laboral para ganar salario y completar misiones:
+      </p>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.6rem; max-height:340px; overflow-y:auto;">
+        <div style="background:rgba(255,255,255,0.05); border:1px solid #38bdf8; border-radius:10px; padding:0.75rem;">
+          <h4 style="margin:0; color:#38bdf8;">🚖 Taxista Urbano</h4>
+          <p style="font-size:0.75rem; color:#cbd5e1; margin:0.25rem 0;">Recoge pasajeros en las avenidas y llévalos a su destino.</p>
+
+          <button class="btn btn-primary" style="font-size:0.75rem; padding:0.3rem;" onclick="acceptJobMission('TAXI')">⚡ Iniciar Misión ($50/carrera)</button>
+        </div>
+
+        <div style="background:rgba(255,255,255,0.05); border:1px solid #eab308; border-radius:10px; padding:0.75rem;">
+          <h4 style="margin:0; color:#eab308;">🍕 Delivery Express</h4>
+          <p style="font-size:0.75rem; color:#cbd5e1; margin:0.25rem 0;">Entrega pedidos de pizza a los hoteles de 10 pisos.</p>
+
+          <button class="btn btn-primary" style="font-size:0.75rem; padding:0.3rem;" onclick="acceptJobMission('DELIVERY')">⚡ Iniciar Misión ($40/pedido)</button>
+        </div>
+
+        <div style="background:rgba(255,255,255,0.05); border:1px solid #3b82f6; border-radius:10px; padding:0.75rem;">
+          <h4 style="margin:0; color:#3b82f6;">👮 Oficial de Policía</h4>
+          <p style="font-size:0.75rem; color:#cbd5e1; margin:0.25rem 0;">Patrulla la ciudad y arresta a los pandilleros en flagrancia.</p>
+
+          <button class="btn btn-primary" style="font-size:0.75rem; padding:0.3rem;" onclick="acceptJobMission('POLICE')">⚡ Iniciar Misión ($100/arresto)</button>
+        </div>
+
+        <div style="background:rgba(255,255,255,0.05); border:1px solid #10b981; border-radius:10px; padding:0.75rem;">
+          <h4 style="margin:0; color:#10b981;">🩺 Médico / Paramédico</h4>
+          <p style="font-size:0.75rem; color:#cbd5e1; margin:0.25rem 0;">Trata y cura a los ciudadanos enfermos del Hospital.</p>
+
+          <button class="btn btn-primary" style="font-size:0.75rem; padding:0.3rem;" onclick="acceptJobMission('DOCTOR')">⚡ Iniciar Misión ($80/curación)</button>
+        </div>
+
+        <div style="background:rgba(255,255,255,0.05); border:1px solid #c084fc; border-radius:10px; padding:0.75rem;">
+          <h4 style="margin:0; color:#c084fc;">⚖️ Abogado Defensor</h4>
+          <p style="font-size:0.75rem; color:#cbd5e1; margin:0.25rem 0;">Representa acusados en la Corte Judicial de Ciudad Link.</p>
+
+          <button class="btn btn-primary" style="font-size:0.75rem; padding:0.3rem;" onclick="acceptJobMission('LAWYER')">⚡ Iniciar Misión ($120/juicio)</button>
+        </div>
+
+        <div style="background:rgba(255,255,255,0.05); border:1px solid #f97316; border-radius:10px; padding:0.75rem;">
+          <h4 style="margin:0; color:#f97316;">🍽️ Cocinero / Mesero</h4>
+          <p style="font-size:0.75rem; color:#cbd5e1; margin:0.25rem 0;">Prepara y sirve platillos típicos en el Paladar Don Link.</p>
+
+          <button class="btn btn-primary" style="font-size:0.75rem; padding:0.3rem;" onclick="acceptJobMission('PALADAR')">⚡ Iniciar Misión ($60/servicio)</button>
+        </div>
+      </div>
+    `;
+
+    openModalCard('💼 Bolsa de Empleos & Misiones', body);
+  }
+
+  window.acceptJobMission = function(type) {
+    if (type === 'TAXI') {
+      player.money += 50;
+      addLog('🚖 Completaste una carrera de Taxi Express (+$50).');
+      alert('🚖 ¡Misión de Taxi completada! Recogiste un pasajero en la avenida y lo llevaste a su hotel. +$50 ganados.');
+    } else if (type === 'DELIVERY') {
+      player.money += 40;
+      addLog('🍕 Entregaste una orden de pizza en el Hotel Sol (+$40).');
+      alert('🍕 ¡Misión de Delivery completada! Entregaste pizza caliente en el Piso 4 del Hotel Sol. +$40 ganados.');
+    } else if (type === 'POLICE') {
+      player.money += 100;
+      addLog('👮 Arrestaste a un sospecchoso en el Barrio Bajero (+$100).');
+      alert('👮 ¡Patrullaje exitoso! Arrestaste a un pandillero en flagrancia y lo llevaste a la comisaría. +$100 ganados.');
+    } else if (type === 'DOCTOR') {
+      player.money += 80;
+      addLog('🩺 Curaste a un paciente en Urgencias del Hospital (+$80).');
+      alert('🩺 ¡Tratamiento médico completado! Curaste a un poblador herido en Urgencias. +$80 ganados.');
+    } else if (type === 'LAWYER') {
+      player.money += 120;
+      addLog('⚖️ Defendiste a tu cliente en la Corte con éxito (+$120).');
+      alert('⚖️ ¡Juicio ganado! Absolviste a tu cliente de los cargos ante el Juez. +$120 ganados.');
+    } else if (type === 'PALADAR') {
+      player.money += 60;
+      addLog('🍽️ Serviste banquetes en el Paladar Don Link (+$60).');
+      alert('🍽️ ¡Servicio de restaurante completado! Serviste la mesa VIP en Paladar Don Link. +$60 ganados.');
+    }
+    closeModalCard();
+  };
+
+  function openHospitalMenuModal() {
+    const body = `
+      <div style="text-align:center; margin-bottom:1rem;">
+        <h3 style="color:#10b981; margin:0 0 0.3rem;">🏥 Hospital General & Red Subterránea</h3>
+        <p style="font-size:0.85rem; color:#cbd5e1;">Centro de Tratamiento Médico e Infraestructura Subterránea de Ciudad Link.</p>
+      </div>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem;">
+        <div style="background:rgba(255,255,255,0.05); border:1px solid #10b981; border-radius:12px; padding:0.85rem; text-align:center;">
+          <div style="font-size:2rem;">🩺</div>
+          <h4 style="margin:0.25rem 0; color:#10b981;">Tratamiento Integral</h4>
+          <p style="font-size:0.75rem; color:#94a3b8; margin-bottom:0.75rem;">Restaura la Salud (HP) y Energía al 100%.</p>
+
+          <button class="btn btn-primary" style="font-size:0.78rem;" onclick="healPlayerHospital()">🏥 Curar HP y Energía ($50)</button>
+        </div>
+
+        <div style="background:rgba(255,255,255,0.05); border:1px solid #f97316; border-radius:12px; padding:0.85rem; text-align:center;">
+          <div style="font-size:2rem;">🕳️</div>
+          <h4 style="margin:0.25rem 0; color:#f97316;">Túneles Subterráneos</h4>
+          <p style="font-size:0.75rem; color:#94a3b8; margin-bottom:0.75rem;">Red secreta de pasadizos para conectar distritos.</p>
+
+          <button class="btn btn-secondary" style="font-size:0.78rem;" onclick="openSewerTunnelsModal()">🕳️ Explorar Túneles</button>
+        </div>
+      </div>
+    `;
+
+    openModalCard('🏥 Hospital General & Red de Túneles', body);
+  }
+
+  window.healPlayerHospital = function() {
+    if (player.money >= 50) {
+      player.money -= 50;
+      player.health = player.maxHealth;
+      player.energy = player.maxEnergy;
+      addLog('🏥 Fuiste atendido en el Hospital General. Salud y Energía restauradas a 100.');
+      alert('🏥 ¡Tratamiento completado! Tu Salud y Energía han sido restauradas al 100%. -$50.');
+      closeModalCard();
+    } else {
+      alert('❌ Dinero insuficiente ($50).');
+    }
+  };
+
+  window.openSewerTunnelsModal = function() {
+    const body = `
+      <p style="font-size:0.85rem; color:#cbd5e1; margin-bottom:1rem;">
+        🕳️ <b>Red Subterránea de Alcantarillado y Túneles:</b> Elige una escotilla para desplazarte de forma sigilosa sin tráfico:
+      </p>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.5rem;">
+        <button class="btn btn-secondary" style="font-size:0.8rem;" onclick="teleportTunnel(10, 30, 'Hospital General')">🏥 Salida Hospital (NW)</button>
+        <button class="btn btn-secondary" style="font-size:0.8rem;" onclick="teleportTunnel(88, 70, 'Banco Central')">🏦 Salida Bóveda Banco (NE)</button>
+
+        <button class="btn btn-secondary" style="font-size:0.8rem;" onclick="teleportTunnel(10, 10, 'Estación Policía')">🚔 Salida Comisaría (NW)</button>
+        <button class="btn btn-secondary" style="font-size:0.8rem;" onclick="teleportTunnel(88, 88, 'Barrio Bajero')">🥷 Salida Escondite Gang (SE)</button>
+      </div>
+    `;
+
+    openModalCard('🕳️ Túneles Subterráneos de la Ciudad', body);
+  };
+
+  window.teleportTunnel = function(x, y, destName) {
+    player.x = x;
+    player.y = y;
+    player.insideBuilding = null;
+    addLog(`🕳️ Viajaste por los túneles subterráneos hacia ${destName}.`);
+    alert(`🕳️ ¡Saliste del túnel subterráneo en ${destName}! Ubicación: (${x}, ${y}).`);
+    closeModalCard();
+  };
 
   function updatePointerPos(e) {
     const rect = canvas.getBoundingClientRect();
