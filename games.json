@@ -1,23 +1,14 @@
 [
   {
-    "id": "ciudadlink",
-    "name": "Ciudad Link: Simulador Urbano Flagship",
-    "description": "Simulación urbana con Presidencia Link, Policía, Juzgados, Hospital, Cementerio, Hoteles de 10 pisos con elevadores, catálogo de 1000+ cosas, lazos familiares y reglas universales.",
-    "category": "rpg",
-    "players": 1,
-    "mode": ["solo"],
-    "mobile": true,
-    "requiresServer": false,
-    "license": "MIT",
-    "url": "./ciudadlink/"
-  },
-  {
     "id": "tictactoe",
     "name": "Tres en Raya",
     "description": "Clásico juego de Tres en Raya con modo 1 vs AI o 2 jugadores local.",
     "category": "board",
     "players": 2,
-    "mode": ["solo", "multiplayer"],
+    "mode": [
+      "solo",
+      "multiplayer"
+    ],
     "mobile": true,
     "requiresServer": false,
     "license": "MIT",
@@ -29,7 +20,10 @@
     "description": "Conecta 4 fichas de tu color en línea horizontal, vertical o diagonal.",
     "category": "board",
     "players": 2,
-    "mode": ["solo", "multiplayer"],
+    "mode": [
+      "solo",
+      "multiplayer"
+    ],
     "mobile": true,
     "requiresServer": false,
     "license": "MIT",
@@ -41,7 +35,10 @@
     "description": "El clásico juego retro de paletas y pelota en 2D.",
     "category": "arcade",
     "players": 2,
-    "mode": ["solo", "multiplayer"],
+    "mode": [
+      "solo",
+      "multiplayer"
+    ],
     "mobile": true,
     "requiresServer": false,
     "license": "MIT",
@@ -53,7 +50,9 @@
     "description": "Pon a prueba tus conocimientos en tecnología, cultura general, ciencia y cine.",
     "category": "trivia",
     "players": 1,
-    "mode": ["solo"],
+    "mode": [
+      "solo"
+    ],
     "mobile": true,
     "requiresServer": false,
     "license": "MIT",
@@ -65,7 +64,9 @@
     "description": "Encuentra las parejas de cartas iguales en el menor número de movimientos.",
     "category": "puzzle",
     "players": 1,
-    "mode": ["solo"],
+    "mode": [
+      "solo"
+    ],
     "mobile": true,
     "requiresServer": false,
     "license": "MIT",
@@ -77,7 +78,9 @@
     "description": "Guía a la serpiente para comer alimentos sin chocar contra las paredes.",
     "category": "arcade",
     "players": 1,
-    "mode": ["solo"],
+    "mode": [
+      "solo"
+    ],
     "mobile": true,
     "requiresServer": false,
     "license": "MIT",
@@ -89,7 +92,9 @@
     "description": "Combina fichas del mismo valor hasta alcanzar la casilla 2048.",
     "category": "puzzle",
     "players": 1,
-    "mode": ["solo"],
+    "mode": [
+      "solo"
+    ],
     "mobile": true,
     "requiresServer": false,
     "license": "MIT",
@@ -101,7 +106,9 @@
     "description": "Esquiva las tuberías volando con el pajarito Link.",
     "category": "arcade",
     "players": 1,
-    "mode": ["solo"],
+    "mode": [
+      "solo"
+    ],
     "mobile": true,
     "requiresServer": false,
     "license": "MIT",
@@ -113,7 +120,9 @@
     "description": "Destruye los bloques rebotando la pelota sobre la paleta.",
     "category": "arcade",
     "players": 1,
-    "mode": ["solo"],
+    "mode": [
+      "solo"
+    ],
     "mobile": true,
     "requiresServer": false,
     "license": "MIT",
@@ -125,7 +134,9 @@
     "description": "Adivina la palabra oculta de 5 letras en 6 intentos.",
     "category": "puzzle",
     "players": 1,
-    "mode": ["solo"],
+    "mode": [
+      "solo"
+    ],
     "mobile": true,
     "requiresServer": false,
     "license": "MIT",
@@ -137,7 +148,9 @@
     "description": "Limpia el campo de minas sin hacer detonar ninguna.",
     "category": "board",
     "players": 1,
-    "mode": ["solo"],
+    "mode": [
+      "solo"
+    ],
     "mobile": true,
     "requiresServer": false,
     "license": "MIT",
@@ -149,7 +162,9 @@
     "description": "Memoriza y repite la secuencia de colores creciente.",
     "category": "puzzle",
     "players": 1,
-    "mode": ["solo"],
+    "mode": [
+      "solo"
+    ],
     "mobile": true,
     "requiresServer": false,
     "license": "MIT",
@@ -161,23 +176,13 @@
     "description": "Rellena la cuadrícula de 9x9 con números del 1 al 9.",
     "category": "board",
     "players": 1,
-    "mode": ["solo"],
+    "mode": [
+      "solo"
+    ],
     "mobile": true,
     "requiresServer": false,
     "license": "MIT",
     "url": "./sudoku/"
-  },
-  {
-    "id": "spaceinvaders",
-    "name": "Invasores del Espacio",
-    "description": "Defiende la Tierra destruyendo la flota alienígena.",
-    "category": "arcade",
-    "players": 1,
-    "mode": ["solo"],
-    "mobile": true,
-    "requiresServer": false,
-    "license": "MIT",
-    "url": "./spaceinvaders/"
   },
   {
     "id": "whackamole",
@@ -185,7 +190,9 @@
     "description": "Golpea a los topos que asoman la cabeza antes de que desaparezcan.",
     "category": "arcade",
     "players": 1,
-    "mode": ["solo"],
+    "mode": [
+      "solo"
+    ],
     "mobile": true,
     "requiresServer": false,
     "license": "MIT",
@@ -197,7 +204,9 @@
     "description": "Ordena las barajas de cartas por palo y orden descendente.",
     "category": "board",
     "players": 1,
-    "mode": ["solo"],
+    "mode": [
+      "solo"
+    ],
     "mobile": true,
     "requiresServer": false,
     "license": "MIT",
@@ -209,7 +218,10 @@
     "description": "Captura todas las fichas del oponente en el tablero de damas.",
     "category": "board",
     "players": 2,
-    "mode": ["solo", "multiplayer"],
+    "mode": [
+      "solo",
+      "multiplayer"
+    ],
     "mobile": true,
     "requiresServer": false,
     "license": "MIT",
@@ -221,7 +233,9 @@
     "description": "Mueve los discos a la tercera torre respetando las reglas de tamaño.",
     "category": "puzzle",
     "players": 1,
-    "mode": ["solo"],
+    "mode": [
+      "solo"
+    ],
     "mobile": true,
     "requiresServer": false,
     "license": "MIT",
@@ -233,7 +247,9 @@
     "description": "Recoge los puntos en el laberinto evitando al fantasma.",
     "category": "arcade",
     "players": 1,
-    "mode": ["solo"],
+    "mode": [
+      "solo"
+    ],
     "mobile": true,
     "requiresServer": false,
     "license": "MIT",
@@ -245,7 +261,9 @@
     "description": "Pon a prueba tu velocidad escribiendo palabras antes de que expire el tiempo.",
     "category": "arcade",
     "players": 1,
-    "mode": ["solo"],
+    "mode": [
+      "solo"
+    ],
     "mobile": true,
     "requiresServer": false,
     "license": "MIT",
@@ -257,7 +275,9 @@
     "description": "Apila bloques en movimiento para construir la torre más alta.",
     "category": "arcade",
     "players": 1,
-    "mode": ["solo"],
+    "mode": [
+      "solo"
+    ],
     "mobile": true,
     "requiresServer": false,
     "license": "MIT",
@@ -269,7 +289,9 @@
     "description": "Intercambia gemas para conectar 3 o más del mismo tipo.",
     "category": "puzzle",
     "players": 1,
-    "mode": ["solo"],
+    "mode": [
+      "solo"
+    ],
     "mobile": true,
     "requiresServer": false,
     "license": "MIT",
@@ -281,7 +303,9 @@
     "description": "Resuelve rápidas operaciones aritméticas contra el reloj.",
     "category": "trivia",
     "players": 1,
-    "mode": ["solo"],
+    "mode": [
+      "solo"
+    ],
     "mobile": true,
     "requiresServer": false,
     "license": "MIT",
@@ -293,7 +317,9 @@
     "description": "Salta de plataforma en plataforma para llegar lo más alto posible.",
     "category": "arcade",
     "players": 1,
-    "mode": ["solo"],
+    "mode": [
+      "solo"
+    ],
     "mobile": true,
     "requiresServer": false,
     "license": "MIT",
@@ -305,7 +331,9 @@
     "description": "Apaga todas las luces del tablero haciendo clic en las casillas.",
     "category": "puzzle",
     "players": 1,
-    "mode": ["solo"],
+    "mode": [
+      "solo"
+    ],
     "mobile": true,
     "requiresServer": false,
     "license": "MIT",
@@ -317,7 +345,9 @@
     "description": "Adivina la palabra letra por letra antes de agotar tus oportunidades.",
     "category": "trivia",
     "players": 1,
-    "mode": ["solo"],
+    "mode": [
+      "solo"
+    ],
     "mobile": true,
     "requiresServer": false,
     "license": "MIT",
@@ -329,46 +359,12 @@
     "description": "Encuentra las palabras ocultas dentro de la cuadrícula de letras.",
     "category": "puzzle",
     "players": 1,
-    "mode": ["solo"],
+    "mode": [
+      "solo"
+    ],
     "mobile": true,
     "requiresServer": false,
     "license": "MIT",
     "url": "./wordsearch/"
-  },
-  {
-    "id": "dungeon",
-    "name": "Dungeon Crawler: El Laberinto Sombrío",
-    "description": "Peligrosa aventura en mazmorra con niveles, niebla de guerra, combate por turnos, magia, pociones y NPCs.",
-    "category": "rpg",
-    "players": 1,
-    "mode": ["solo"],
-    "mobile": true,
-    "requiresServer": false,
-    "license": "MIT",
-    "url": "./dungeon/"
-  },
-  {
-    "id": "towerdefense",
-    "name": "Kingdom Defense: Defensa de Torres",
-    "description": "Juego de estrategia en tiempo real. Construye torres de arqueros, cañones y magia para contener oleadas enemigas.",
-    "category": "rpg",
-    "players": 1,
-    "mode": ["solo"],
-    "mobile": true,
-    "requiresServer": false,
-    "license": "MIT",
-    "url": "./towerdefense/"
-  },
-  {
-    "id": "rpgquest",
-    "name": "Leyenda Heroica: RPG Quest",
-    "description": "RPG de exploración de mundo abierto 2D, interacciones y misiones con NPCs, batallas contra monstruos y mejoras.",
-    "category": "rpg",
-    "players": 1,
-    "mode": ["solo"],
-    "mobile": true,
-    "requiresServer": false,
-    "license": "MIT",
-    "url": "./rpgquest/"
   }
 ]
